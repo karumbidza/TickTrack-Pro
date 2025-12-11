@@ -1,0 +1,896 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NextAuth required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Application models
+enum AssetStatus {
+  ACTIVE
+  MAINTENANCE
+  OUT_OF_SERVICE
+  RETIRED
+  REPAIR_NEEDED
+  DECOMMISSIONED
+  TRANSFERRED
+  PENDING_DECOMMISSION  // Awaiting admin approval
+}
+
+// Custom asset categories - tenants can create their own
+model AssetCategory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String   // e.g., "Vehicles", "Farm Equipment", "Fuel Tanks"
+  description String?
+  icon        String?  // Optional icon name for UI
+  color       String?  // Optional color code for UI
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false) // System default categories
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  assets      Asset[]
+  tickets     Ticket[]
+
+  @@unique([tenantId, name])
+  @@map("asset_categories")
+}
+
+// Branches - tenant's physical locations (head office, branches, sites, etc.)
+model Branch {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String   // e.g., "Head Office", "Branch A", "Site B"
+  address       String?  // Physical address
+  type          String   @default("BRANCH") // HEAD_OFFICE, BRANCH, SITE, WAREHOUSE, DEPOT, OTHER
+  isHeadOffice  Boolean  @default(false) // If true, users assigned here have access to all branches
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  userBranches  UserBranch[]
+
+  @@unique([tenantId, name])
+  @@map("branches")
+}
+
+// Junction table for User-Branch many-to-many relationship
+model UserBranch {
+  id        String   @id @default(cuid())
+  userId    String
+  branchId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, branchId])
+  @@map("user_branches")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  IT_ADMIN
+  SALES_ADMIN
+  RETAIL_ADMIN
+  MAINTENANCE_ADMIN
+  PROJECTS_ADMIN
+  CONTRACTOR
+  END_USER
+}
+
+enum TicketStatus {
+  OPEN
+  PROCESSING
+  ACCEPTED
+  IN_PROGRESS
+  ON_SITE
+  AWAITING_DESCRIPTION    // User marked complete, waiting for contractor to describe work done
+  AWAITING_WORK_APPROVAL  // Contractor submitted description, waiting for user approval
+  AWAITING_APPROVAL
+  COMPLETED
+  CLOSED
+  CANCELLED
+}
+
+enum TicketType {
+  REPAIR
+  MAINTENANCE
+  INSPECTION
+  INSTALLATION
+  REPLACEMENT
+  EMERGENCY
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ContractorStatus {
+  AVAILABLE
+  BUSY
+  ON_SITE
+  UNAVAILABLE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  PAID
+  OVERDUE
+  CANCELLED
+  REJECTED
+}
+
+enum TenantStatus {
+  ACTIVE
+  TRIAL
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  BASIC
+  PRO
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  PAUSED
+}
+
+enum PaymentProvider {
+  PAYNOW
+  STRIPE
+  PAYPAL
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String?   // For credential authentication
+  role          UserRole  @default(END_USER)
+  tenantId      String?   // null for super admin
+  isActive      Boolean   @default(true)
+  phone         String?
+  department    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  tenant              Tenant?        @relation(fields: [tenantId], references: [id])
+  branches            UserBranch[]   // Branches this user is assigned to
+  createdTickets      Ticket[]       @relation("CreatedTickets")
+  assignedTickets     Ticket[]       @relation("AssignedTickets")
+  adminTickets        Ticket[]       @relation("AdminTickets")
+  contractorProfile   Contractor?
+  notifications       Notification[]
+  messages            Message[]
+  uploadedAttachments Attachment[]
+  ratings             Rating[]
+  contractorInvoices  Invoice[]      @relation("ContractorInvoices")
+  contractorKYC       ContractorKYC?
+  
+  // Asset management relations
+  decommissionRequestedAssets Asset[] @relation("DecommissionRequester")
+  decommissionApprovedAssets  Asset[] @relation("DecommissionApprover")
+  decommissionRejectedAssets  Asset[] @relation("DecommissionRejecter")
+  assetHistory                AssetHistory[]
+
+  @@map("users")
+}
+
+model Tenant {
+  id            String       @id @default(cuid())
+  name          String
+  slug          String       @unique
+  domain        String?      @unique
+  logo          String?
+  address       String?
+  phone         String?
+  email         String?
+  status        TenantStatus @default(TRIAL)
+  trialEndsAt   DateTime?
+  features      Json         @default("{}")
+  settings      Json         @default("{}")
+  customFeatures Json        @default("{}") // For custom enterprise features
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users         User[]
+  tickets       Ticket[]
+  contractors   Contractor[]
+  assets        Asset[]
+  assetCategories AssetCategory[]
+  branches      Branch[]
+  subscription  Subscription?
+  invoices      Invoice[]
+  quotes        Quote[]      // For custom feature quotes
+  payments      Payment[]
+  contractorInvitations ContractorInvitation[]
+  contractorKYCs        ContractorKYC[]
+
+  @@map("tenants")
+}
+
+model Subscription {
+  id              String             @id @default(cuid())
+  tenantId        String             @unique
+  plan            SubscriptionPlan   @default(BASIC)
+  status          SubscriptionStatus @default(TRIAL)
+  amount          Float              // Monthly amount in USD
+  currency        String             @default("USD")
+  billingCycle    String             @default("monthly") // monthly, yearly
+  trialEndsAt     DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean         @default(false)
+  
+  // Payment provider details
+  paymentProvider    PaymentProvider @default(PAYNOW)
+  paynowSubscriptionId String?       @unique
+  stripeSubscriptionId String?       @unique
+  paypalSubscriptionId String?       @unique
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments        Payment[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  tenantId        String
+  subscriptionId  String?
+  amount          Float
+  currency        String          @default("USD")
+  status          String          // success, failed, pending, refunded
+  paymentMethod   String?         // ecocash, onemoney, visa, mastercard
+  
+  // Payment provider details
+  provider        PaymentProvider @default(PAYNOW)
+  providerPaymentId String?       @unique
+  providerResponse  Json?         // Store full payment response
+  
+  description     String?
+  metadata        Json?           @default("{}")
+  paidAt          DateTime?
+  failedAt        DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  subscription    Subscription?   @relation(fields: [subscriptionId], references: [id])
+
+  @@map("payments")
+}
+
+model Quote {
+  id              String    @id @default(cuid())
+  tenantId        String
+  title           String
+  description     String
+  requestedFeatures Json    // Array of requested custom features
+  estimatedCost   Float?
+  estimatedDays   Int?
+  status          String    @default("pending") // pending, approved, rejected, in_progress, completed
+  
+  // Contact details
+  contactName     String
+  contactEmail    String
+  contactPhone    String?
+  
+  notes           String?
+  adminNotes      String?   // Internal notes for admin
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@map("quotes")
+}
+
+model Ticket {
+  id              String         @id @default(cuid())
+  ticketNumber    String?        @unique // Auto-generated ticket ID for tracking
+  title           String
+  description     String
+  status          TicketStatus   @default(OPEN)
+  type            TicketType
+  priority        TicketPriority @default(MEDIUM)
+  department      String?        @default("MAINTENANCE") // SALES, MAINTENANCE, IT
+  
+  // Reporter information
+  reporterName    String?        // Name of person who raised the ticket
+  reporterContact String?        // Phone/email of reporter
+  
+  // Asset information
+  assetId         String?        // Related asset if applicable
+  categoryId      String?        // Category for the ticket (auto-filled from asset or manually selected)
+  location        String?        // Location if no asset specified
+  
+  dueDate         DateTime?
+  scheduledArrival DateTime?     // Contractor's scheduled arrival time
+  completedAt     DateTime?
+  estimatedHours  Float?
+  actualHours     Float?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Cancellation fields
+  cancellationReason    String?  // Reason for cancellation
+  cancellationRequestedAt DateTime? // When user requested cancellation
+  cancellationRequestedBy String?   // Who requested cancellation
+  cancelledAt           DateTime?   // When admin approved cancellation
+  
+  // Rejection fields (contractor)
+  rejectionReason       String?     // Reason contractor rejected
+  rejectedAt            DateTime?   // When contractor rejected
+  
+  // HQ Assignment fields
+  hqAssignedAt          DateTime?   // When HQ admin took over the ticket
+  hqCompletedAt         DateTime?   // When HQ admin marked job complete
+
+  // Work Description Workflow fields
+  workDescriptionRequestedAt DateTime?  // When user marked job complete
+  workDescription            String?    // Contractor's description of work done
+  workDescriptionSubmittedAt DateTime?  // When contractor submitted description
+  workDescriptionApproved    Boolean?   // Whether user approved the description
+  workDescriptionApprovedAt  DateTime?  // When user approved/rejected the description
+  workDescriptionRejectionReason String? // Reason if user rejected the description
+
+  // Foreign keys
+  userId       String // who created it
+  tenantId     String
+  assignedToId String? // contractor assigned
+  adminId      String? // admin responsible
+
+  // Relations
+  user         User           @relation("CreatedTickets", fields: [userId], references: [id])
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  assignedTo   User?          @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  admin        User?          @relation("AdminTickets", fields: [adminId], references: [id])
+  asset        Asset?         @relation(fields: [assetId], references: [id])
+  category     AssetCategory? @relation(fields: [categoryId], references: [id])
+  messages     Message[]
+  attachments  Attachment[]
+  statusHistory StatusHistory[]
+  invoice      Invoice?
+  ratings      Rating[]
+  maintenanceHistory MaintenanceHistory[]
+
+  @@map("tickets")
+}
+
+model Contractor {
+  id              String            @id @default(cuid())
+  userId          String            @unique
+  tenantId        String
+  specialties     String[]
+  hourlyRate      Float?
+  rating          Float             @default(0)
+  totalJobs       Int               @default(0)
+  status          ContractorStatus  @default(AVAILABLE)
+  bio             String?
+  certifications  String[]
+  availability    Json              @default("{}")
+  secondaryPhone  String?           // Secondary contact phone (international format e.g., +263771234567)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id])
+  contractorSubscription  ContractorSubscription?
+  ratings                 Rating[]
+  maintenanceHistory      MaintenanceHistory[]
+
+  @@map("contractors")
+}
+
+model Asset {
+  id              String        @id @default(cuid())
+  tenantId        String
+  assetNumber     String        // Unique asset identifier (ASSET-001, etc.)
+  name            String
+  description     String?
+  categoryId      String?       // Reference to custom category (optional for backwards compatibility)
+  brand           String?
+  model           String?
+  serialNumber    String?
+  purchaseDate    DateTime?
+  warrantyExpires DateTime?
+  status          AssetStatus   @default(ACTIVE)
+  location        String        // Site/building/floor/room
+  
+  // Technical specifications
+  specifications  Json          @default("{}")  // Store tech specs as JSON
+  
+  // Media
+  images          Json          @default("[]")  // Array of image URLs
+  manuals         Json          @default("[]")  // Array of manual/document URLs
+  
+  // Maintenance
+  lastMaintenanceDate   DateTime?
+  nextMaintenanceDate   DateTime?
+  maintenanceInterval   Int?      // Days between maintenance
+  
+  // Financial
+  purchasePrice   Float?
+  currentValue    Float?
+  endOfLifeDate   DateTime?     // Expected end of life date
+  
+  // Decommission/Transfer
+  decommissionedAt    DateTime?
+  transferredAt       DateTime?
+  decommissionReason  String?   // Reason for decommissioning
+  transferReason      String?   // Reason for transfer
+  transferLocation    String?   // New location if transferred
+  transferredTo       String?   // Person/department transferred to
+  
+  // Decommission Approval Workflow
+  decommissionRequestedAt   DateTime?
+  decommissionRequestedById String?
+  decommissionApprovedAt    DateTime?
+  decommissionApprovedById  String?
+  decommissionRejectedAt    DateTime?
+  decommissionRejectedById  String?
+  decommissionRejectionReason String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  category        AssetCategory? @relation(fields: [categoryId], references: [id])
+  tickets         Ticket[]      // Maintenance tickets for this asset
+  maintenanceHistory MaintenanceHistory[]
+  decommissionRequestedBy  User?  @relation("DecommissionRequester", fields: [decommissionRequestedById], references: [id])
+  decommissionApprovedBy   User?  @relation("DecommissionApprover", fields: [decommissionApprovedById], references: [id])
+  decommissionRejectedBy   User?  @relation("DecommissionRejecter", fields: [decommissionRejectedById], references: [id])
+  assetHistory    AssetHistory[]
+
+  @@unique([tenantId, assetNumber])
+  @@map("assets")
+}
+
+model MaintenanceHistory {
+  id              String    @id @default(cuid())
+  assetId         String
+  ticketId        String?   // Related ticket if applicable
+  type            String    // preventive, corrective, emergency
+  description     String
+  cost            Float?
+  performedBy     String?   // Contractor/technician name
+  contractorId    String?   // Reference to contractor if applicable
+  performedDate   DateTime
+  nextDue         DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  asset           Asset     @relation(fields: [assetId], references: [id])
+  contractor      Contractor? @relation(fields: [contractorId], references: [id])
+  ticket          Ticket?   @relation(fields: [ticketId], references: [id])
+
+  @@map("maintenance_history")
+}
+
+// Comprehensive asset history tracking
+model AssetHistory {
+  id              String    @id @default(cuid())
+  assetId         String
+  action          String    // CREATED, UPDATED, STATUS_CHANGED, TRANSFERRED, DECOMMISSION_REQUESTED, DECOMMISSION_APPROVED, DECOMMISSION_REJECTED, REPAIRED, SERVICED
+  previousValue   Json?     // Previous state (for updates)
+  newValue        Json?     // New state (for updates)
+  description     String    // Human-readable description
+  performedById   String?   // User who performed the action
+  cost            Float?    // Cost associated with this action (repair, service, etc.)
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  asset           Asset     @relation(fields: [assetId], references: [id])
+  performedBy     User?     @relation(fields: [performedById], references: [id])
+
+  @@map("asset_history")
+}
+
+model ContractorSubscription {
+  id              String    @id @default(cuid())
+  contractorId    String    @unique
+  hasInvoiceAccess Boolean  @default(false)
+  invoiceFee      Float     @default(15) // Monthly fee in USD
+  status          String    @default("inactive") // inactive, active, cancelled
+  activatedAt     DateTime?
+  expiresAt       DateTime?
+  lastPaymentDate DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  contractor      Contractor @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  payments        ContractorPayment[]
+
+  @@map("contractor_subscriptions")
+}
+
+model ContractorPayment {
+  id              String    @id @default(cuid())
+  subscriptionId  String
+  amount          Float
+  currency        String    @default("USD")
+  status          String    // success, pending, failed
+  paymentMethod   String?
+  provider        String    @default("PAYNOW") // PAYNOW, STRIPE, etc
+  providerPaymentId String? @unique
+  providerResponse  Json?
+  description     String?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  subscription    ContractorSubscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("contractor_payments")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  ticketId  String
+  userId    String
+  isInternal Boolean @default(false) // internal messages between admins/contractors
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id])
+  attachments Attachment[]
+
+  @@map("messages")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String   // Original filename when uploaded
+  url          String
+  size         Int
+  mimeType     String
+  type         String   // image, video, audio, document, invoice, job_card
+  description  String?  // Optional description for the attachment
+  ticketId     String?  // Can be attached to ticket
+  messageId    String?  // Can be attached to message
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  ticket     Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message    Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation(fields: [uploadedById], references: [id])
+
+  @@map("attachments")
+}
+
+model StatusHistory {
+  id        String       @id @default(cuid())
+  ticketId  String
+  fromStatus TicketStatus?
+  toStatus  TicketStatus
+  changedById String
+  reason    String?
+  createdAt DateTime     @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("status_history")
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  contractorId      String?
+  contractor        User?         @relation("ContractorInvoices", fields: [contractorId], references: [id])
+  ticketId          String        @unique
+  tenantId          String?
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id])
+  
+  // Invoice details
+  invoiceNumber     String        @unique
+  amount            Float
+  hoursWorked       Float?
+  hourlyRate        Float?
+  description       String?
+  workDescription   String?       // Detailed work done description from contractor
+  status            InvoiceStatus @default(PENDING)
+  
+  // Clarification/Rejection
+  rejectionReason   String?       // Why invoice was rejected
+  clarificationRequest String?    // Admin's clarification request
+  clarificationResponse String?   // Contractor's response to clarification
+  
+  // File attachments
+  invoiceFileUrl    String?       // Contractor's fiscalized invoice
+  proofOfPaymentUrl String?       // Admin's payment proof
+  
+  // Payment tracking
+  paidDate          DateTime?
+  paidAmount        Float         @default(0)
+  balance           Float         @default(0)
+  notes             String?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String   // who gave the rating
+  contractorId String? // contractor being rated
+  
+  // Star ratings (1-5)
+  punctualityRating     Int      // Was contractor on time?
+  customerServiceRating Int      // Was contractor helpful/friendly?
+  workmanshipRating     Int      // Was workmanship satisfactory?
+  overallRating         Int      // Overall rating
+  
+  // Boolean compliance checks
+  ppeCompliant          Boolean  @default(false)
+  followedSiteProcedures Boolean @default(false)
+  
+  // Detailed checklist data as JSON
+  ratingDetails         Json?    @default("{}")
+  
+  // Comments
+  comment               String?  @db.Text
+  
+  // Legacy fields for backwards compatibility
+  rating                Int?     // Legacy single rating
+  category              String?  // Legacy category
+  
+  createdAt DateTime @default(now())
+
+  ticket     Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id])
+  contractor Contractor? @relation(fields: [contractorId], references: [id])
+
+  @@map("ratings")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // ticket_assigned, ticket_updated, invoice_approved, etc.
+  title     String
+  message   String
+  data      Json?    @default("{}")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ==================== CONTRACTOR KYC SYSTEM ====================
+
+enum KYCStatus {
+  PENDING      // Invitation sent, waiting for submission
+  SUBMITTED    // KYC form submitted, waiting for review
+  UNDER_REVIEW // Admin is reviewing
+  APPROVED     // Approved, waiting for password setup
+  ACTIVE       // Password set, contractor can login
+  REJECTED     // KYC rejected
+  SUSPENDED    // Account suspended
+}
+
+model ContractorInvitation {
+  id          String    @id @default(cuid())
+  tenantId    String
+  email       String
+  token       String    @unique @default(cuid())
+  invitedBy   String    // Admin who sent the invite
+  status      String    @default("pending") // pending, used, expired
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, email])
+  @@map("contractor_invitations")
+}
+
+model ContractorKYC {
+  id          String    @id @default(cuid())
+  tenantId    String
+  invitationId String?  @unique
+  status      KYCStatus @default(PENDING)
+  
+  // ==================== 1. COMPANY INFORMATION ====================
+  companyName           String
+  tradingName           String?
+  physicalAddress       String
+  companyEmail          String
+  companyPhone          String
+  companyProfileUrl     String?   // Uploaded company profile document
+  
+  // ==================== 2. COMPANY REGISTRATION DOCUMENTS ====================
+  certificateOfIncorporationUrl String?  // CR14
+  cr5RegisteredOfficeUrl        String?  // CR5 - Registered Office Address
+  cr6DirectorsListUrl           String?  // CR6 - Directors List
+  memorandumArticlesUrl         String?  // Memorandum & Articles of Association
+  prazCertificateUrl            String?  // PRAZ Registration Certificate (optional)
+  
+  // ==================== 3. DIRECTORS / OWNERS INFORMATION ====================
+  directors             Json      @default("[]") // Array of director objects
+  // Each director: { fullName, nationalId, passportNumber, mobile, email, residentialAddress, shareholdingPercent }
+  
+  // ==================== 4. FINANCIAL & BANKING INFORMATION ====================
+  bankName              String?
+  bankBranch            String?
+  accountName           String?
+  accountNumber         String?
+  accountCurrency       String?   @default("USD") // USD or ZWL
+  bankProofUrl          String?   // Bank letter or statement header
+  
+  // ==================== 5. TAX & STATUTORY COMPLIANCE ====================
+  zimraTaxClearanceUrl  String?   // ITF263
+  vatCertificateUrl     String?   // VAT Registration Certificate
+  nssaNumber            String?   // NSSA Registration Number
+  necComplianceUrl      String?   // NEC Compliance Certificate
+  insuranceCoverUrl     String?   // Public liability, workmen's compensation
+  
+  // ==================== 6. HEALTH & SAFETY COMPLIANCE ====================
+  sheqPolicyUrl         String?   // Valid SHEQ Policy
+  ppeComplianceDeclaration Boolean @default(false)
+  publicLiabilityInsuranceUrl String?
+  safetyOfficerName     String?
+  safetyOfficerQualifications String?
+  safetyCertificatesUrl String?   // Copies of safety certificates
+  
+  // ==================== 7. TECHNICAL CAPABILITY ====================
+  numberOfEmployees     Int?
+  keyTechnicalStaff     Json      @default("[]") // Array: { name, qualification, role }
+  availableEquipment    Json      @default("[]") // Array of equipment/tools
+  specialLicenses       Json      @default("[]") // plumbing, electrical, refrigeration, etc.
+  methodStatementsUrl   String?
+  specializations       String[]  @default([])   // Areas of expertise
+  
+  // ==================== 8. PREVIOUS EXPERIENCE ====================
+  previousClients       Json      @default("[]") // Array: { clientName, contactPerson, phone, email }
+  referenceLettersUrl   String?
+  previousWorkExamplesUrl String?
+  currentProjects       Json      @default("[]") // Array: { projectName, client, status }
+  pastProjects          Json      @default("[]")
+  industrySectors       String[]  @default([])   // fuel stations, construction, ICT, HVAC, etc.
+  
+  // ==================== 9. COMPLIANCE DECLARATIONS ====================
+  conflictOfInterestDeclared    Boolean @default(false)
+  antiCorruptionDeclared        Boolean @default(false)
+  dataPrivacyAcknowledged       Boolean @default(false)
+  infoAccuracyDeclared          Boolean @default(false)
+  authorizedSignatoryName       String?
+  authorizedSignatoryPosition   String?
+  signatureDate                 DateTime?
+  companyStampUrl               String?
+  
+  // ==================== ADMIN REVIEW ====================
+  reviewedBy            String?   // Admin who reviewed
+  reviewedAt            DateTime?
+  reviewNotes           String?   // Internal notes
+  rejectionReason       String?   // If rejected
+  
+  // ==================== PASSWORD SETUP ====================
+  passwordSetupToken    String?   @unique
+  passwordSetupExpires  DateTime?
+  passwordSetAt         DateTime?
+  
+  // ==================== LINKED USER (after approval) ====================
+  userId                String?   @unique // Created user account
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
+  user                  User?     @relation(fields: [userId], references: [id])
+
+  @@map("contractor_kyc")
+}
+
+// Optional modules (commented out for now)
+// model InventoryItem {
+//   id          String   @id @default(cuid())
+//   tenantId    String
+//   name        String
+//   sku         String   @unique
+//   quantity    Int
+//   minStock    Int
+//   price       Float
+//   supplier    String?
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+// }
+
+// model Project {
+//   id          String   @id @default(cuid())
+//   tenantId    String
+//   name        String
+//   description String?
+//   status      String
+//   startDate   DateTime
+//   endDate     DateTime?
+//   budget      Float?
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+// }

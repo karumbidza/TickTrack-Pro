@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const tenants = await prisma.tenant.findMany({
+      include: {
+        subscription: true,
+        _count: {
+          select: {
+            users: true,
+            tickets: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const formattedTenants = tenants.map(tenant => ({
+      id: tenant.id,
+      name: tenant.name,
+      slug: tenant.slug,
+      email: tenant.email,
+      phone: tenant.phone,
+      address: tenant.address,
+      status: tenant.status,
+      isActive: tenant.status === 'ACTIVE' || tenant.status === 'TRIAL',
+      userCount: tenant._count.users,
+      ticketCount: tenant._count.tickets,
+      subscription: tenant.subscription ? {
+        plan: tenant.subscription.plan,
+        status: tenant.subscription.status
+      } : null,
+      features: tenant.features as Record<string, boolean>,
+      createdAt: tenant.createdAt
+    }))
+
+    return NextResponse.json({ tenants: formattedTenants })
+  } catch (error) {
+    console.error('Super admin tenants fetch error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch tenants' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { 
+      name, 
+      slug, 
+      email, 
+      phone, 
+      address,
+      adminName,
+      adminEmail,
+      adminPassword 
+    } = body
+
+    // Validate required fields
+    if (!name || !slug || !adminEmail || !adminPassword) {
+      return NextResponse.json(
+        { error: 'Name, slug, admin email and password are required' },
+        { status: 400 }
+      )
+    }
+
+    // Check if slug already exists
+    const existingTenant = await prisma.tenant.findUnique({
+      where: { slug }
+    })
+
+    if (existingTenant) {
+      return NextResponse.json(
+        { error: 'A tenant with this slug already exists' },
+        { status: 400 }
+      )
+    }
+
+    // Check if admin email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: adminEmail }
+    })
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'A user with this email already exists' },
+        { status: 400 }
+      )
+    }
+
+    // Create tenant with admin user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the tenant
+      const tenant = await tx.tenant.create({
+        data: {
+          name,
+          slug,
+          email,
+          phone,
+          address,
+          status: 'TRIAL',
+          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+          features: {
+            ticketManagement: true,
+            assetManagement: true,
+            contractorManagement: true,
+            reporting: false,
+            advancedAnalytics: false
+          }
+        }
+      })
+
+      // Hash the admin password
+      const hashedPassword = await bcrypt.hash(adminPassword, 12)
+
+      // Create the tenant admin user
+      const adminUser = await tx.user.create({
+        data: {
+          name: adminName || name + ' Admin',
+          email: adminEmail,
+          password: hashedPassword,
+          role: 'TENANT_ADMIN',
+          tenantId: tenant.id
+        }
+      })
+
+      return { tenant, adminUser }
+    })
+
+    return NextResponse.json({
+      message: 'Tenant created successfully',
+      tenant: {
+        id: result.tenant.id,
+        name: result.tenant.name,
+        slug: result.tenant.slug,
+        status: result.tenant.status
+      },
+      admin: {
+        id: result.adminUser.id,
+        email: result.adminUser.email
+      }
+    }, { status: 201 })
+  } catch (error) {
+    console.error('Failed to create tenant:', error)
+    return NextResponse.json(
+      { error: 'Failed to create tenant' },
+      { status: 500 }
+    )
+  }
+}
