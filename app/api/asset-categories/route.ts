@@ -5,16 +5,35 @@ import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
 // GET - List all asset categories for the tenant
+// Supports both authenticated requests (session-based) and public requests (with tenantId param)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const tenantId = session.user.tenantId
-    if (!tenantId) {
-      return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
+    const { searchParams } = new URL(request.url)
+    const queryTenantId = searchParams.get('tenantId')
+    
+    let tenantId: string | null = null
+    
+    // If tenantId is provided in query params (for public access like contractor registration)
+    if (queryTenantId) {
+      // Verify the tenant exists
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: queryTenantId },
+        select: { id: true }
+      })
+      if (!tenant) {
+        return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+      }
+      tenantId = queryTenantId
+    } else {
+      // Require authentication for requests without tenantId param
+      const session = await getServerSession(authOptions)
+      if (!session?.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      tenantId = session.user.tenantId
+      if (!tenantId) {
+        return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
+      }
     }
 
     const categories = await prisma.assetCategory.findMany({
@@ -49,14 +68,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Only admins can create categories
-    const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+    const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']
     if (!adminRoles.includes(session.user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const tenantId = session.user.tenantId
     if (!tenantId) {
-      return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
+      return NextResponse.json({ error: 'No tenant associated. Please log in as a tenant admin to create categories.' }, { status: 400 })
+    }
+
+    // Verify tenant exists
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId }
+    })
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
     }
 
     const { name, description, icon, color } = await request.json()

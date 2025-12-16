@@ -5,6 +5,13 @@ import { logger } from './logger'
 // Africa's Talking Configuration
 const apiKey = process.env.AFRICASTALKING_API_KEY
 const username = process.env.AFRICASTALKING_USERNAME || 'sandbox'
+// Sender ID - requires approval from Africa's Talking dashboard
+// IMPORTANT: Set to empty string or remove from .env until approved
+// Using an unapproved sender ID will cause "InvalidSenderId" error
+const senderId = process.env.AFRICASTALKING_SENDER_ID || ''
+
+// Track if sender ID is invalid (for runtime fallback)
+let senderIdInvalid = false
 
 // Response time based on priority (in hours)
 const RESPONSE_TIMES: Record<string, number> = {
@@ -148,14 +155,30 @@ export async function sendSMS(
       message
     }
     
-    // Only add 'from' if provided (for production, you can use a shortcode)
-    if (from) {
-      options.from = from
+    // Use sender ID if provided in function call, otherwise use environment variable
+    // Skip sender ID if it was previously marked as invalid
+    const senderToUse = senderIdInvalid ? undefined : (from || senderId)
+    if (senderToUse) {
+      options.from = senderToUse
+      logger.debug(`Using sender ID: ${senderToUse}`)
+    } else {
+      logger.debug('Sending SMS without custom sender ID (using default)')
     }
     
-    const response = await sms.send(options)
+    let response = await sms.send(options)
     
     logger.debug('Africa\'s Talking SMS Response:', JSON.stringify(response, null, 2))
+    
+    // Check for InvalidSenderId error and retry without sender ID
+    if (response.SMSMessageData?.Message === 'InvalidSenderId' && options.from) {
+      logger.warn(`Sender ID "${options.from}" is invalid. Retrying without sender ID...`)
+      senderIdInvalid = true // Mark for future calls
+      
+      // Retry without sender ID
+      delete options.from
+      response = await sms.send(options)
+      logger.debug('Retry SMS Response:', JSON.stringify(response, null, 2))
+    }
     
     // Process response
     if (response.SMSMessageData?.Recipients) {
@@ -250,6 +273,175 @@ export async function sendJobCompletedSMS(
 ): Promise<SMSResponse> {
   const message = `TICKTRACK: Ticket ${ticketNumber} completed by ${contractorName}. Please review and close.`
   return sendSMS(recipientPhone, message)
+}
+
+// ==================== OPTIMIZED SMS TEMPLATES ====================
+
+// Truncate text to fit SMS limits
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength - 3) + '...'
+}
+
+// Format date for SMS
+function formatDateForSMS(date: Date | null | undefined): string {
+  if (!date) return 'TBD'
+  return date.toLocaleDateString('en-GB', { 
+    day: '2-digit', 
+    month: 'short', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
+}
+
+// Get SLA response time text
+function getSLAText(priority: string): string {
+  const slaMap: Record<string, string> = {
+    CRITICAL: '30min',
+    HIGH: '1hr',
+    MEDIUM: '12hrs',
+    LOW: '48hrs'
+  }
+  return slaMap[priority] || '24hrs'
+}
+
+// 1. NEW TICKET SMS (to Branch Admins)
+export async function sendNewTicketSMS(
+  adminPhones: string[],
+  data: {
+    ticketNumber: string
+    title: string
+    priority: string
+    branchName: string
+    userName: string
+    responseDeadline: Date | null
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: New ${data.priority} ticket #${data.ticketNumber}
+${truncateText(data.title, 35)}
+Branch: ${truncateText(data.branchName, 20)}
+By: ${truncateText(data.userName, 15)}
+Respond by: ${formatDateForSMS(data.responseDeadline)}`
+
+  return sendSMS(adminPhones, message)
+}
+
+// 2. JOB ASSIGNED SMS (to Contractor) - Already exists as sendTicketAssignmentSMS
+// Enhanced version with user contact
+export async function sendJobAssignedSMS(
+  contractorPhone: string,
+  data: {
+    ticketNumber: string
+    title: string
+    priority: string
+    location: string
+    userPhone: string
+    resolutionDeadline: Date | null
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: Job #${data.ticketNumber} assigned
+${truncateText(data.title, 40)}
+Priority: ${data.priority} | Due: ${getSLAText(data.priority)}
+Location: ${truncateText(data.location, 25)}
+Contact: ${data.userPhone}
+Accept/Reject in app`
+
+  return sendSMS(contractorPhone, message)
+}
+
+// 3. CONTRACTOR ACCEPTED SMS (to User)
+export async function sendContractorAcceptedToUserSMS(
+  userPhone: string,
+  data: {
+    ticketNumber: string
+    contractorName: string
+    contractorPhone: string
+    arrivalDate: Date | null
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: #${data.ticketNumber} accepted by ${truncateText(data.contractorName, 15)}
+ETA: ${formatDateForSMS(data.arrivalDate)}
+Contact: ${data.contractorPhone}`
+
+  return sendSMS(userPhone, message)
+}
+
+// 4. CONTRACTOR ACCEPTED SMS (to Admin)
+export async function sendContractorAcceptedToAdminSMS(
+  adminPhone: string,
+  data: {
+    ticketNumber: string
+    contractorName: string
+    arrivalDate: Date | null
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: #${data.ticketNumber} accepted
+Contractor: ${truncateText(data.contractorName, 20)}
+ETA: ${formatDateForSMS(data.arrivalDate)}`
+
+  return sendSMS(adminPhone, message)
+}
+
+// 5. CONTRACTOR REJECTED SMS (to Admin)
+export async function sendContractorRejectedSMS(
+  adminPhone: string,
+  data: {
+    ticketNumber: string
+    contractorName: string
+    reason: string
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: #${data.ticketNumber} REJECTED by ${truncateText(data.contractorName, 15)}
+Reason: ${truncateText(data.reason, 50)}
+Please reassign`
+
+  return sendSMS(adminPhone, message)
+}
+
+// 6. JOB COMPLETED SMS (to User)
+export async function sendJobCompletedToUserSMS(
+  userPhone: string,
+  data: {
+    ticketNumber: string
+    contractorName: string
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: Ticket #${data.ticketNumber} completed by ${truncateText(data.contractorName, 20)}. Please rate the service in the app.`
+
+  return sendSMS(userPhone, message)
+}
+
+// 7. JOB COMPLETED SMS (to Admin)
+export async function sendJobCompletedToAdminSMS(
+  adminPhone: string,
+  data: {
+    ticketNumber: string
+    contractorName: string
+    completedAt: Date
+  }
+): Promise<SMSResponse> {
+  const message = `TickTrack: #${data.ticketNumber} completed
+By: ${truncateText(data.contractorName, 20)}
+At: ${formatDateForSMS(data.completedAt)}`
+
+  return sendSMS(adminPhone, message)
+}
+
+// 8. RATING RECEIVED SMS (to Contractor)
+export async function sendRatingReceivedSMS(
+  contractorPhone: string,
+  data: {
+    ticketNumber: string
+    rating: number
+    feedback: string | null
+  }
+): Promise<SMSResponse> {
+  const stars = '★'.repeat(data.rating) + '☆'.repeat(5 - data.rating)
+  const feedbackText = data.feedback ? `\n"${truncateText(data.feedback, 50)}"` : ''
+  
+  const message = `TickTrack: Job #${data.ticketNumber} rated ${stars} (${data.rating}/5)${feedbackText}`
+
+  return sendSMS(contractorPhone, message)
 }
 
 // Generic SMS sender
@@ -415,5 +607,14 @@ export default {
   sendTicketAssignmentDual,
   formatPhoneNumber,
   isValidPhoneNumber,
-  getAccountBalance
+  getAccountBalance,
+  // Optimized SMS templates
+  sendNewTicketSMS,
+  sendJobAssignedSMS,
+  sendContractorAcceptedToUserSMS,
+  sendContractorAcceptedToAdminSMS,
+  sendContractorRejectedSMS,
+  sendJobCompletedToUserSMS,
+  sendJobCompletedToAdminSMS,
+  sendRatingReceivedSMS
 }

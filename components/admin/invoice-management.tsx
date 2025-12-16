@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { FileUpload } from '@/components/ui/file-upload'
+import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import { 
   Eye, Download, FileText, DollarSign, Check, X, AlertCircle, 
   MessageSquare, Printer, Clock, User, Building, MapPin, Star,
@@ -329,9 +330,24 @@ export function AdminInvoiceManagement() {
     await fetchInvoiceDetails(invoice.id)
   }
 
-  const downloadSummary = async (invoiceId: string, format: 'html' | 'text' = 'html') => {
+  const downloadSummary = async (invoiceId: string, format: 'html' | 'text' | 'pdf' = 'pdf') => {
     try {
-      if (format === 'html') {
+      if (format === 'pdf') {
+        // Download PDF summary
+        const response = await fetch(`/api/invoices/${invoiceId}/summary-pdf`)
+        if (response.ok) {
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `Invoice-Summary-${invoiceId}.pdf`
+          a.click()
+          window.URL.revokeObjectURL(url)
+          toast.success('Summary PDF downloaded')
+        } else {
+          throw new Error('Failed to generate PDF')
+        }
+      } else if (format === 'html') {
         window.open(`/api/admin/invoices/summary?invoiceId=${invoiceId}&format=html`, '_blank')
       } else {
         const response = await fetch(`/api/admin/invoices/summary?invoiceId=${invoiceId}&format=text`)
@@ -387,8 +403,8 @@ export function AdminInvoiceManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -616,14 +632,19 @@ export function AdminInvoiceManagement() {
               {invoiceDetails && (
                 <div className="flex gap-2">
                   {invoiceDetails.invoice.invoiceFileUrl && (
-                    <Button size="sm" variant="outline" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
-                      <FileText className="h-4 w-4 mr-1" />
-                      Invoice PDF
-                    </Button>
+                    <MediaHoverPreview 
+                      file={{ url: invoiceDetails.invoice.invoiceFileUrl, filename: `Invoice ${invoiceDetails.invoice.invoiceNumber}.pdf`, mimeType: 'application/pdf' }}
+                      previewSize="lg"
+                    >
+                      <Button size="sm" variant="outline" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
+                        <FileText className="h-4 w-4 mr-1" />
+                        Invoice PDF
+                      </Button>
+                    </MediaHoverPreview>
                   )}
-                  <Button size="sm" variant="outline" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'html')}>
-                    <Printer className="h-4 w-4 mr-1" />
-                    Work Summary
+                  <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Summary PDF
                   </Button>
                 </div>
               )}
@@ -700,9 +721,14 @@ export function AdminInvoiceManagement() {
                             <FileText className="h-5 w-5 text-blue-600" />
                             <span className="font-medium">Invoice Document</span>
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
-                            <ExternalLink className="h-4 w-4 mr-1" />View File
-                          </Button>
+                          <MediaHoverPreview 
+                            file={{ url: invoiceDetails.invoice.invoiceFileUrl, filename: 'Invoice Document', mimeType: 'application/pdf' }}
+                            previewSize="lg"
+                          >
+                            <Button size="sm" variant="outline" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
+                              <ExternalLink className="h-4 w-4 mr-1" />View File
+                            </Button>
+                          </MediaHoverPreview>
                         </div>
                       </CardContent>
                     </Card>
@@ -852,16 +878,24 @@ export function AdminInvoiceManagement() {
                     <CardContent>
                       <div className="flex gap-3">
                         {invoiceDetails.invoice.invoiceFileUrl && (
-                          <Button variant="outline" className="flex-1" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Download Invoice PDF
-                          </Button>
+                          <MediaHoverPreview 
+                            file={{ url: invoiceDetails.invoice.invoiceFileUrl, filename: 'Invoice PDF', mimeType: 'application/pdf' }}
+                            previewSize="lg"
+                          >
+                            <Button variant="outline" className="flex-1" onClick={() => window.open(invoiceDetails.invoice.invoiceFileUrl, '_blank')}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Contractor Invoice
+                            </Button>
+                          </MediaHoverPreview>
                         )}
-                        <Button variant="outline" className="flex-1" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'html')}>
-                          <Printer className="h-4 w-4 mr-2" />
-                          Download Work Summary
+                        <Button variant="default" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Summary PDF
                         </Button>
                       </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        The Summary PDF contains complete job details for accounting records.
+                      </p>
                     </CardContent>
                   </Card>
                 </TabsContent>

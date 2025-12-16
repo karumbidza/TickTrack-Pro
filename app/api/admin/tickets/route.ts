@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -22,6 +22,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
+    // Parse pagination params
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
+    const skip = (page - 1) * limit
+
     // Filter tickets based on admin role
     let departmentFilter = {}
     if (user.role === 'IT_ADMIN') {
@@ -32,83 +38,80 @@ export async function GET() {
       departmentFilter = { department: 'MAINTENANCE' }
     }
 
-    const tickets = await prisma.ticket.findMany({
-      where: {
-        tenantId: user.tenantId,
-        ...departmentFilter
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        asset: {
-          select: {
-            id: true,
-            name: true,
-            assetNumber: true,
-            location: true
-          }
-        },
-        attachments: {
-          select: {
-            id: true,
-            filename: true,
-            originalName: true,
-            url: true,
-            mimeType: true
-          }
-        },
-        messages: {
-          select: {
-            id: true,
-            content: true,
-            createdAt: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true
-              }
+    const whereClause = {
+      tenantId: user.tenantId,
+      ...departmentFilter
+    }
+
+    // Run count and data query in parallel
+    const [tickets, total] = await Promise.all([
+      prisma.ticket.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
             }
           },
-          orderBy: {
-            createdAt: 'desc'
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
           },
-          take: 10 // Limit for initial load
-        },
-        invoice: {
-          select: {
-            id: true,
-            invoiceNumber: true,
-            amount: true,
-            status: true,
-            invoiceFileUrl: true
+          asset: {
+            select: {
+              id: true,
+              name: true,
+              assetNumber: true,
+              location: true
+            }
+          },
+          attachments: {
+            select: {
+              id: true,
+              filename: true,
+              originalName: true,
+              url: true,
+              mimeType: true
+            }
+          },
+          invoice: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              amount: true,
+              status: true,
+              invoiceFileUrl: true
+            }
+          },
+          _count: {
+            select: {
+              messages: true
+            }
           }
         },
-        _count: {
-          select: {
-            messages: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip,
+        take: limit
+      }),
+      prisma.ticket.count({ where: whereClause })
+    ])
 
-    return NextResponse.json({ tickets }, { status: 200 })
+    return NextResponse.json({ 
+      tickets,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    }, { status: 200 })
   } catch (error) {
     console.error('Failed to fetch admin tickets:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { calculateSLADeadlines } from '@/lib/sla-utils'
+import { sendNewTicketEmailToAdmin } from '@/lib/email'
 import { z } from 'zod'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -156,6 +158,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Calculate SLA deadlines based on priority
+    const now = new Date()
+    const { responseDeadline, resolutionDeadline } = calculateSLADeadlines(now, data.priority)
+
     // Create the ticket
     const ticket = await prisma.ticket.create({
       data: {
@@ -172,7 +178,10 @@ export async function POST(request: NextRequest) {
         location: data.location || null,
         status: 'OPEN',
         userId: session.user.id,
-        tenantId: userTenantId
+        tenantId: userTenantId,
+        responseDeadline,
+        resolutionDeadline,
+        dueDate: resolutionDeadline // Also set dueDate for compatibility
       },
       include: {
         user: {
@@ -252,13 +261,38 @@ export async function POST(request: NextRequest) {
 
     const adminRole = adminRoleMap[data.type] || 'TENANT_ADMIN'
     
-    const admin = await prisma.user.findFirst({
+    // Find admins in the user's branch(es) or tenant admins
+    const userBranches = await prisma.userBranch.findMany({
+      where: { userId: session.user.id },
+      select: { branchId: true, branch: { select: { name: true, isHeadOffice: true } } }
+    })
+    
+    const branchIds = userBranches.map(ub => ub.branchId)
+    const branchName = userBranches[0]?.branch?.name || 'Unknown Branch'
+    
+    // Find admins assigned to the same branch(es) or HQ admins
+    const adminsInBranch = await prisma.user.findMany({
       where: {
         tenantId: userTenantId,
-        role: adminRole as any,
-        isActive: true
+        isActive: true,
+        role: { in: ['TENANT_ADMIN', 'MAINTENANCE_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'PROJECTS_ADMIN'] },
+        OR: [
+          // Admins in the same branch
+          { branches: { some: { branchId: { in: branchIds } } } },
+          // HQ admins (have access to all branches)
+          { branches: { some: { branch: { isHeadOffice: true } } } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true
       }
     })
+    
+    // Find the primary admin for this ticket type
+    const admin = adminsInBranch.find(a => a.role === adminRole) || adminsInBranch[0]
 
     if (admin) {
       await prisma.ticket.update({
@@ -266,7 +300,7 @@ export async function POST(request: NextRequest) {
         data: { adminId: admin.id }
       })
 
-      // Create notification for admin
+      // Create in-app notification for the primary admin
       await prisma.notification.create({
         data: {
           userId: admin.id,
@@ -276,6 +310,23 @@ export async function POST(request: NextRequest) {
           data: { ticketId: ticket.id }
         }
       })
+    }
+
+    // Send email to all admins in the branch
+    const adminEmails = adminsInBranch.filter(a => a.email)
+    for (const adminUser of adminEmails) {
+      sendNewTicketEmailToAdmin(adminUser.email!, {
+        adminName: adminUser.name || 'Admin',
+        ticketNumber: ticket.ticketNumber || ticket.id.slice(-8),
+        ticketTitle: data.title,
+        ticketDescription: data.description,
+        priority: data.priority,
+        type: data.type,
+        branchName: branchName,
+        userName: session.user.name || 'User',
+        userEmail: session.user.email || '',
+        responseDeadline: responseDeadline
+      }).catch(err => logger.error('Failed to send new ticket email:', err))
     }
 
     return NextResponse.json({ ticket })

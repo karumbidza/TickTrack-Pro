@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
-    const { name, email, phone, secondaryPhone, specialties = [], hourlyRate } = await request.json()
+    const { name, email, phone, secondaryPhone } = await request.json()
 
     if (!name || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
@@ -61,8 +61,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: contractor.id,
         tenantId: user.tenantId,
-        specialties: Array.isArray(specialties) ? specialties : [],
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        specialties: [],
         status: 'AVAILABLE',
         secondaryPhone: secondaryPhone || null
       }

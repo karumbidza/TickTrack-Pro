@@ -128,7 +128,7 @@ export async function POST(
     })
 
     // Create contractor profile
-    await prisma.contractor.create({
+    const contractor = await prisma.contractor.create({
       data: {
         userId: user.id,
         tenantId: kyc.tenantId,
@@ -138,6 +138,17 @@ export async function POST(
         status: 'AVAILABLE'
       }
     })
+
+    // Create contractor category relationships
+    if (kyc.serviceCategories && kyc.serviceCategories.length > 0) {
+      await prisma.contractorCategory.createMany({
+        data: kyc.serviceCategories.map(categoryId => ({
+          contractorId: contractor.id,
+          categoryId: categoryId,
+          isAvailable: true
+        }))
+      })
+    }
 
     // Update KYC status to ACTIVE and link user
     await prisma.contractorKYC.update({

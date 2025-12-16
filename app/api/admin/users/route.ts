@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
-    const { name, email, password, role, branchIds } = await request.json()
+    const { name, email, password, role, branchIds, phone } = await request.json()
 
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 })
+    if (!name || !email || !password || !phone) {
+      return NextResponse.json({ error: 'Name, email, phone, and password are required' }, { status: 400 })
     }
 
     if (!branchIds || !Array.isArray(branchIds) || branchIds.length === 0) {
@@ -149,6 +149,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         email,
+        phone,
         password: hashedPassword,
         role: role as any,
         tenantId: session.user.tenantId,
@@ -163,6 +164,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         isActive: true,
         createdAt: true,

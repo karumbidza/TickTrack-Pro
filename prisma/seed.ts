@@ -231,6 +231,43 @@ async function main() {
 
   console.log('✅ Assigned users to branches')
 
+  // Create default asset categories for demo company
+  const defaultCategories = [
+    { name: 'Plumbing', description: 'Water systems, pipes, fixtures, and drainage', color: '#3B82F6' },
+    { name: 'Electrical', description: 'Electrical systems, wiring, and power equipment', color: '#F59E0B' },
+    { name: 'HVAC', description: 'Heating, ventilation, and air conditioning systems', color: '#10B981' },
+    { name: 'Refrigeration', description: 'Cooling and refrigeration equipment', color: '#06B6D4' },
+    { name: 'Generators', description: 'Power generators and backup systems', color: '#8B5CF6' },
+    { name: 'Civil Works', description: 'Building structures, foundations, and construction', color: '#6B7280' },
+    { name: 'Painting', description: 'Interior and exterior painting services', color: '#EC4899' },
+    { name: 'Carpentry', description: 'Woodwork, furniture, and fixtures', color: '#78350F' },
+    { name: 'Security Systems', description: 'CCTV, access control, and alarm systems', color: '#EF4444' },
+    { name: 'Fire Safety', description: 'Fire suppression, alarms, and safety equipment', color: '#DC2626' },
+    { name: 'IT/Networking', description: 'Computer networks, servers, and IT infrastructure', color: '#0EA5E9' },
+    { name: 'Landscaping', description: 'Garden maintenance and outdoor spaces', color: '#22C55E' },
+    { name: 'Cleaning Services', description: 'Janitorial and specialized cleaning', color: '#A855F7' },
+    { name: 'Fuel Systems', description: 'Fuel storage, dispensing, and related equipment', color: '#F97316' },
+    { name: 'Solar Installation', description: 'Solar panels and renewable energy systems', color: '#FACC15' },
+  ]
+
+  for (let i = 0; i < defaultCategories.length; i++) {
+    const cat = defaultCategories[i]
+    await prisma.assetCategory.upsert({
+      where: { tenantId_name: { tenantId: demoTenant.id, name: cat.name } },
+      update: {},
+      create: {
+        tenantId: demoTenant.id,
+        name: cat.name,
+        description: cat.description,
+        color: cat.color,
+        sortOrder: i + 1,
+        isActive: true
+      }
+    })
+  }
+
+  console.log('✅ Created default asset categories')
+
   console.log('\n🎉 Database seeded successfully!')
   console.log('\nYou can now sign in with:')
   console.log('• Super Admin: admin@ticktrackpro.com / admin123')

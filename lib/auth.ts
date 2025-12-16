@@ -41,13 +41,21 @@ export const authOptions: AuthOptions = {
           return null
         }
 
+        // Check if email is verified (skip for SUPER_ADMIN and existing unverified users)
+        // We allow login but will show a warning to verify email
+        // For stricter enforcement, uncomment the following:
+        // if (!user.emailVerified && user.role !== 'SUPER_ADMIN') {
+        //   throw new Error('Please verify your email before logging in')
+        // }
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           tenantId: user.tenantId,
-          image: user.image
+          image: user.image,
+          emailVerified: user.emailVerified
         }
       }
     })

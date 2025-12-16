@@ -72,16 +72,20 @@ export async function GET(request: Request) {
           select: { id: true, name: true, email: true }
         },
         tickets: {
-          where: {
-            status: { in: ['COMPLETED', 'CLOSED'] }
-          },
           include: {
-            invoice: true,
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                amount: true,
+                status: true
+              }
+            },
             assignedTo: {
-              select: { name: true }
+              select: { id: true, name: true, email: true }
             }
           },
-          orderBy: { completedAt: 'desc' }
+          orderBy: { createdAt: 'desc' }
         },
         maintenanceHistory: {
           orderBy: { performedDate: 'desc' },
@@ -98,7 +102,7 @@ export async function GET(request: Request) {
       orderBy: { updatedAt: 'desc' }
     })
 
-    // Calculate total repair costs for each asset
+    // Calculate total repair costs for each asset and format repair history
     const assetsWithCosts = assets.map(asset => {
       const totalRepairCost = asset.tickets.reduce((sum, ticket) => {
         return sum + (ticket.invoice?.amount || 0)
@@ -108,8 +112,31 @@ export async function GET(request: Request) {
         return sum + (mh.cost || 0)
       }, 0)
 
+      // Format repair history with full details for admin
+      const repairHistory = asset.tickets.map(ticket => ({
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        description: ticket.description,
+        status: ticket.status,
+        type: ticket.type,
+        priority: ticket.priority,
+        workDescription: ticket.workDescription,
+        workDescriptionApproved: ticket.workDescriptionApproved,
+        contractorId: ticket.assignedTo?.id || null,
+        contractorName: ticket.assignedTo?.name || null,
+        contractorEmail: ticket.assignedTo?.email || null,
+        createdAt: ticket.createdAt.toISOString(),
+        completedAt: ticket.completedAt?.toISOString() || null,
+        invoiceId: ticket.invoice?.id || null,
+        invoiceNumber: ticket.invoice?.invoiceNumber || null,
+        invoiceAmount: ticket.invoice?.amount || null,
+        invoiceStatus: ticket.invoice?.status || null
+      }))
+
       return {
         ...asset,
+        repairHistory,
         totalRepairCost,
         totalMaintenanceCost: maintenanceCost,
         totalCost: totalRepairCost + maintenanceCost + (asset.purchasePrice || 0)

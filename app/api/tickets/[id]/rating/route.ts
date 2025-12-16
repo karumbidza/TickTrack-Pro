@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { sendRatingEmailToContractor } from '@/lib/email'
+import { sendRatingEmailToContractor, sendJobClosedEmail } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
 const ratingSchema = z.object({
@@ -67,8 +67,19 @@ export async function POST(
       where: { id: ticketId },
       include: {
         assignedTo: {
-          include: {
-            contractorProfile: true // Get the Contractor record linked to the assigned user
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            contractorProfile: true
+          }
+        },
+        admin: {
+          select: {
+            id: true,
+            name: true,
+            email: true
           }
         }
       }
@@ -196,8 +207,33 @@ export async function POST(
         })
       } catch (emailError) {
         logger.error('Failed to send rating email:', emailError)
-        // Don't fail the request if email fails
       }
+      
+      // Also send job closed email to contractor
+      sendJobClosedEmail(ticket.assignedTo.email, {
+        recipientName: ticket.assignedTo.name || 'Contractor',
+        recipientType: 'contractor',
+        ticketNumber: ticket.ticketNumber || ticketId.slice(-8),
+        ticketTitle: ticket.title,
+        contractorName: ticket.assignedTo.name || 'Contractor',
+        completedAt: ticket.completedAt || new Date(),
+        rating: validatedData.overallRating,
+        feedback: validatedData.additionalComments || undefined
+      }).catch(err => logger.error('Failed to send job closed email to contractor:', err))
+    }
+
+    // Send job closed email to admin
+    if (ticket.admin?.email) {
+      sendJobClosedEmail(ticket.admin.email, {
+        recipientName: ticket.admin.name || 'Admin',
+        recipientType: 'admin',
+        ticketNumber: ticket.ticketNumber || ticketId.slice(-8),
+        ticketTitle: ticket.title,
+        contractorName: ticket.assignedTo?.name || 'Contractor',
+        completedAt: ticket.completedAt || new Date(),
+        rating: validatedData.overallRating,
+        feedback: validatedData.additionalComments || undefined
+      }).catch(err => logger.error('Failed to send job closed email to admin:', err))
     }
 
     return NextResponse.json({ 

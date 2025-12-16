@@ -35,6 +35,18 @@ import {
   ChevronLeft
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Paper,
+  Checkbox as MuiCheckbox,
+  Box,
+  Typography,
+  Chip
+} from '@mui/material'
 
 interface Director {
   fullName: string
@@ -75,6 +87,14 @@ interface Project {
   status: string
 }
 
+interface Category {
+  id: string
+  name: string
+  description?: string
+  icon?: string
+  color?: string
+}
+
 const STEPS = [
   { id: 1, title: 'Company Info', icon: Building2 },
   { id: 2, title: 'Documents', icon: FileText },
@@ -112,6 +132,8 @@ export default function ContractorRegistrationPage() {
   const [tenant, setTenant] = useState<{ id: string; name: string; logo?: string } | null>(null)
   const [invitationEmail, setInvitationEmail] = useState('')
   const [currentStep, setCurrentStep] = useState(1)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   
   // Form state
   const [formData, setFormData] = useState({
@@ -217,6 +239,13 @@ export default function ContractorRegistrationPage() {
         setTenant(data.tenant)
         setInvitationEmail(data.invitation.email)
         setFormData(prev => ({ ...prev, companyEmail: data.invitation.email }))
+        
+        // Fetch categories for this tenant
+        const categoriesResponse = await fetch(`/api/asset-categories?tenantId=${data.tenant.id}`)
+        const categoriesData = await categoriesResponse.json()
+        if (categoriesData.categories) {
+          setCategories(categoriesData.categories)
+        }
       } else {
         setError(data.message || 'Invalid invitation link')
       }
@@ -313,6 +342,14 @@ export default function ContractorRegistrationPage() {
     }
   }
 
+  const toggleCategory = (categoryId: string) => {
+    if (selectedCategories.includes(categoryId)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== categoryId))
+    } else {
+      setSelectedCategories([...selectedCategories, categoryId])
+    }
+  }
+
   const nextStep = () => {
     if (currentStep < 9) setCurrentStep(currentStep + 1)
   }
@@ -326,6 +363,12 @@ export default function ContractorRegistrationPage() {
     if (!formData.companyName || !formData.physicalAddress || !formData.companyPhone) {
       toast.error('Please fill in all required company information')
       setCurrentStep(1)
+      return
+    }
+
+    if (selectedCategories.length === 0) {
+      toast.error('Please select at least one service category')
+      setCurrentStep(7)
       return
     }
 
@@ -349,6 +392,9 @@ export default function ContractorRegistrationPage() {
       
       // Add token
       submitData.append('token', token)
+      
+      // Add selected categories
+      submitData.append('categories', JSON.stringify(selectedCategories))
       
       // Add form fields
       Object.entries(formData).forEach(([key, value]) => {
@@ -977,6 +1023,111 @@ export default function ContractorRegistrationPage() {
                     placeholder="10"
                     min="1"
                   />
+                </div>
+                
+                <div className="space-y-3">
+                  <Label>Service Categories <span className="text-red-500">*</span></Label>
+                  <p className="text-sm text-gray-500">Select all categories you can service</p>
+                  
+                  {categories.length === 0 ? (
+                    <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography color="text.secondary">
+                        No service categories have been set up by the tenant yet.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: 'grey.50' }}>
+                            <TableCell padding="checkbox">
+                              <MuiCheckbox
+                                indeterminate={selectedCategories.length > 0 && selectedCategories.length < categories.length}
+                                checked={categories.length > 0 && selectedCategories.length === categories.length}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedCategories(categories.map(c => c.id))
+                                  } else {
+                                    setSelectedCategories([])
+                                  }
+                                }}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {categories.map((category) => (
+                            <TableRow 
+                              key={category.id}
+                              hover
+                              onClick={() => toggleCategory(category.id)}
+                              sx={{ cursor: 'pointer' }}
+                              selected={selectedCategories.includes(category.id)}
+                            >
+                              <TableCell padding="checkbox">
+                                <MuiCheckbox
+                                  checked={selectedCategories.includes(category.id)}
+                                  size="small"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  {category.color && (
+                                    <Box 
+                                      sx={{ 
+                                        width: 12, 
+                                        height: 12, 
+                                        borderRadius: '50%', 
+                                        bgcolor: category.color 
+                                      }} 
+                                    />
+                                  )}
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {category.name}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" color="text.secondary">
+                                  {category.description || '-'}
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Paper>
+                  )}
+                  
+                  {selectedCategories.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                        Selected ({selectedCategories.length}):
+                      </Typography>
+                      {categories
+                        .filter(c => selectedCategories.includes(c.id))
+                        .map(c => (
+                          <Chip
+                            key={c.id}
+                            label={c.name}
+                            size="small"
+                            sx={{ 
+                              bgcolor: c.color || 'primary.main',
+                              color: 'white',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        ))
+                      }
+                    </Box>
+                  )}
+                  
+                  {selectedCategories.length === 0 && (
+                    <p className="text-sm text-red-500">Please select at least one category</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

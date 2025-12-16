@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { sendTicketAssignmentDual } from '@/lib/africastalking-service'
+import { sendJobAssignedSMS } from '@/lib/africastalking-service'
+import { sendJobAssignedEmailToContractor } from '@/lib/email'
 import { logger } from '@/lib/logger'
 
 export async function POST(
@@ -35,6 +36,8 @@ export async function POST(
     }
 
     // Verify ticket belongs to user's tenant and get full details
+    logger.info('Assign ticket request', { ticketId, contractorId, userTenantId: user.tenantId })
+    
     const existingTicket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
@@ -45,11 +48,26 @@ export async function POST(
           select: {
             name: true
           }
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true
+          }
         }
       }
     })
 
     if (!existingTicket) {
+      // Debug: check if ticket exists at all
+      const ticketCheck = await prisma.ticket.findUnique({ where: { id: ticketId } })
+      logger.error('Ticket not found for assignment', { 
+        ticketId, 
+        userTenantId: user.tenantId,
+        ticketExists: !!ticketCheck,
+        ticketTenantId: ticketCheck?.tenantId
+      })
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
     }
 
@@ -80,12 +98,13 @@ export async function POST(
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 })
     }
 
-    // Update ticket with contractor assignment
+    // Update ticket with contractor assignment and set assignedAt for SLA tracking
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: {
         assignedToId: contractorId,
         status: status, // Use provided status (PROCESSING from admin assignment)
+        assignedAt: existingTicket.assignedAt || new Date(), // Only set if not already assigned
         updatedAt: new Date()
       },
       include: {
@@ -120,7 +139,7 @@ export async function POST(
       }
     })
 
-    // Send SMS notification to contractor
+    // Send SMS notification to contractor (both primary and secondary phones)
     const contractorPhones: string[] = []
     if (contractor.phone) contractorPhones.push(contractor.phone)
     if (contractor.contractorProfile?.secondaryPhone) {
@@ -128,32 +147,49 @@ export async function POST(
     }
 
     if (contractorPhones.length > 0) {
-      // Send SMS and WhatsApp notifications asynchronously - don't block the response
-      sendTicketAssignmentDual({
-        contractorName: contractor.name || 'Contractor',
-        contractorPhones,
-        ticketNumber: existingTicket.ticketNumber || existingTicket.id,
-        ticketTitle: existingTicket.title,
+      // Send SMS notification to all contractor phone numbers
+      const smsData = {
+        ticketNumber: existingTicket.ticketNumber || existingTicket.id.slice(-8),
+        title: existingTicket.title,
         priority: existingTicket.priority,
-        adminName: user.name || user.email || 'Admin',
-        companyName: existingTicket.tenant?.name || 'Company',
-        ticketId: existingTicket.id
-      }).then(result => {
-        if (result.sms.success) {
-          logger.info(`SMS sent to contractor for ticket ${existingTicket.ticketNumber}`)
-        } else {
-          logger.warn(`SMS failed for ticket ${existingTicket.ticketNumber}:`, result.sms.results)
-        }
-        if (result.whatsapp.success) {
-          logger.info(`WhatsApp sent to contractor for ticket ${existingTicket.ticketNumber}`)
-        } else {
-          logger.warn(`WhatsApp failed for ticket ${existingTicket.ticketNumber}:`, result.whatsapp.results)
-        }
-      }).catch(err => {
-        logger.error('Notification sending error:', err)
-      })
+        location: existingTicket.location || existingTicket.tenant?.name || 'N/A',
+        userPhone: existingTicket.user?.phone || 'N/A',
+        resolutionDeadline: existingTicket.resolutionDeadline
+      }
+      
+      // Send to all phones (primary and secondary)
+      for (const phone of contractorPhones) {
+        sendJobAssignedSMS(phone, smsData).then(result => {
+          if (result.success) {
+            logger.info(`SMS sent to ${phone} for ticket ${existingTicket.ticketNumber}`)
+          } else {
+            logger.warn(`SMS failed for ${phone} on ticket ${existingTicket.ticketNumber}:`, result.results)
+          }
+        }).catch(err => {
+          logger.error(`Notification sending error to ${phone}:`, err)
+        })
+      }
+      
+      logger.info(`SMS notifications sent to ${contractorPhones.length} phone(s) for contractor ${contractor.name}`)
     } else {
-      logger.debug(`No phone numbers for contractor ${contractor.name}, skipping notifications`)
+      logger.debug(`No phone numbers for contractor ${contractor.name}, skipping SMS`)
+    }
+
+    // Send email to contractor
+    if (contractor.email) {
+      sendJobAssignedEmailToContractor(contractor.email, {
+        contractorName: contractor.name || 'Contractor',
+        ticketNumber: existingTicket.ticketNumber || existingTicket.id.slice(-8),
+        ticketTitle: existingTicket.title,
+        ticketDescription: existingTicket.description || '',
+        priority: existingTicket.priority,
+        type: existingTicket.type || 'MAINTENANCE',
+        location: existingTicket.location || existingTicket.tenant?.name || 'N/A',
+        userName: existingTicket.user?.name || 'User',
+        userPhone: existingTicket.user?.phone || 'N/A',
+        resolutionDeadline: existingTicket.resolutionDeadline,
+        companyName: existingTicket.tenant?.name || 'Company'
+      }).catch(err => logger.error('Failed to send job assigned email:', err))
     }
 
     return NextResponse.json({ ticket: updatedTicket }, { status: 200 })

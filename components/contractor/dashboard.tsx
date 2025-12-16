@@ -9,13 +9,16 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 import { TicketChat } from '@/components/tickets/ticket-chat'
 import { MediaViewer } from '@/components/ui/media-viewer'
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
+import { calculateSLAInfo, getSLAChipColor } from '@/lib/sla-utils'
 import { 
   Clock, 
   MapPin, 
@@ -35,7 +38,11 @@ import {
   Star,
   Shield,
   Award,
-  Paperclip
+  Paperclip,
+  ToggleLeft,
+  Timer,
+  Wrench,
+  ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -59,6 +66,13 @@ interface Job {
   workDescriptionApproved?: boolean
   workDescriptionApprovedAt?: string
   workDescriptionRejectionReason?: string
+  // SLA tracking fields
+  assignedAt?: string
+  contractorAcceptedAt?: string
+  onSiteAt?: string
+  completedAt?: string
+  responseDeadline?: string
+  resolutionDeadline?: string
   tenant: {
     name: string
   }
@@ -67,9 +81,31 @@ interface Job {
     email: string
   }
   asset?: {
+    id: string
     name: string
     assetNumber: string
     location: string
+    brand?: string
+    model?: string
+    serialNumber?: string
+    status: string
+    images: string[]
+    category?: {
+      id: string
+      name: string
+      color?: string
+      icon?: string
+    }
+    repairHistory?: {
+      id: string
+      ticketNumber?: string
+      title: string
+      status: string
+      type: string
+      createdAt: string
+      completedAt?: string
+      cost?: number
+    }[]
   }
   attachments?: {
     id: string
@@ -102,15 +138,28 @@ interface InvoiceForm {
   file: File | null
 }
 
+interface ContractorCategory {
+  id: string
+  categoryId: string
+  categoryName: string
+  categoryColor?: string
+  categoryIcon?: string
+  isAvailable: boolean
+  updatedAt: string
+}
+
 export function ContractorDashboard() {
   const { data: session } = useSession()
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [categories, setCategories] = useState<ContractorCategory[]>([])
+  const [togglingCategory, setTogglingCategory] = useState<string | null>(null)
   const [showJobModal, setShowJobModal] = useState(false)
   const [showAcceptDialog, setShowAcceptDialog] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [expandedRepairId, setExpandedRepairId] = useState<string | null>(null)
   
   // Job Plan state
   const [jobPlan, setJobPlan] = useState<JobPlan>({
@@ -121,6 +170,8 @@ export function ContractorDashboard() {
     notes: ''
   })
   const [rejectionReason, setRejectionReason] = useState('')
+  const [arrivalDateConfirmed, setArrivalDateConfirmed] = useState(false)
+  const [deadlineConfirmed, setDeadlineConfirmed] = useState(false)
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false)
   const [invoiceForm, setInvoiceForm] = useState<InvoiceForm>({
     invoiceNumber: '',
@@ -153,14 +204,16 @@ export function ContractorDashboard() {
 
   const fetchContractorData = async () => {
     try {
-      const [jobsResponse, profileResponse] = await Promise.all([
+      const [jobsResponse, profileResponse, categoriesResponse] = await Promise.all([
         fetch('/api/contractor/jobs'),
-        fetch('/api/contractor/profile')
+        fetch('/api/contractor/profile'),
+        fetch('/api/contractor/categories')
       ])
       
       if (jobsResponse.ok) {
         const jobsData = await jobsResponse.json()
-        setJobs(jobsData || [])
+        // Handle both old format (array) and new format (object with jobs array)
+        setJobs(Array.isArray(jobsData) ? jobsData : (jobsData.jobs || []))
       } else {
         toast.error('Failed to fetch jobs')
       }
@@ -171,11 +224,49 @@ export function ContractorDashboard() {
           setRatingStats(profileData.ratingStats)
         }
       }
+      
+      if (categoriesResponse.ok) {
+        const categoriesData = await categoriesResponse.json()
+        setCategories(categoriesData.categories || [])
+      }
     } catch (error) {
       console.error('Failed to fetch contractor data:', error)
       toast.error('Failed to load dashboard data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleCategoryAvailability = async (categoryId: string, currentStatus: boolean) => {
+    setTogglingCategory(categoryId)
+    try {
+      const response = await fetch('/api/contractor/categories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId,
+          isAvailable: !currentStatus
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(data.message)
+        // Update local state
+        setCategories(prev => prev.map(cat => 
+          cat.categoryId === categoryId 
+            ? { ...cat, isAvailable: !currentStatus }
+            : cat
+        ))
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to update availability')
+      }
+    } catch (error) {
+      console.error('Failed to toggle category:', error)
+      toast.error('Failed to update category availability')
+    } finally {
+      setTogglingCategory(null)
     }
   }
 
@@ -202,6 +293,8 @@ export function ContractorDashboard() {
         toast.success('Job accepted successfully')
         setShowAcceptDialog(false)
         setShowJobModal(false)
+        setArrivalDateConfirmed(false)
+        setDeadlineConfirmed(false)
         setJobPlan({
           technicianName: '',
           arrivalDate: '',
@@ -282,8 +375,8 @@ export function ContractorDashboard() {
   const handleInvoiceUpload = async () => {
     if (!selectedJob) return
     
-    if (!invoiceForm.invoiceNumber || !invoiceForm.amount || !invoiceForm.workDescription || !invoiceForm.file) {
-      toast.error('Please fill all fields including work description and upload an invoice PDF')
+    if (!invoiceForm.invoiceNumber || !invoiceForm.amount || !invoiceForm.file) {
+      toast.error('Please fill invoice number, amount and upload an invoice PDF')
       return
     }
 
@@ -436,109 +529,201 @@ export function ContractorDashboard() {
   // DataGrid column definitions
   const jobColumns: GridColDef[] = useMemo(() => [
     {
-      field: 'jobDetails',
-      headerName: 'Job Details',
-      flex: 2,
-      minWidth: 300,
-      renderCell: (params: GridRenderCellParams<Job>) => {
-        const job = params.row
-        return (
-          <Box sx={{ py: 1.5, width: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              <Box sx={{ flexShrink: 0, mt: 0.5 }}>
-                {getStatusIcon(job.status)}
+      field: 'ticket',
+      headerName: 'Ticket',
+      flex: 1.2,
+      minWidth: 130,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
+          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
+          <p className="text-xs text-blue-600">{params.row.ticketNumber}</p>
+        </Box>
+      ),
+    },
+    {
+      field: 'ticketId',
+      headerName: 'Ticket ID',
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <span className="text-xs font-mono text-gray-600">
+          {params.row.id.slice(0, 8).toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 1.3,
+      minWidth: 140,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <Tooltip 
+            title={
+              <Box sx={{ p: 1, maxWidth: 400 }}>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
+                  {params.row.description || 'No description'}
+                </p>
               </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                  <span className="text-base font-semibold text-gray-900 truncate">
-                    {job.title}
-                  </span>
-                  <Chip 
-                    label={job.type?.replace(/_/g, ' ')} 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ fontSize: '0.7rem', height: 20 }}
-                  />
-                </Box>
-                <p className="text-sm font-medium text-blue-600">{job.ticketNumber}</p>
-                <p className="text-sm text-gray-700 line-clamp-1">{job.description}</p>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                  {job.location && (
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {job.location}
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> {new Date(job.createdAt).toLocaleDateString()}
-                  </span>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )
-      },
+            }
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: 'grey.900',
+                  '& .MuiTooltip-arrow': { color: 'grey.900' },
+                  maxWidth: 400,
+                },
+              },
+            }}
+          >
+            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+              {params.row.description || 'No description'}
+            </p>
+          </Tooltip>
+        </Box>
+      ),
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <Chip
+          label={params.row.type?.replace(/_/g, ' ')}
+          size="small"
+          variant="outlined"
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+        />
+      ),
     },
     {
       field: 'priority',
       headerName: 'Priority',
-      width: 100,
+      flex: 0.5,
+      minWidth: 70,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
         <Chip
           label={params.row.priority}
           size="small"
           color={getPriorityChipColor(params.row.priority)}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
-      field: 'tenant',
-      headerName: 'Client',
-      width: 150,
-      renderCell: (params: GridRenderCellParams<Job>) => (
-        <Box>
-          <p className="text-sm font-medium text-gray-900">
-            {params.row.tenant?.name || 'N/A'}
-          </p>
-          {params.row.user && (
-            <p className="text-xs text-gray-500">{params.row.user.name}</p>
-          )}
-        </Box>
-      ),
-    },
-    {
-      field: 'asset',
-      headerName: 'Asset',
-      width: 130,
-      renderCell: (params: GridRenderCellParams<Job>) => {
-        const job = params.row
-        return job.asset ? (
-          <Box>
-            <p className="text-sm font-medium text-gray-900">{job.asset.name}</p>
-            <p className="text-xs text-gray-500">{job.asset.assetNumber}</p>
-          </Box>
-        ) : (
-          <span className="text-sm text-gray-400">-</span>
-        )
-      },
-    },
-    {
       field: 'status',
       headerName: 'Status',
-      width: 150,
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
         <Chip
           label={params.row.status.replace(/_/g, ' ')}
           size="small"
           color={getStatusChipColor(params.row.status)}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
+      field: 'sla',
+      headerName: 'SLA',
+      flex: 0.8,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => {
+        const slaInfo = calculateSLAInfo({
+          status: params.row.status,
+          priority: params.row.priority,
+          createdAt: params.row.createdAt,
+          assignedAt: params.row.assignedAt,
+          contractorAcceptedAt: params.row.contractorAcceptedAt,
+          onSiteAt: params.row.onSiteAt,
+          completedAt: params.row.completedAt,
+          responseDeadline: params.row.responseDeadline,
+          resolutionDeadline: params.row.resolutionDeadline,
+        })
+        return (
+          <Tooltip title={`Response: ${slaInfo.responseStatus} | Resolution: ${slaInfo.resolutionStatus}`}>
+            <Chip
+              icon={<Timer className="h-3 w-3" />}
+              label={slaInfo.displayText}
+              size="small"
+              color={getSLAChipColor(slaInfo.overallStatus)}
+              sx={{ fontWeight: 500, fontSize: '0.65rem' }}
+            />
+          </Tooltip>
+        )
+      },
+    },
+    {
+      field: 'client',
+      headerName: 'Client',
+      flex: 0.8,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <Box sx={{ textAlign: 'center' }}>
+          <p className="text-xs font-medium text-gray-900 truncate">
+            {params.row.tenant?.name || 'N/A'}
+          </p>
+          {params.row.user && (
+            <p className="text-xs text-gray-500 truncate">{params.row.user.name}</p>
+          )}
+        </Box>
+      ),
+    },
+    {
+      field: 'location',
+      headerName: 'Location',
+      flex: 0.6,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        params.row.location ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+            <MapPin className="h-3 w-3 text-gray-400" />
+            <span className="text-xs text-gray-700 truncate">{params.row.location}</span>
+          </Box>
+        ) : (
+          <span className="text-xs text-gray-400">-</span>
+        )
+      ),
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 0.5,
+      minWidth: 75,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Job>) => (
+        <span className="text-xs text-gray-500">
+          {new Date(params.row.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
       field: 'actions',
-      headerName: 'Actions',
-      width: 80,
+      headerName: '',
+      width: 50,
       sortable: false,
       filterable: false,
       align: 'center',
@@ -586,8 +771,8 @@ export function ContractorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -744,6 +929,51 @@ export function ContractorDashboard() {
           </Card>
         )}
 
+        {/* Category Availability */}
+        {categories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <ToggleLeft className="h-5 w-5 mr-2 text-blue-500" />
+                Service Category Availability
+              </CardTitle>
+              <CardDescription>Toggle your availability for each service category. When unavailable, you won't be assigned to new tickets in that category.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map((category) => (
+                  <div
+                    key={category.categoryId}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${
+                      category.isAvailable 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-gray-50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: category.categoryColor || '#6b7280' }}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{category.categoryName}</p>
+                        <p className={`text-xs ${category.isAvailable ? 'text-green-600' : 'text-gray-500'}`}>
+                          {category.isAvailable ? 'Available for assignments' : 'Not accepting assignments'}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={category.isAvailable}
+                      onCheckedChange={() => handleToggleCategoryAvailability(category.categoryId, category.isAvailable)}
+                      disabled={togglingCategory === category.categoryId}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Jobs Table */}
         <Card>
           <CardHeader>
@@ -765,7 +995,7 @@ export function ContractorDashboard() {
               </div>
             ) : (
               <Box sx={{ width: '100%', p: 2 }}>
-                <DataGrid
+                <ScrollableDataGrid
                   rows={jobs}
                   columns={jobColumns}
                   initialState={{
@@ -779,18 +1009,6 @@ export function ContractorDashboard() {
                   pageSizeOptions={[5, 10, 25, 50]}
                   disableRowSelectionOnClick
                   autoHeight
-                  sx={{
-                    '& .MuiDataGrid-cell': {
-                      borderColor: '#f3f4f6',
-                    },
-                    '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: '#f9fafb',
-                      borderBottom: '1px solid #e5e7eb',
-                    },
-                    '& .MuiDataGrid-row:hover': {
-                      backgroundColor: '#f9fafb',
-                    },
-                  }}
                 />
               </Box>
             )}
@@ -858,6 +1076,94 @@ export function ContractorDashboard() {
                   </div>
                 </div>
 
+                {/* SLA Information */}
+                {(() => {
+                  const slaInfo = calculateSLAInfo({
+                    status: selectedJob.status,
+                    priority: selectedJob.priority,
+                    createdAt: selectedJob.createdAt,
+                    assignedAt: selectedJob.assignedAt,
+                    contractorAcceptedAt: selectedJob.contractorAcceptedAt,
+                    onSiteAt: selectedJob.onSiteAt,
+                    completedAt: selectedJob.completedAt,
+                    responseDeadline: selectedJob.responseDeadline,
+                    resolutionDeadline: selectedJob.resolutionDeadline,
+                  })
+                  const isCompleted = ['COMPLETED', 'CLOSED', 'RESOLVED'].includes(selectedJob.status)
+                  
+                  return (
+                    <div className={`p-4 rounded-lg border-2 ${
+                      isCompleted ? 'bg-gray-50 border-gray-200' :
+                      slaInfo.overallStatus === 'overdue' ? 'bg-red-50 border-red-300' :
+                      slaInfo.overallStatus === 'warning' ? 'bg-yellow-50 border-yellow-300' :
+                      'bg-green-50 border-green-300'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Timer className={`h-5 w-5 ${
+                          isCompleted ? 'text-gray-500' :
+                          slaInfo.overallStatus === 'overdue' ? 'text-red-600' :
+                          slaInfo.overallStatus === 'warning' ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`} />
+                        <h4 className="text-sm font-semibold text-gray-900">SLA Status</h4>
+                        <Chip
+                          label={slaInfo.displayText}
+                          size="small"
+                          color={getSLAChipColor(slaInfo.overallStatus)}
+                          sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600 font-medium">Response Due:</p>
+                          <p className={`font-semibold ${
+                            slaInfo.responseStatus === 'overdue' ? 'text-red-600' :
+                            slaInfo.responseStatus === 'warning' ? 'text-yellow-600' :
+                            'text-green-600'
+                          }`}>
+                            {selectedJob.responseDeadline 
+                              ? new Date(selectedJob.responseDeadline).toLocaleString()
+                              : 'Not set'
+                            }
+                          </p>
+                          {!isCompleted && selectedJob.responseDeadline && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {slaInfo.responseTimeRemaining}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <p className="text-gray-600 font-medium">Resolution Due:</p>
+                          <p className={`font-semibold ${
+                            slaInfo.resolutionStatus === 'overdue' ? 'text-red-600' :
+                            slaInfo.resolutionStatus === 'warning' ? 'text-yellow-600' :
+                            'text-green-600'
+                          }`}>
+                            {selectedJob.resolutionDeadline 
+                              ? new Date(selectedJob.resolutionDeadline).toLocaleString()
+                              : 'Not set'
+                            }
+                          </p>
+                          {!isCompleted && selectedJob.resolutionDeadline && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              {slaInfo.resolutionTimeRemaining}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {!isCompleted && slaInfo.overallStatus === 'overdue' && (
+                        <div className="mt-3 p-2 bg-red-100 rounded text-red-700 text-sm flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="font-medium">SLA breached! Immediate action required.</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
                 {/* Description */}
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Description</h4>
@@ -869,11 +1175,175 @@ export function ContractorDashboard() {
                 {/* Asset Info */}
                 {selectedJob.asset && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Related Asset</h4>
-                    <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                      <p><span className="font-medium">Asset:</span> {selectedJob.asset.name}</p>
-                      <p><span className="font-medium">Asset Number:</span> {selectedJob.asset.assetNumber}</p>
-                      <p><span className="font-medium">Location:</span> {selectedJob.asset.location}</p>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Related Asset
+                    </h4>
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      {/* Asset Header with Image */}
+                      <div className="flex gap-4">
+                        {/* Asset Image */}
+                        {selectedJob.asset.images && selectedJob.asset.images.length > 0 ? (
+                          <div className="flex-shrink-0">
+                            <img
+                              src={selectedJob.asset.images[0]}
+                              alt={selectedJob.asset.name}
+                              className="w-24 h-24 object-cover rounded-lg border shadow-sm"
+                            />
+                            {selectedJob.asset.images.length > 1 && (
+                              <p className="text-xs text-center text-gray-500 mt-1">
+                                +{selectedJob.asset.images.length - 1} more
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Package className="h-8 w-8 text-gray-400" />
+                          </div>
+                        )}
+                        
+                        {/* Asset Details */}
+                        <div className="flex-1 space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold text-gray-900 text-base">{selectedJob.asset.name}</p>
+                            {selectedJob.asset.category && (
+                              <span 
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: selectedJob.asset.category.color ? `${selectedJob.asset.category.color}20` : '#e5e7eb',
+                                  color: selectedJob.asset.category.color || '#374151'
+                                }}
+                              >
+                                {selectedJob.asset.category.name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-gray-600">
+                            <p><span className="font-medium text-gray-700">Asset #:</span> {selectedJob.asset.assetNumber}</p>
+                            <p><span className="font-medium text-gray-700">Status:</span> {selectedJob.asset.status?.replace('_', ' ') || 'N/A'}</p>
+                            {selectedJob.asset.brand && (
+                              <p><span className="font-medium text-gray-700">Brand:</span> {selectedJob.asset.brand}</p>
+                            )}
+                            {selectedJob.asset.model && (
+                              <p><span className="font-medium text-gray-700">Model:</span> {selectedJob.asset.model}</p>
+                            )}
+                            {selectedJob.asset.serialNumber && (
+                              <p className="col-span-2"><span className="font-medium text-gray-700">Serial #:</span> {selectedJob.asset.serialNumber}</p>
+                            )}
+                            <p className="col-span-2 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-gray-400" />
+                              <span className="font-medium text-gray-700">Location:</span> {selectedJob.asset.location}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Repair History */}
+                      {selectedJob.asset.repairHistory && selectedJob.asset.repairHistory.length > 0 && (
+                        <div className="mt-4 pt-3 border-t">
+                          <h5 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Wrench className="h-4 w-4" />
+                            Repair History ({selectedJob.asset.repairHistory.length})
+                          </h5>
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {selectedJob.asset.repairHistory.map((repair, idx) => (
+                              <div 
+                                key={repair.id || idx} 
+                                className="bg-white rounded border overflow-hidden"
+                              >
+                                {/* Clickable Header */}
+                                <div 
+                                  className="flex items-center justify-between p-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                  onClick={() => setExpandedRepairId(expandedRepairId === repair.id ? null : repair.id)}
+                                >
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} />
+                                      <span className="font-mono text-xs text-blue-600">#{repair.ticketNumber}</span>
+                                      <span className="font-medium text-gray-800 text-sm">{repair.title}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 ml-6 mt-0.5">
+                                      <span className="text-xs text-gray-500">
+                                        {new Date(repair.createdAt).toLocaleDateString()}
+                                        {repair.completedAt && ` → ${new Date(repair.completedAt).toLocaleDateString()}`}
+                                      </span>
+                                      {repair.contractorName && (
+                                        <span className="text-xs text-gray-500">• {repair.contractorName}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                      repair.status === 'COMPLETED' || repair.status === 'CLOSED' 
+                                        ? 'bg-green-100 text-green-700'
+                                        : repair.status === 'IN_PROGRESS' 
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : 'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {repair.status?.replace('_', ' ')}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {/* Expanded Details */}
+                                {expandedRepairId === repair.id && (
+                                  <div className="px-4 pb-3 pt-1 bg-gray-50 border-t text-sm space-y-3">
+                                    {/* Basic Info */}
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="font-medium text-gray-600">Type:</span>{' '}
+                                        <span className="text-gray-800">{repair.type?.replace('_', ' ')}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">Priority:</span>{' '}
+                                        <span className={`font-medium ${
+                                          repair.priority === 'CRITICAL' ? 'text-red-600' :
+                                          repair.priority === 'HIGH' ? 'text-orange-600' :
+                                          repair.priority === 'MEDIUM' ? 'text-yellow-600' :
+                                          'text-green-600'
+                                        }`}>{repair.priority}</span>
+                                      </div>
+                                      {repair.contractorName && (
+                                        <div className="col-span-2">
+                                          <span className="font-medium text-gray-600">Assigned Contractor:</span>{' '}
+                                          <span className="text-gray-800">{repair.contractorName}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Original Issue Description */}
+                                    {repair.description && (
+                                      <div>
+                                        <p className="text-xs font-medium text-gray-600 mb-1">Original Issue:</p>
+                                        <p className="text-xs text-gray-700 bg-white p-2 rounded border">{repair.description}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Approved Work Description */}
+                                    {repair.workDescription && (
+                                      <div>
+                                        <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                                          <CheckCircle className="h-3 w-3" />
+                                          Approved Work Description:
+                                        </p>
+                                        <p className="text-xs text-gray-700 bg-green-50 p-2 rounded border border-green-200 whitespace-pre-wrap">{repair.workDescription}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Timeline */}
+                                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-1 border-t">
+                                      <span>Created: {new Date(repair.createdAt).toLocaleString()}</span>
+                                      {repair.completedAt && (
+                                        <span>Completed: {new Date(repair.completedAt).toLocaleString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1001,7 +1471,10 @@ export function ContractorDashboard() {
                       )}
                       {!selectedJob.invoice && (
                         <Button 
-                          onClick={() => setShowInvoiceDialog(true)}
+                          onClick={() => {
+                            setInvoiceForm(prev => ({ ...prev, workDescription: selectedJob.workDescription || '' }))
+                            setShowInvoiceDialog(true)
+                          }}
                           className="bg-blue-600 hover:bg-blue-700"
                         >
                           <Upload className="h-4 w-4 mr-2" />
@@ -1044,7 +1517,10 @@ export function ContractorDashboard() {
                         </div>
                       ) : (
                         <Button 
-                          onClick={() => setShowInvoiceDialog(true)}
+                          onClick={() => {
+                            setInvoiceForm(prev => ({ ...prev, workDescription: selectedJob.workDescription || '' }))
+                            setShowInvoiceDialog(true)
+                          }}
                           className="bg-blue-600 hover:bg-blue-700"
                         >
                           <Upload className="h-4 w-4 mr-2" />
@@ -1060,13 +1536,75 @@ export function ContractorDashboard() {
         </Dialog>
 
         {/* Accept Job Dialog with Job Plan */}
-        <Dialog open={showAcceptDialog} onOpenChange={setShowAcceptDialog}>
+        <Dialog open={showAcceptDialog} onOpenChange={(open) => {
+          setShowAcceptDialog(open)
+          if (!open) {
+            setDeadlineConfirmed(false)
+            setArrivalDateConfirmed(false)
+          }
+        }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Accept Job & Submit Plan</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* SLA Deadline Warning */}
+              {selectedJob?.resolutionDeadline && (
+                <div className={`p-3 rounded-lg border-2 ${
+                  new Date(selectedJob.resolutionDeadline) < new Date() 
+                    ? 'bg-red-50 border-red-300' 
+                    : 'bg-amber-50 border-amber-300'
+                }`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className={`h-5 w-5 ${
+                      new Date(selectedJob.resolutionDeadline) < new Date()
+                        ? 'text-red-600'
+                        : 'text-amber-600'
+                    }`} />
+                    <span className="font-semibold text-gray-900">SLA Deadline</span>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    This ticket must be closed by{' '}
+                    <span className="font-bold">
+                      {new Date(selectedJob.resolutionDeadline).toLocaleString()}
+                    </span>
+                  </p>
+                  {(() => {
+                    const deadline = new Date(selectedJob.resolutionDeadline)
+                    const now = new Date()
+                    const diffMs = deadline.getTime() - now.getTime()
+                    if (diffMs <= 0) {
+                      return (
+                        <p className="text-sm text-red-600 font-semibold mt-1">
+                          ⚠️ SLA already breached!
+                        </p>
+                      )
+                    }
+                    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60))
+                    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+                    return (
+                      <p className="text-sm text-amber-700 mt-1">
+                        Time remaining: <span className="font-semibold">{diffHrs}h {diffMins}m</span>
+                      </p>
+                    )
+                  })()}
+                  
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="deadlineConfirm"
+                      checked={deadlineConfirmed}
+                      onChange={(e) => setDeadlineConfirmed(e.target.checked)}
+                      className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    />
+                    <label htmlFor="deadlineConfirm" className="text-sm font-medium text-gray-700">
+                      I confirm I can meet this deadline
+                    </label>
+                  </div>
+                </div>
+              )}
+              
               <p className="text-sm text-gray-600">
                 Please provide the job plan details before accepting this job.
               </p>
@@ -1084,12 +1622,92 @@ export function ContractorDashboard() {
                 
                 <div>
                   <Label htmlFor="arrivalDate">Arrival Date & Time *</Label>
-                  <Input
-                    id="arrivalDate"
-                    type="datetime-local"
-                    value={jobPlan.arrivalDate}
-                    onChange={(e) => setJobPlan({ ...jobPlan, arrivalDate: e.target.value })}
-                  />
+                  {/* Deadline reminder on calendar */}
+                  {selectedJob?.resolutionDeadline && (
+                    <p className="text-xs text-amber-600 mb-1 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Must complete by: {new Date(selectedJob.resolutionDeadline).toLocaleString()}
+                    </p>
+                  )}
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="arrivalDate"
+                      type="datetime-local"
+                      value={jobPlan.arrivalDate}
+                      max={selectedJob?.resolutionDeadline 
+                        ? new Date(selectedJob.resolutionDeadline).toISOString().slice(0, 16)
+                        : undefined
+                      }
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value)
+                        const deadline = selectedJob?.resolutionDeadline 
+                          ? new Date(selectedJob.resolutionDeadline) 
+                          : null
+                        
+                        if (deadline && selectedDate > deadline) {
+                          toast.error('Arrival date cannot be after the resolution deadline!')
+                          return
+                        }
+                        
+                        setJobPlan({ ...jobPlan, arrivalDate: e.target.value })
+                        setArrivalDateConfirmed(false)
+                      }}
+                      className={arrivalDateConfirmed ? 'border-green-500 bg-green-50' : ''}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={arrivalDateConfirmed ? 'default' : 'outline'}
+                      onClick={() => {
+                        if (jobPlan.arrivalDate) {
+                          const selectedDate = new Date(jobPlan.arrivalDate)
+                          const deadline = selectedJob?.resolutionDeadline 
+                            ? new Date(selectedJob.resolutionDeadline) 
+                            : null
+                          
+                          if (deadline && selectedDate > deadline) {
+                            toast.error('Arrival date cannot be after the resolution deadline!')
+                            return
+                          }
+                          
+                          setArrivalDateConfirmed(true)
+                          toast.success('Arrival date confirmed!')
+                        } else {
+                          toast.error('Please select a date first')
+                        }
+                      }}
+                      className={arrivalDateConfirmed ? 'bg-green-600 hover:bg-green-700' : ''}
+                    >
+                      {arrivalDateConfirmed ? (
+                        <><CheckCircle className="h-4 w-4 mr-1" /> Set</>
+                      ) : (
+                        'Set'
+                      )}
+                    </Button>
+                  </div>
+                  {arrivalDateConfirmed && jobPlan.arrivalDate && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Arrival set for {new Date(jobPlan.arrivalDate).toLocaleString()}
+                    </p>
+                  )}
+                  {/* Warning if arrival is close to deadline */}
+                  {jobPlan.arrivalDate && selectedJob?.resolutionDeadline && (() => {
+                    const arrival = new Date(jobPlan.arrivalDate)
+                    const deadline = new Date(selectedJob.resolutionDeadline)
+                    const estimatedHours = parseFloat(jobPlan.estimatedDuration) || 0
+                    const estimatedCompletion = new Date(arrival.getTime() + estimatedHours * 60 * 60 * 1000)
+                    
+                    if (estimatedCompletion > deadline) {
+                      return (
+                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Warning: Estimated completion ({estimatedCompletion.toLocaleString()}) exceeds deadline!
+                        </p>
+                      )
+                    }
+                    return null
+                  })()}
                 </div>
                 
                 <div>
@@ -1133,12 +1751,18 @@ export function ContractorDashboard() {
               </Button>
               <Button 
                 onClick={handleAcceptJob}
-                disabled={actionLoading}
+                disabled={actionLoading || (selectedJob?.resolutionDeadline && !deadlineConfirmed)}
                 className="bg-green-600 hover:bg-green-700"
+                title={!deadlineConfirmed && selectedJob?.resolutionDeadline ? 'Please confirm you can meet the deadline' : ''}
               >
                 {actionLoading ? 'Submitting...' : 'Accept & Submit Plan'}
               </Button>
             </DialogFooter>
+            {!deadlineConfirmed && selectedJob?.resolutionDeadline && (
+              <p className="text-xs text-amber-600 text-center mt-2">
+                ☝️ Please confirm you can meet the deadline to enable the Accept button
+              </p>
+            )}
           </DialogContent>
         </Dialog>
 
@@ -1224,17 +1848,21 @@ export function ContractorDashboard() {
 
                   <div>
                     <Label htmlFor="workDescription">
-                      Work Description *
-                      <span className="text-xs text-gray-500 ml-2">(Will appear in invoice summary)</span>
+                      Approved Work Description
+                      <span className="text-xs text-gray-500 ml-2">(Pre-filled from site manager approval)</span>
                     </Label>
                     <Textarea
                       id="workDescription"
-                      placeholder="Describe all work performed, materials used, repairs made, etc."
+                      placeholder="No work description available"
                       value={invoiceForm.workDescription}
-                      onChange={(e) => setInvoiceForm({ ...invoiceForm, workDescription: e.target.value })}
+                      readOnly
+                      disabled
                       rows={4}
-                      className="mt-1"
+                      className="mt-1 bg-gray-100 text-gray-700 cursor-not-allowed"
                     />
+                    {!invoiceForm.workDescription && (
+                      <p className="text-xs text-amber-600 mt-1">Note: No approved work description found for this job.</p>
+                    )}
                   </div>
                   
                   <div>

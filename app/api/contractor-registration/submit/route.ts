@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
 
     const specializations = parseArray(formData.get('specializations') as string)
     const industrySectors = parseArray(formData.get('industrySectors') as string)
+    const serviceCategories = parseArray(formData.get('categories') as string)
 
     // Create KYC record
     const kyc = await prisma.contractorKYC.create({
@@ -170,6 +171,7 @@ export async function POST(request: NextRequest) {
         specialLicenses,
         methodStatementsUrl,
         specializations,
+        serviceCategories,
         
         // Previous Experience
         previousClients,

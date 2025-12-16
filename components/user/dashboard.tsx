@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,9 @@ import { AssetRegister } from '@/components/assets/asset-register'
 import { TicketChat } from '@/components/tickets/ticket-chat'
 import { MediaViewer } from '@/components/ui/media-viewer'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { calculateSLAInfo, getSLAChipColor } from '@/lib/sla-utils'
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -41,7 +43,12 @@ import {
   XCircle,
   AlertTriangle,
   Paperclip,
-  FileText
+  FileText,
+  Pencil,
+  Video,
+  Upload,
+  Image as ImageIcon,
+  Timer
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -86,6 +93,13 @@ interface TicketSummary {
   workDescriptionApproved?: boolean
   workDescriptionApprovedAt?: string
   workDescriptionRejectionReason?: string
+  // SLA tracking fields
+  assignedAt?: string
+  contractorAcceptedAt?: string
+  onSiteAt?: string
+  completedAt?: string
+  responseDeadline?: string
+  resolutionDeadline?: string
   createdAt: string
   updatedAt: string
   location?: string
@@ -108,6 +122,17 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    priority: '',
+    type: ''
+  })
+  const [editMediaFiles, setEditMediaFiles] = useState<File[]>([])
+  const [existingAttachments, setExistingAttachments] = useState<{id: string, filename: string, originalName: string, url: string, mimeType: string}[]>([])
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -393,6 +418,79 @@ export function UserDashboard({ user }: UserDashboardProps) {
     return ticket.status === 'OPEN' || (ticket.status === 'PROCESSING' && !ticket.assignedTo)
   }
 
+  // Check if user can edit ticket (same logic as cancel - only when not yet assigned)
+  const canEditTicket = (ticket: TicketSummary) => {
+    return ticket.status === 'OPEN' || (ticket.status === 'PROCESSING' && !ticket.assignedTo)
+  }
+
+  // Open edit dialog with current ticket data
+  const openEditDialog = (ticket: TicketSummary) => {
+    setEditFormData({
+      title: ticket.title,
+      description: ticket.description,
+      priority: ticket.priority,
+      type: ticket.type
+    })
+    setExistingAttachments(ticket.attachments || [])
+    setAttachmentsToDelete([])
+    setEditMediaFiles([])
+    setShowEditDialog(true)
+  }
+
+  // Handle edit ticket submission
+  const handleEditTicket = async () => {
+    if (!selectedTicket) return
+
+    if (!editFormData.title.trim()) {
+      alert('Please enter a ticket title')
+      return
+    }
+
+    setEditLoading(true)
+    try {
+      // Create FormData to handle file uploads
+      const formData = new FormData()
+      formData.append('title', editFormData.title.trim())
+      formData.append('description', editFormData.description.trim())
+      formData.append('priority', editFormData.priority)
+      formData.append('type', editFormData.type)
+      
+      // Add attachments to delete
+      if (attachmentsToDelete.length > 0) {
+        formData.append('deleteAttachments', JSON.stringify(attachmentsToDelete))
+      }
+      
+      // Add new files
+      editMediaFiles.forEach((file) => {
+        formData.append('files', file)
+      })
+
+      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
+        method: 'PATCH',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        alert('Ticket updated successfully')
+        setShowEditDialog(false)
+        setEditMediaFiles([])
+        setAttachmentsToDelete([])
+        fetchUserTickets()
+        // Update selected ticket with new data
+        setSelectedTicket({ ...selectedTicket, ...data.ticket })
+      } else {
+        alert(data.error || 'Failed to update ticket')
+      }
+    } catch (error) {
+      console.error('Failed to update ticket:', error)
+      alert('Failed to update ticket')
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
   const formatStatus = (status: string) => {
     return status.replace(/_/g, ' ')
   }
@@ -435,80 +533,185 @@ export function UserDashboard({ user }: UserDashboardProps) {
     {
       field: 'ticket',
       headerName: 'Ticket',
-      flex: 1,
-      minWidth: 250,
+      flex: 1.2,
+      minWidth: 130,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <Box sx={{ py: 1 }}>
-          <p className="font-medium text-gray-900">{params.row.title}</p>
-          <p className="text-sm text-gray-500 truncate max-w-[200px]">{params.row.description}</p>
+        <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
+          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
+        </Box>
+      ),
+    },
+    {
+      field: 'ticketId',
+      headerName: 'Ticket ID',
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketSummary>) => (
+        <span className="text-xs font-mono text-gray-600">
+          {params.row.id.slice(0, 8).toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      field: 'description',
+      headerName: 'Description',
+      flex: 1.5,
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketSummary>) => (
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <Tooltip 
+            title={
+              <Box sx={{ p: 1, maxWidth: 400 }}>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
+                  {params.row.description || 'No description'}
+                </p>
+              </Box>
+            }
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: 'grey.900',
+                  '& .MuiTooltip-arrow': { color: 'grey.900' },
+                  maxWidth: 400,
+                },
+              },
+            }}
+          >
+            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+              {params.row.description || 'No description'}
+            </p>
+          </Tooltip>
         </Box>
       ),
     },
     {
       field: 'type',
       headerName: 'Type',
-      width: 130,
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={params.row.type?.replace(/_/g, ' ')}
           size="small"
           variant="outlined"
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
       field: 'priority',
       headerName: 'Priority',
-      width: 100,
+      flex: 0.5,
+      minWidth: 70,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={params.row.priority}
           size="small"
           color={getPriorityChipColor(params.row.priority)}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
       field: 'status',
       headerName: 'Status',
-      width: 150,
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={formatStatus(params.row.status)}
           size="small"
           color={getStatusChipColor(params.row.status)}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
+      field: 'sla',
+      headerName: 'SLA',
+      flex: 0.8,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketSummary>) => {
+        const slaInfo = calculateSLAInfo({
+          createdAt: params.row.createdAt,
+          priority: params.row.priority,
+          status: params.row.status,
+          assignedAt: params.row.assignedAt,
+          contractorAcceptedAt: params.row.contractorAcceptedAt,
+          onSiteAt: params.row.onSiteAt,
+          completedAt: params.row.completedAt,
+          responseDeadline: params.row.responseDeadline,
+          resolutionDeadline: params.row.resolutionDeadline
+        })
+        
+        const showResolution = !['OPEN', 'PROCESSING', 'ASSIGNED'].includes(params.row.status)
+        const status = showResolution ? slaInfo.resolutionStatus : slaInfo.responseStatus
+        const label = showResolution ? slaInfo.formattedResolutionRemaining : slaInfo.formattedResponseRemaining
+        const tooltipText = showResolution 
+          ? `Resolution: ${slaInfo.formattedResolutionRemaining}`
+          : `Response: ${slaInfo.formattedResponseRemaining}`
+        
+        return (
+          <Tooltip title={tooltipText}>
+            <Chip
+              icon={<Timer className="h-3 w-3" />}
+              label={label.length > 10 ? label.substring(0, 10) + '...' : label}
+              size="small"
+              color={getSLAChipColor(status)}
+              sx={{ fontWeight: 500, fontSize: '0.65rem' }}
+            />
+          </Tooltip>
+        )
+      },
+    },
+    {
       field: 'assignedTo',
       headerName: 'Contractor',
-      width: 150,
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         params.row.assignedTo ? (
-          <span className="text-sm">{params.row.assignedTo.name || params.row.assignedTo.email}</span>
+          <span className="text-xs truncate">{params.row.assignedTo.name || params.row.assignedTo.email}</span>
         ) : (
-          <span className="text-sm text-gray-400">Not assigned</span>
+          <span className="text-xs text-gray-400">Not assigned</span>
         )
       ),
     },
     {
       field: 'createdAt',
       headerName: 'Created',
-      width: 110,
+      flex: 0.5,
+      minWidth: 75,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <span className="text-sm text-gray-500">
+        <span className="text-xs text-gray-500">
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
     },
     {
       field: 'actions',
-      headerName: 'Actions',
-      width: 80,
+      headerName: '',
+      width: 50,
       sortable: false,
       filterable: false,
       align: 'center',
@@ -539,8 +742,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -827,7 +1030,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
             </div>
           ) : (
             <Box sx={{ width: '100%' }}>
-              <DataGrid
+              <ScrollableDataGrid
                 rows={filteredTickets}
                 columns={ticketColumns}
                 initialState={{
@@ -841,18 +1044,6 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 pageSizeOptions={[5, 10, 25, 50]}
                 disableRowSelectionOnClick
                 autoHeight
-                sx={{
-                  '& .MuiDataGrid-cell': {
-                    borderColor: '#f3f4f6',
-                  },
-                  '& .MuiDataGrid-columnHeaders': {
-                    backgroundColor: '#f9fafb',
-                    borderBottom: '1px solid #e5e7eb',
-                  },
-                  '& .MuiDataGrid-row:hover': {
-                    backgroundColor: '#f9fafb',
-                  },
-                }}
               />
             </Box>
           )}
@@ -861,7 +1052,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
           </>
         ) : (
           /* Asset Register Tab */
-          <AssetRegister tenantId={user.tenantId || ''} />
+          <AssetRegister tenantId={user.tenantId || ''} userRole={user.role} />
         )
         ) : (
           /* Admin Users - Direct them to proper admin sections */
@@ -1041,6 +1232,16 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 {/* Actions */}
                 <DialogFooter className="flex gap-2 flex-wrap justify-between w-full">
                   <div className="flex gap-2">
+                    {/* Edit Ticket Button - only for OPEN or PROCESSING without contractor */}
+                    {canEditTicket(selectedTicket) && (
+                      <Button 
+                        variant="outline" 
+                        onClick={() => openEditDialog(selectedTicket)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Ticket
+                      </Button>
+                    )}
                     {/* Cancel Ticket Button - only for OPEN or PROCESSING without contractor */}
                     {canCancelTicket(selectedTicket) && (
                       <Button 
@@ -1117,6 +1318,196 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 </DialogFooter>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Ticket Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center text-blue-600">
+                <Pencil className="h-5 w-5 mr-2" />
+                Edit Ticket
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div>
+                <Label htmlFor="editTitle">Title <span className="text-red-500">*</span></Label>
+                <Input
+                  id="editTitle"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  placeholder="Ticket title"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editDescription">Description</Label>
+                <Textarea
+                  id="editDescription"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  placeholder="Describe the issue..."
+                  rows={4}
+                  className="mt-1"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="editPriority">Priority</Label>
+                  <Select value={editFormData.priority} onValueChange={(value) => setEditFormData({ ...editFormData, priority: value })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LOW">Low</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="HIGH">High</SelectItem>
+                      <SelectItem value="CRITICAL">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="editType">Type</Label>
+                  <Select value={editFormData.type} onValueChange={(value) => setEditFormData({ ...editFormData, type: value })}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="REPAIR">Repair</SelectItem>
+                      <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                      <SelectItem value="INSPECTION">Inspection</SelectItem>
+                      <SelectItem value="INSTALLATION">Installation</SelectItem>
+                      <SelectItem value="REPLACEMENT">Replacement</SelectItem>
+                      <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Existing Attachments */}
+              {existingAttachments.length > 0 && (
+                <div>
+                  <Label className="mb-2 block">Current Attachments</Label>
+                  <div className="space-y-2">
+                    {existingAttachments
+                      .filter(att => !attachmentsToDelete.includes(att.id))
+                      .map((attachment) => (
+                        <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {attachment.mimeType?.startsWith('image/') ? (
+                              <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            ) : attachment.mimeType?.startsWith('video/') ? (
+                              <Video className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                            )}
+                            <span className="text-sm truncate">{attachment.originalName || attachment.filename}</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                            onClick={() => setAttachmentsToDelete([...attachmentsToDelete, attachment.id])}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                  {attachmentsToDelete.length > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      {attachmentsToDelete.length} file(s) will be removed on save
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* Add New Attachments */}
+              <div>
+                <Label>Add New Attachments</Label>
+                <div className="mt-2">
+                  <input
+                    id="editFiles"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || [])
+                      const maxSize = 10 * 1024 * 1024 // 10MB
+                      const validFiles = files.filter(file => {
+                        if (file.size > maxSize) {
+                          alert(`File ${file.name} is too large. Maximum size is 10MB.`)
+                          return false
+                        }
+                        return true
+                      })
+                      setEditMediaFiles(prev => [...prev, ...validFiles])
+                      e.target.value = ''
+                    }}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('editFiles')?.click()}
+                    className="w-full border-dashed border-2"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Choose Files
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Images, Videos, Audio, PDFs (Max 10MB per file)
+                </p>
+                
+                {/* New files to upload */}
+                {editMediaFiles.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    <Label className="text-sm text-green-600">New files to add:</Label>
+                    {editMediaFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {file.type.startsWith('image/') ? (
+                            <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          ) : file.type.startsWith('video/') ? (
+                            <Video className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                          ) : (
+                            <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                          )}
+                          <span className="text-sm truncate">{file.name}</span>
+                          <span className="text-xs text-gray-400">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          onClick={() => setEditMediaFiles(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={editLoading}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditTicket} 
+                disabled={editLoading || !editFormData.title.trim()}
+              >
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

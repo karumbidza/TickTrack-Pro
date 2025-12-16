@@ -95,7 +95,8 @@ export function SuperAdminDashboard() {
     address: '',
     adminName: '',
     adminEmail: '',
-    adminPassword: ''
+    adminPassword: '',
+    confirmPassword: ''
   })
 
   useEffect(() => {
@@ -138,6 +139,16 @@ export function SuperAdminDashboard() {
       return
     }
 
+    if (createForm.adminPassword !== createForm.confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+
+    if (createForm.adminPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+
     setProcessing(true)
     try {
       const response = await fetch('/api/super-admin/tenants', {
@@ -147,7 +158,7 @@ export function SuperAdminDashboard() {
       })
 
       if (response.ok) {
-        toast.success('Tenant created successfully')
+        toast.success('Tenant created successfully. A verification email has been sent to the admin.')
         setShowCreateDialog(false)
         setCreateForm({
           name: '',
@@ -157,7 +168,8 @@ export function SuperAdminDashboard() {
           address: '',
           adminName: '',
           adminEmail: '',
-          adminPassword: ''
+          adminPassword: '',
+          confirmPassword: ''
         })
         fetchDashboardData()
       } else {
@@ -268,8 +280,8 @@ export function SuperAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -601,6 +613,19 @@ export function SuperAdminDashboard() {
                       value={createForm.adminPassword}
                       onChange={(e) => setCreateForm({ ...createForm, adminPassword: e.target.value })}
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      value={createForm.confirmPassword}
+                      onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })}
+                    />
+                    {createForm.adminPassword && createForm.confirmPassword && createForm.adminPassword !== createForm.confirmPassword && (
+                      <p className="text-sm text-red-500 mt-1">Passwords do not match</p>
+                    )}
                   </div>
                 </div>
               </div>

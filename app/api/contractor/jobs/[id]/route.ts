@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
 
 // GET - Get job details
 export async function GET(
@@ -77,11 +78,16 @@ export async function PATCH(
     const body = await request.json()
     const { action, jobPlan } = body
 
-    // Verify the job is assigned to this contractor
+    // Verify the job is assigned to this contractor and get admin/user info
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: params.id,
         assignedToId: session.user.id
+      },
+      include: {
+        admin: { select: { id: true, name: true, phone: true } },
+        user: { select: { id: true, name: true, phone: true } },
+        tenant: { select: { name: true } }
       }
     })
 
@@ -106,6 +112,7 @@ export async function PATCH(
           dueDate: new Date(jobPlan.arrivalDate),
           scheduledArrival: new Date(jobPlan.arrivalDate), // Store scheduled arrival for rating
           estimatedHours: parseFloat(jobPlan.estimatedDuration) || null,
+          contractorAcceptedAt: new Date() // SLA tracking: contractor acceptance time
         }
       })
 
@@ -133,6 +140,9 @@ export async function PATCH(
           reason: `Job accepted. Technician: ${jobPlan.technicianName}. Arrival: ${new Date(jobPlan.arrivalDate).toLocaleDateString()}`
         }
       })
+
+      // SMS notifications disabled - only sent on contractor assignment to reduce costs
+      // In-app notifications are still active
 
       return NextResponse.json({
         message: 'Job accepted successfully',
@@ -181,6 +191,8 @@ export async function PATCH(
         }
       })
 
+      // SMS notification disabled - only sent on contractor assignment to reduce costs
+
       return NextResponse.json({
         message: 'Job rejected successfully',
         ticket: updatedTicket
@@ -212,7 +224,10 @@ export async function PATCH(
     if (action === 'on_site') {
       const updatedTicket = await prisma.ticket.update({
         where: { id: params.id },
-        data: { status: 'ON_SITE' }
+        data: { 
+          status: 'ON_SITE',
+          onSiteAt: new Date() // SLA tracking: on-site arrival time
+        }
       })
 
       await prisma.statusHistory.create({
@@ -225,6 +240,9 @@ export async function PATCH(
         }
       })
 
+      // On-site notification is in-app only to save SMS costs
+      // User can check the ticket status in the app
+
       return NextResponse.json({
         message: 'Status updated to on-site',
         ticket: updatedTicket
@@ -233,12 +251,13 @@ export async function PATCH(
 
     if (action === 'complete') {
       const { actualHours, completionNotes } = body
+      const completedAt = new Date()
 
       const updatedTicket = await prisma.ticket.update({
         where: { id: params.id },
         data: {
           status: 'COMPLETED',
-          completedAt: new Date(),
+          completedAt,
           actualHours: actualHours ? parseFloat(actualHours) : null
         }
       })
@@ -262,6 +281,8 @@ export async function PATCH(
           reason: `Job completed. Actual hours: ${actualHours || 'Not recorded'}`
         }
       })
+
+      // SMS notifications disabled - only sent on contractor assignment to reduce costs
 
       return NextResponse.json({
         message: 'Job completed successfully',

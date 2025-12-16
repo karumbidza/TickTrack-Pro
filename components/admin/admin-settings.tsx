@@ -377,8 +377,8 @@ export function AdminSettings({ user }: AdminSettingsProps) {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>

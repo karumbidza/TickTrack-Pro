@@ -72,9 +72,10 @@ model AssetCategory {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  assets      Asset[]
-  tickets     Ticket[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  assets              Asset[]
+  tickets             Ticket[]
+  contractorCategories ContractorCategory[] // Contractors who can service this category
 
   @@unique([tenantId, name])
   @@map("asset_categories")
@@ -243,6 +244,9 @@ model User {
   decommissionRejectedAssets  Asset[] @relation("DecommissionRejecter")
   assetHistory                AssetHistory[]
 
+  // Performance indexes
+  @@index([tenantId, role])
+  @@index([tenantId, isActive])
   @@map("users")
 }
 
@@ -388,6 +392,13 @@ model Ticket {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   
+  // SLA Tracking Fields
+  assignedAt            DateTime?   // When admin assigned the ticket (first response)
+  contractorAcceptedAt  DateTime?   // When contractor accepted the job
+  onSiteAt              DateTime?   // When contractor arrived on site
+  responseDeadline      DateTime?   // Auto-calculated: createdAt + response SLA
+  resolutionDeadline    DateTime?   // Auto-calculated: createdAt + resolution SLA
+  
   // Cancellation fields
   cancellationReason    String?  // Reason for cancellation
   cancellationRequestedAt DateTime? // When user requested cancellation
@@ -430,6 +441,13 @@ model Ticket {
   ratings      Rating[]
   maintenanceHistory MaintenanceHistory[]
 
+  // Performance indexes
+  @@index([tenantId, status])
+  @@index([tenantId, department])
+  @@index([assignedToId, status])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([createdAt])
   @@map("tickets")
 }
 
@@ -452,10 +470,29 @@ model Contractor {
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant                  Tenant                   @relation(fields: [tenantId], references: [id])
   contractorSubscription  ContractorSubscription?
+  contractorCategories    ContractorCategory[]     // Categories this contractor can service
   ratings                 Rating[]
   maintenanceHistory      MaintenanceHistory[]
 
+  // Performance indexes
+  @@index([tenantId, status])
   @@map("contractors")
+}
+
+// Junction table for contractors and categories they can service
+model ContractorCategory {
+  id            String    @id @default(cuid())
+  contractorId  String
+  categoryId    String
+  isAvailable   Boolean   @default(true)  // Contractor can toggle availability per category
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  contractor    Contractor    @relation(fields: [contractorId], references: [id], onDelete: Cascade)
+  category      AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([contractorId, categoryId])
+  @@map("contractor_categories")
 }
 
 model Asset {
@@ -689,6 +726,9 @@ model Invoice {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
+  // Performance indexes
+  @@index([tenantId, status])
+  @@index([contractorId])
   @@map("invoices")
 }
 
@@ -724,6 +764,9 @@ model Rating {
   user       User        @relation(fields: [userId], references: [id])
   contractor Contractor? @relation(fields: [contractorId], references: [id])
 
+  // Performance indexes
+  @@index([contractorId])
+  @@index([ticketId])
   @@map("ratings")
 }
 
@@ -739,6 +782,9 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Performance indexes
+  @@index([userId, read])
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -826,6 +872,7 @@ model ContractorKYC {
   specialLicenses       Json      @default("[]") // plumbing, electrical, refrigeration, etc.
   methodStatementsUrl   String?
   specializations       String[]  @default([])   // Areas of expertise
+  serviceCategories     String[]  @default([])   // Category IDs the contractor can service
   
   // ==================== 8. PREVIOUS EXPERIENCE ====================
   previousClients       Json      @default("[]") // Array: { clientName, contactPerson, phone, email }

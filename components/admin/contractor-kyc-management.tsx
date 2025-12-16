@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import {
   Table,
   TableBody,
@@ -361,15 +362,17 @@ export function ContractorKYCManagement() {
   const DocumentLink = ({ url, label }: { url?: string; label: string }) => {
     if (!url) return <span className="text-gray-400 text-sm">Not provided</span>
     return (
-      <a 
-        href={url} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-      >
-        <FileText className="h-3 w-3" />
-        View {label}
-      </a>
+      <MediaHoverPreview file={{ url, filename: label, mimeType: url.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }} previewSize="lg">
+        <a 
+          href={url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+        >
+          <FileText className="h-3 w-3" />
+          View {label}
+        </a>
+      </MediaHoverPreview>
     )
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { MediaViewer } from '@/components/ui/media-viewer'
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
+import Chip from '@mui/material/Chip'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
+import Box from '@mui/material/Box'
 import { 
   Plus,
   Search,
@@ -24,7 +30,12 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Eye,
+  ChevronRight,
+  DollarSign,
+  User,
+  Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -60,6 +71,41 @@ interface Asset {
   transferReason?: string
   transferLocation?: string
   transferredTo?: string
+  // Repair history
+  repairHistory?: {
+    id: string
+    ticketNumber: string
+    title: string
+    description?: string
+    status: string
+    type?: string
+    priority?: string
+    workDescription?: string
+    workDescriptionApproved?: boolean
+    contractorId?: string
+    contractorName?: string
+    contractorEmail?: string
+    createdAt: string
+    completedAt?: string
+    invoiceId?: string
+    invoiceNumber?: string
+    invoiceAmount?: number
+    invoiceStatus?: string
+  }[]
+  // Ticket history (legacy)
+  tickets?: {
+    id: string
+    title: string
+    status: string
+    createdAt: string
+    totalCost?: number
+  }[]
+  _count?: {
+    tickets: number
+  }
+  totalRepairCost?: number
+  totalMaintenanceCost?: number
+  totalCost?: number
 }
 
 interface AssetCategory {
@@ -73,20 +119,35 @@ interface AssetCategory {
   }
 }
 
-interface AssetRegisterProps {
-  tenantId: string
+interface Branch {
+  id: string
+  name: string
+  isHeadOffice: boolean
 }
 
-export function AssetRegister({ tenantId }: AssetRegisterProps) {
+interface UserBranch {
+  branch: Branch
+}
+
+interface AssetRegisterProps {
+  tenantId: string
+  userRole?: string
+}
+
+export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegisterProps) {
   const [assets, setAssets] = useState<Asset[]>([])
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
   const [categories, setCategories] = useState<AssetCategory[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [userBranches, setUserBranches] = useState<Branch[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDecommissionDialog, setShowDecommissionDialog] = useState(false)
   const [showTransferDialog, setShowTransferDialog] = useState(false)
   const [showCategoryDialog, setShowCategoryDialog] = useState(false)
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false)
+  const [expandedRepairId, setExpandedRepairId] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -99,6 +160,8 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
   useEffect(() => {
     fetchAssets()
     fetchCategories()
+    fetchBranches()
+    fetchUserBranches()
   }, [])
 
   useEffect(() => {
@@ -124,6 +187,35 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
       setCategories(data.categories || [])
     } catch (error) {
       console.error('Failed to fetch categories:', error)
+    }
+  }
+
+  const fetchBranches = async () => {
+    try {
+      const response = await fetch('/api/branches')
+      const data = await response.json()
+      setBranches(data.branches || [])
+    } catch (error) {
+      console.error('Failed to fetch branches:', error)
+    }
+  }
+
+  const fetchUserBranches = async () => {
+    try {
+      const response = await fetch('/api/auth/session')
+      const session = await response.json()
+      if (session?.user?.id) {
+        // Fetch user's assigned branches
+        const userResponse = await fetch(`/api/admin/users/${session.user.id}`)
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          if (userData.user?.branches) {
+            setUserBranches(userData.user.branches.map((ub: UserBranch) => ub.branch))
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user branches:', error)
     }
   }
 
@@ -176,6 +268,312 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
     }
   }
 
+  const getStatusChipColor = (status: string): 'success' | 'warning' | 'error' | 'default' | 'info' => {
+    switch (status) {
+      case 'ACTIVE': return 'success'
+      case 'MAINTENANCE': return 'warning'
+      case 'REPAIR_NEEDED': return 'warning'
+      case 'OUT_OF_SERVICE': return 'error'
+      case 'RETIRED': return 'default'
+      case 'DECOMMISSIONED': return 'default'
+      case 'TRANSFERRED': return 'info'
+      default: return 'default'
+    }
+  }
+
+  // Check if user is admin
+  const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN'].includes(userRole)
+
+  // State for image hover popup
+  const [hoveredImageAsset, setHoveredImageAsset] = useState<Asset | null>(null)
+  const [imagePopupPosition, setImagePopupPosition] = useState({ x: 0, y: 0 })
+
+  // DataGrid column definitions
+  const assetColumns: GridColDef[] = useMemo(() => [
+    {
+      field: 'image',
+      headerName: 'Photo',
+      width: 80,
+      sortable: false,
+      filterable: false,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => {
+        const images = params.row.images || []
+        const firstImage = images.length > 0 ? images[0] : null
+        
+        if (!firstImage) {
+          return (
+            <Box 
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                borderRadius: 1,
+                bgcolor: 'grey.100',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Image className="h-5 w-5 text-gray-400" />
+            </Box>
+          )
+        }
+        
+        return (
+          <Box
+            sx={{ 
+              position: 'relative',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              setImagePopupPosition({ 
+                x: rect.right + 10, 
+                y: rect.top 
+              })
+              setHoveredImageAsset(params.row)
+            }}
+            onMouseLeave={() => setHoveredImageAsset(null)}
+          >
+            <img
+              src={firstImage}
+              alt={params.row.name}
+              style={{
+                width: 48,
+                height: 48,
+                objectFit: 'cover',
+                borderRadius: 4,
+                border: '1px solid #e5e7eb'
+              }}
+            />
+            {images.length > 1 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 2,
+                  right: 2,
+                  bgcolor: 'rgba(0,0,0,0.7)',
+                  color: 'white',
+                  fontSize: '0.6rem',
+                  px: 0.5,
+                  borderRadius: 0.5,
+                  fontWeight: 600
+                }}
+              >
+                +{images.length - 1}
+              </Box>
+            )}
+          </Box>
+        )
+      },
+    },
+    {
+      field: 'name',
+      headerName: 'Asset',
+      flex: 1.2,
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => (
+        <Box sx={{ textAlign: 'center' }}>
+          <p className="font-medium text-gray-900 text-sm truncate">{params.row.name}</p>
+          {params.row.brand && (
+            <p className="text-xs text-gray-500 truncate">{params.row.brand} {params.row.model}</p>
+          )}
+        </Box>
+      ),
+    },
+    {
+      field: 'category',
+      headerName: 'Category',
+      flex: 0.7,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => (
+        <Chip
+          label={params.row.category?.name || 'Uncategorized'}
+          size="small"
+          variant="outlined"
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+        />
+      ),
+    },
+    {
+      field: 'serialLocation',
+      headerName: 'Serial / Location',
+      flex: 0.9,
+      minWidth: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => (
+        <Box sx={{ textAlign: 'center' }}>
+          <p className="text-xs font-mono text-gray-700">{params.row.serialNumber || '-'}</p>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 0.5 }}>
+            <MapPin className="h-3 w-3 text-gray-400" />
+            <span className="text-xs text-gray-500 truncate">{params.row.location}</span>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      field: 'status',
+      headerName: 'Status',
+      flex: 0.6,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => (
+        <Chip
+          label={params.row.status.replace('_', ' ')}
+          size="small"
+          color={getStatusChipColor(params.row.status)}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+        />
+      ),
+    },
+    {
+      field: 'assetHistory',
+      headerName: 'History',
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => {
+        const ticketCount = params.row._count?.tickets || params.row.tickets?.length || 0
+        const tickets = params.row.tickets || []
+        
+        // Build tooltip content based on user role
+        const tooltipContent = isAdmin ? (
+          <Box sx={{ p: 1, maxWidth: 350 }}>
+            <p className="font-medium mb-2">Ticket History ({ticketCount})</p>
+            {tickets.length > 0 ? (
+              <>
+                {tickets.slice(0, 5).map((ticket, idx) => (
+                  <Box key={idx} sx={{ mb: 1, borderBottom: idx < Math.min(tickets.length, 5) - 1 ? '1px solid #444' : 'none', pb: 0.5 }}>
+                    <p className="text-sm">{ticket.title}</p>
+                    <p className="text-xs text-gray-400">
+                      {ticket.status} • {new Date(ticket.createdAt).toLocaleDateString()}
+                      {ticket.totalCost ? ` • $${ticket.totalCost}` : ''}
+                    </p>
+                  </Box>
+                ))}
+                {tickets.length > 5 && (
+                  <p className="text-xs text-gray-400">+{tickets.length - 5} more tickets...</p>
+                )}
+                {params.row.totalRepairCost && params.row.totalRepairCost > 0 && (
+                  <p className="text-sm font-medium mt-2 pt-1 border-t border-gray-600">
+                    Total Cost: ${params.row.totalRepairCost.toFixed(2)}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-400">No tickets raised</p>
+            )}
+          </Box>
+        ) : (
+          <Box sx={{ p: 1, maxWidth: 300 }}>
+            <p className="font-medium mb-2">Tickets ({ticketCount})</p>
+            {tickets.length > 0 ? (
+              tickets.slice(0, 5).map((ticket, idx) => (
+                <p key={idx} className="text-sm mb-1">• {ticket.title}</p>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400">No tickets raised</p>
+            )}
+            {tickets.length > 5 && (
+              <p className="text-xs text-gray-400">+{tickets.length - 5} more...</p>
+            )}
+          </Box>
+        )
+        
+        return (
+          <Tooltip 
+            title={tooltipContent}
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: 'grey.900',
+                  '& .MuiTooltip-arrow': { color: 'grey.900' },
+                  maxWidth: 350,
+                },
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }}>
+              <FileText className="h-4 w-4 text-gray-500" />
+              <span className="text-sm text-gray-700">{ticketCount} tickets</span>
+            </Box>
+          </Tooltip>
+        )
+      },
+    },
+    {
+      field: 'actions',
+      headerName: '',
+      width: 140,
+      sortable: false,
+      filterable: false,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<Asset>) => (
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="View History">
+            <IconButton
+              size="small"
+              sx={{ color: 'info.main' }}
+              onClick={() => {
+                setSelectedAsset(params.row)
+                setExpandedRepairId(null)
+                setShowHistoryDialog(true)
+              }}
+            >
+              <FileText className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Edit">
+            <IconButton
+              size="small"
+              onClick={() => {
+                setSelectedAsset(params.row)
+                setShowEditDialog(true)
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Decommission">
+            <IconButton
+              size="small"
+              sx={{ color: 'warning.main' }}
+              onClick={() => {
+                setSelectedAsset(params.row)
+                setShowDecommissionDialog(true)
+              }}
+            >
+              <Archive className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Transfer">
+            <IconButton
+              size="small"
+              sx={{ color: 'primary.main' }}
+              onClick={() => {
+                setSelectedAsset(params.row)
+                setShowTransferDialog(true)
+              }}
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      ),
+    },
+  ], [isAdmin])
+
   const stats = {
     total: filteredAssets.length,
     active: filteredAssets.filter(a => a.status === 'ACTIVE').length,
@@ -188,8 +586,21 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
+        {/* User Branch Banner */}
+        {userBranches.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
+            <MapPin className="h-5 w-5 text-blue-600" />
+            <div>
+              <span className="text-sm text-blue-800">
+                <span className="font-medium">Your Branch{userBranches.length > 1 ? 'es' : ''}:</span>{' '}
+                {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -212,6 +623,7 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
                 tenantId={tenantId} 
                 onCancel={() => setShowCreateDialog(false)}
                 categories={categories}
+                branches={branches}
                 onOpenCategoryManager={() => {
                   setShowCreateDialog(false)
                   setShowCategoryDialog(true)
@@ -306,10 +718,12 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" onClick={() => setShowCategoryDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Manage Categories
-              </Button>
+              {isAdmin && (
+                <Button variant="outline" onClick={() => setShowCategoryDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Manage Categories
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -335,108 +749,56 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Asset</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Category</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Location</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Serial Number</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-900">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Maintenance</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAssets.map((asset) => (
-                      <tr key={asset.id} className="border-b hover:bg-gray-50">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              {getStatusIcon(asset.status)}
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{asset.name}</div>
-                              <div className="text-sm text-gray-500">{asset.assetNumber}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="text-sm text-gray-900">{asset.category?.name || 'Uncategorized'}</div>
-                          {asset.brand && (
-                            <div className="text-xs text-gray-500">{asset.brand} {asset.model}</div>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center text-sm text-gray-900">
-                            <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                            {asset.location}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-sm text-gray-600">
-                          {asset.serialNumber || '-'}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <Badge className={getStatusColor(asset.status)}>
-                            {asset.status.replace('_', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4">
-                          {asset.nextMaintenanceDate ? (
-                            <div className="flex items-center text-sm">
-                              <Calendar className="h-3 w-3 mr-1 text-yellow-500" />
-                              <span className={new Date(asset.nextMaintenanceDate) < new Date() ? 'text-red-600' : 'text-gray-600'}>
-                                {new Date(asset.nextMaintenanceDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center space-x-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              title="Edit"
-                              onClick={() => {
-                                setSelectedAsset(asset)
-                                setShowEditDialog(true)
-                              }}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="text-orange-600 hover:text-orange-700"
-                              title="Decommission"
-                              onClick={() => {
-                                setSelectedAsset(asset)
-                                setShowDecommissionDialog(true)
-                              }}
-                            >
-                              <Archive className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Transfer"
-                              onClick={() => {
-                                setSelectedAsset(asset)
-                                setShowTransferDialog(true)
-                              }}
-                            >
-                              <ArrowRightLeft className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <Box sx={{ width: '100%' }}>
+                <ScrollableDataGrid
+                  rows={filteredAssets}
+                  columns={assetColumns}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 10 },
+                    },
+                  }}
+                  pageSizeOptions={[10, 25, 50]}
+                  disableRowSelectionOnClick
+                  autoHeight
+                  getRowHeight={() => 'auto'}
+                  sx={{
+                    border: 'none',
+                    '& .MuiDataGrid-cell': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      py: 1,
+                    },
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* Image Hover Popup */}
+            {hoveredImageAsset && hoveredImageAsset.images && hoveredImageAsset.images.length > 0 && (
+              <div
+                className="fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200 p-2 pointer-events-none"
+                style={{
+                  left: Math.min(imagePopupPosition.x, window.innerWidth - 340),
+                  top: Math.max(10, Math.min(imagePopupPosition.y - 100, window.innerHeight - 350)),
+                }}
+              >
+                <div className="space-y-2">
+                  <img
+                    src={hoveredImageAsset.images[0]}
+                    alt={hoveredImageAsset.name}
+                    className="w-80 h-60 object-cover rounded-md"
+                  />
+                  <div className="px-1">
+                    <p className="font-semibold text-sm text-gray-900">{hoveredImageAsset.name}</p>
+                    <p className="text-xs text-gray-500">{hoveredImageAsset.assetNumber}</p>
+                    {hoveredImageAsset.images.length > 1 && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        {hoveredImageAsset.images.length} photos available
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -470,6 +832,7 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
               <EditAssetForm 
                 asset={selectedAsset}
                 categories={categories}
+                branches={branches}
                 onAssetUpdated={() => {
                   fetchAssets()
                   setShowEditDialog(false)
@@ -517,12 +880,229 @@ export function AssetRegister({ tenantId }: AssetRegisterProps) {
             />
           </DialogContent>
         </Dialog>
+
+        {/* Repair History Dialog */}
+        <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Repair History: {selectedAsset?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedAsset && (
+              <div className="space-y-4">
+                {/* Asset Summary */}
+                <div className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">Asset Number</p>
+                      <p className="font-medium">{selectedAsset.assetNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Category</p>
+                      <p className="font-medium">{selectedAsset.category?.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Status</p>
+                      <Badge variant={selectedAsset.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                        {selectedAsset.status?.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Location</p>
+                      <p className="font-medium">{selectedAsset.location}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cost Summary */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Cost Summary
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-blue-700">Purchase Price</p>
+                      <p className="font-bold text-blue-900">
+                        ${selectedAsset.purchasePrice?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-700">Repair Costs</p>
+                      <p className="font-bold text-blue-900">
+                        ${selectedAsset.totalRepairCost?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-700">Maintenance Costs</p>
+                      <p className="font-bold text-blue-900">
+                        ${selectedAsset.totalMaintenanceCost?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                    <div className="bg-blue-100 rounded p-2 -m-1">
+                      <p className="text-xs text-blue-700">Total Cost</p>
+                      <p className="font-bold text-lg text-blue-900">
+                        ${selectedAsset.totalCost?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Repair History List */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Wrench className="h-4 w-4" />
+                    Repair Tickets ({selectedAsset.repairHistory?.length || 0})
+                  </h4>
+                  
+                  {!selectedAsset.repairHistory || selectedAsset.repairHistory.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
+                      <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No repair history found for this asset</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedAsset.repairHistory.map((repair, idx) => (
+                        <div 
+                          key={repair.id || idx} 
+                          className="bg-white rounded-lg border overflow-hidden"
+                        >
+                          {/* Clickable Header */}
+                          <div 
+                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                            onClick={() => setExpandedRepairId(expandedRepairId === repair.id ? null : repair.id)}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} />
+                                <span className="font-mono text-xs text-blue-600 font-medium">#{repair.ticketNumber}</span>
+                                <span className="font-medium text-gray-800">{repair.title}</span>
+                              </div>
+                              <div className="flex items-center gap-3 ml-6 mt-1 text-xs text-gray-500 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {new Date(repair.createdAt).toLocaleDateString()}
+                                  {repair.completedAt && ` → ${new Date(repair.completedAt).toLocaleDateString()}`}
+                                </span>
+                                {repair.contractorName && (
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    {repair.contractorName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {repair.invoiceAmount && (
+                                <span className="text-sm font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                                  ${repair.invoiceAmount.toLocaleString()}
+                                </span>
+                              )}
+                              <Badge variant={
+                                repair.status === 'COMPLETED' || repair.status === 'CLOSED' 
+                                  ? 'default'
+                                  : repair.status === 'IN_PROGRESS' 
+                                  ? 'secondary'
+                                  : 'outline'
+                              }>
+                                {repair.status?.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Expanded Details */}
+                          {expandedRepairId === repair.id && (
+                            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t space-y-3">
+                              {/* Basic Info Grid */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500">Type</p>
+                                  <p className="text-gray-900">{repair.type?.replace('_', ' ') || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500">Priority</p>
+                                  <Badge variant={
+                                    repair.priority === 'CRITICAL' ? 'destructive' :
+                                    repair.priority === 'HIGH' ? 'destructive' :
+                                    repair.priority === 'MEDIUM' ? 'secondary' :
+                                    'outline'
+                                  }>
+                                    {repair.priority || 'N/A'}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500">Contractor</p>
+                                  <p className="text-gray-900">{repair.contractorName || 'Unassigned'}</p>
+                                  {repair.contractorEmail && (
+                                    <p className="text-xs text-gray-500">{repair.contractorEmail}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500">Invoice</p>
+                                  {repair.invoiceNumber ? (
+                                    <div>
+                                      <p className="text-gray-900 font-mono text-xs">{repair.invoiceNumber}</p>
+                                      <p className="text-sm font-semibold text-green-700">
+                                        ${repair.invoiceAmount?.toLocaleString() || '0'}
+                                        <span className={`ml-1 text-xs font-normal ${
+                                          repair.invoiceStatus === 'PAID' ? 'text-green-600' : 'text-yellow-600'
+                                        }`}>
+                                          ({repair.invoiceStatus})
+                                        </span>
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-gray-400">No invoice</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Original Issue Description */}
+                              {repair.description && (
+                                <div>
+                                  <p className="text-xs font-medium text-gray-500 mb-1">Original Issue</p>
+                                  <p className="text-sm text-gray-700 bg-white p-2 rounded border">{repair.description}</p>
+                                </div>
+                              )}
+                              
+                              {/* Approved Work Description */}
+                              {repair.workDescription && repair.workDescriptionApproved && (
+                                <div>
+                                  <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                                    <CheckCircle className="h-3 w-3" />
+                                    Approved Work Description
+                                  </p>
+                                  <p className="text-sm text-gray-700 bg-green-50 p-2 rounded border border-green-200 whitespace-pre-wrap">{repair.workDescription}</p>
+                                </div>
+                              )}
+                              
+                              {/* Timeline */}
+                              <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
+                                <span>Created: {new Date(repair.createdAt).toLocaleString()}</span>
+                                {repair.completedAt && (
+                                  <span>Completed: {new Date(repair.completedAt).toLocaleString()}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
 }
 
-function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCategoryManager }: { onAssetCreated: () => void; tenantId: string; onCancel: () => void; categories: AssetCategory[]; onOpenCategoryManager?: () => void }) {
+function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, onOpenCategoryManager }: { onAssetCreated: () => void; tenantId: string; onCancel: () => void; categories: AssetCategory[]; branches: Branch[]; onOpenCategoryManager?: () => void }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -531,7 +1111,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCateg
     model: '',
     serialNumber: '',
     status: 'ACTIVE',
-    location: '',
+    location: branches.length > 0 ? branches[0].name : '',
     purchaseDate: '',
     warrantyExpires: '',
     purchasePrice: '',
@@ -571,11 +1151,30 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCateg
         }
       }
 
+      // Upload images first if any
+      let imageUrls: string[] = []
+      if (images.length > 0) {
+        const imageFormData = new FormData()
+        images.forEach(file => imageFormData.append('files', file))
+        
+        const uploadResponse = await fetch('/api/upload/asset', {
+          method: 'POST',
+          body: imageFormData
+        })
+        
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json()
+          imageUrls = uploadResult.urls || []
+        } else {
+          toast.error('Failed to upload images. Asset will be created without images.')
+        }
+      }
+
       const assetData = {
         ...formData,
         purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
         specifications: specifications,
-        images: [], // Would be populated after file upload
+        images: imageUrls,
         manuals: []
       }
 
@@ -683,13 +1282,23 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCateg
             />
           </div>
           <div>
-            <Label htmlFor="location">Location *</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => setFormData({...formData, location: e.target.value})}
-              required
-            />
+            <Label htmlFor="location">Branch / Site *</Label>
+            <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select branch/site" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.length === 0 ? (
+                  <SelectItem value="__none__" disabled>No branches available</SelectItem>
+                ) : (
+                  branches.map(branch => (
+                    <SelectItem key={branch.id} value={branch.name}>
+                      {branch.name} {branch.isHeadOffice ? '(Head Office)' : ''}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -715,8 +1324,11 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCateg
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="images">Asset Images</Label>
+        <div className="border rounded-lg p-4 space-y-3">
+          <Label className="text-base font-semibold flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Asset Images
+          </Label>
           <Input
             id="images"
             type="file"
@@ -724,6 +1336,29 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, onOpenCateg
             accept="image/*"
             onChange={(e) => setImages(Array.from(e.target.files || []))}
           />
+          {images.length > 0 && (
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {images.map((file, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Preview ${idx + 1}`}
+                    className="w-full h-20 object-cover rounded border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-500">
+            {images.length > 0 ? `${images.length} image(s) selected` : 'Select images to upload with the asset'}
+          </p>
         </div>
 
         <div className="flex justify-end space-x-2">
@@ -870,11 +1505,12 @@ function DecommissionForm({ asset, onDecommissioned, onCancel }: DecommissionFor
 interface EditAssetFormProps {
   asset: Asset
   categories: AssetCategory[]
+  branches: Branch[]
   onAssetUpdated: () => void
   onCancel: () => void
 }
 
-function EditAssetForm({ asset, categories, onAssetUpdated, onCancel }: EditAssetFormProps) {
+function EditAssetForm({ asset, categories, branches, onAssetUpdated, onCancel }: EditAssetFormProps) {
   const [formData, setFormData] = useState({
     name: asset.name,
     description: asset.description || '',
@@ -889,6 +1525,43 @@ function EditAssetForm({ asset, categories, onAssetUpdated, onCancel }: EditAsse
     purchasePrice: asset.purchasePrice?.toString() || ''
   })
   const [loading, setLoading] = useState(false)
+  const [existingImages, setExistingImages] = useState<string[]>(asset.images || [])
+  const [newImages, setNewImages] = useState<File[]>([])
+  const [uploadingImages, setUploadingImages] = useState(false)
+
+  const handleRemoveExistingImage = (indexToRemove: number) => {
+    setExistingImages(prev => prev.filter((_, idx) => idx !== indexToRemove))
+  }
+
+  const handleAddImages = async () => {
+    if (newImages.length === 0) return
+
+    setUploadingImages(true)
+    try {
+      const imageFormData = new FormData()
+      newImages.forEach(file => imageFormData.append('files', file))
+      imageFormData.append('assetId', asset.id)
+      
+      const uploadResponse = await fetch('/api/upload/asset', {
+        method: 'POST',
+        body: imageFormData
+      })
+      
+      if (uploadResponse.ok) {
+        const uploadResult = await uploadResponse.json()
+        setExistingImages(prev => [...prev, ...(uploadResult.urls || [])])
+        setNewImages([])
+        toast.success('Images uploaded successfully!')
+      } else {
+        toast.error('Failed to upload images')
+      }
+    } catch (error) {
+      console.error('Failed to upload images:', error)
+      toast.error('Failed to upload images')
+    } finally {
+      setUploadingImages(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -912,7 +1585,8 @@ function EditAssetForm({ asset, categories, onAssetUpdated, onCancel }: EditAsse
         location: formData.location,
         purchaseDate: formData.purchaseDate || null,
         warrantyExpires: formData.warrantyExpires || null,
-        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null
+        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+        images: existingImages
       }
 
       const response = await fetch(`/api/assets/${asset.id}`, {
@@ -1013,13 +1687,23 @@ function EditAssetForm({ asset, categories, onAssetUpdated, onCancel }: EditAsse
             />
           </div>
           <div>
-            <Label htmlFor="edit-location">Location *</Label>
-            <Input
-              id="edit-location"
-              value={formData.location}
-              onChange={(e) => setFormData({...formData, location: e.target.value})}
-              required
-            />
+            <Label htmlFor="edit-location">Branch / Site *</Label>
+            <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select branch/site" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.length === 0 ? (
+                  <SelectItem value="__none__" disabled>No branches available</SelectItem>
+                ) : (
+                  branches.map(branch => (
+                    <SelectItem key={branch.id} value={branch.name}>
+                      {branch.name} {branch.isHeadOffice ? '(Head Office)' : ''}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -1070,18 +1754,64 @@ function EditAssetForm({ asset, categories, onAssetUpdated, onCancel }: EditAsse
           </div>
         </div>
 
-        {/* Asset Images */}
-        {asset.images && asset.images.length > 0 && (
-          <div>
-            <Label className="mb-2 block">Asset Images</Label>
-            <MediaViewer 
-              files={asset.images} 
-              gridCols={3}
-              thumbnailSize="sm"
-              emptyMessage="No images"
-            />
+        {/* Asset Images Section */}
+        <div className="border rounded-lg p-4 space-y-3">
+          <Label className="text-base font-semibold flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Asset Images
+          </Label>
+          
+          {/* Existing Images */}
+          {existingImages.length > 0 ? (
+            <div className="grid grid-cols-4 gap-3">
+              {existingImages.map((imageUrl, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`Asset image ${idx + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveExistingImage(idx)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                    title="Remove image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">No images uploaded</p>
+          )}
+
+          {/* Add New Images */}
+          <div className="pt-2 border-t">
+            <Label htmlFor="new-images" className="text-sm mb-2 block">Add New Images</Label>
+            <div className="flex gap-2">
+              <Input
+                id="new-images"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => setNewImages(Array.from(e.target.files || []))}
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleAddImages}
+                disabled={newImages.length === 0 || uploadingImages}
+              >
+                {uploadingImages ? 'Uploading...' : 'Upload'}
+              </Button>
+            </div>
+            {newImages.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">{newImages.length} file(s) selected</p>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Manuals & Documents */}
         {asset.manuals && asset.manuals.length > 0 && (

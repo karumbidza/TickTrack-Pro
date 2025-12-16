@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
+import { sendContractorInvitationEmail } from '@/lib/email'
 
 // POST - Send contractor invitation
 export async function POST(request: NextRequest) {
@@ -20,13 +21,27 @@ export async function POST(request: NextRequest) {
     }
 
     if (!session.user.tenantId) {
-      return NextResponse.json({ message: 'Invalid tenant' }, { status: 400 })
+      return NextResponse.json({ message: 'Invalid tenant. Super admins must switch to a tenant context to invite contractors.' }, { status: 400 })
     }
 
-    const { email } = await request.json()
+    // Verify tenant exists
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: session.user.tenantId },
+      select: { id: true, name: true }
+    })
+
+    if (!tenant) {
+      return NextResponse.json({ message: 'Tenant not found' }, { status: 400 })
+    }
+
+    const { email, companyName } = await request.json()
 
     if (!email || !email.includes('@')) {
       return NextResponse.json({ message: 'Valid email is required' }, { status: 400 })
+    }
+
+    if (!companyName || companyName.trim().length < 2) {
+      return NextResponse.json({ message: 'Company name is required' }, { status: 400 })
     }
 
     // Check if email already exists as a user
@@ -102,18 +117,24 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Get tenant info for the email
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: session.user.tenantId },
-      select: { name: true, domain: true }
-    })
-
     // Generate registration link
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const registrationLink = `${appUrl}/contractor-registration/${token}`
 
-    // TODO: Send email with registration link
-    // For now, we'll return the link in the response
+    // Send invitation email
+    try {
+      await sendContractorInvitationEmail(
+        email.toLowerCase(),
+        companyName,
+        registrationLink,
+        tenant.name || 'TickTrack Pro',
+        expiresAt
+      )
+      logger.info('Contractor invitation email sent:', { email, registrationLink })
+    } catch (emailError) {
+      logger.warn('Failed to send invitation email, but invitation was created:', emailError)
+    }
+
     logger.info('Contractor invitation created:', {
       email,
       registrationLink,
@@ -129,7 +150,7 @@ export async function POST(request: NextRequest) {
         expiresAt: invitation.expiresAt
       },
       registrationLink,
-      tenantName: tenant?.name
+      tenantName: tenant.name
     })
 
   } catch (error) {

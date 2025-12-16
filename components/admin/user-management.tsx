@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -91,6 +92,7 @@ export function UserManagement({ user }: UserManagementProps) {
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
+    phone: '',
     role: 'END_USER',
     password: '',
     branchIds: [] as string[]
@@ -142,8 +144,8 @@ export function UserManagement({ user }: UserManagementProps) {
   }
 
   const handleCreateUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password) {
-      toast.error('Please fill in all required fields')
+    if (!newUser.name || !newUser.email || !newUser.phone || !newUser.password) {
+      toast.error('Please fill in all required fields including phone number')
       return
     }
 
@@ -168,7 +170,7 @@ export function UserManagement({ user }: UserManagementProps) {
       if (response.ok) {
         toast.success('User created successfully')
         setShowCreateDialog(false)
-        setNewUser({ name: '', email: '', role: 'END_USER', password: '', branchIds: [] })
+        setNewUser({ name: '', email: '', phone: '', role: 'END_USER', password: '', branchIds: [] })
         fetchUsers()
       } else {
         const error = await response.json()
@@ -361,19 +363,21 @@ export function UserManagement({ user }: UserManagementProps) {
     {
       field: 'user',
       headerName: 'User',
-      flex: 1,
-      minWidth: 250,
+      flex: 1.2,
+      minWidth: 180,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => {
         const userData = params.row
         const initials = userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData.email.slice(0, 2).toUpperCase()
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
-            <Avatar sx={{ bgcolor: 'primary.light', width: 40, height: 40 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1, width: '100%' }}>
+            <Avatar sx={{ bgcolor: 'primary.light', width: 32, height: 32, fontSize: '0.75rem' }}>
               {initials}
             </Avatar>
-            <Box>
-              <p className="font-medium text-gray-900">{userData.name || 'No Name'}</p>
-              <p className="text-sm text-gray-500">{userData.email}</p>
+            <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
+              <p className="font-medium text-gray-900 text-sm truncate">{userData.name || 'No Name'}</p>
+              <p className="text-xs text-gray-500 truncate">{userData.email}</p>
             </Box>
           </Box>
         )
@@ -382,42 +386,48 @@ export function UserManagement({ user }: UserManagementProps) {
     {
       field: 'role',
       headerName: 'Role',
-      width: 150,
+      flex: 0.6,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => (
         <Chip
           label={formatRole(params.row.role)}
           size="small"
           color={getRoleChipColor(params.row.role)}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
       field: 'branches',
       headerName: 'Branches',
-      width: 200,
+      flex: 0.8,
+      minWidth: 130,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => {
         const userData = params.row
         return (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
             {userData.branches && userData.branches.length > 0 ? (
               <>
-                {userData.branches.slice(0, 2).map(ub => (
+                {userData.branches.slice(0, 1).map(ub => (
                   <Chip
                     key={ub.branch.id}
                     label={ub.branch.name}
                     size="small"
                     variant="outlined"
                     color={ub.branch.isHeadOffice ? 'primary' : 'default'}
-                    sx={{ fontSize: '0.7rem', height: 24 }}
+                    sx={{ fontSize: '0.65rem', height: 22 }}
                   />
                 ))}
-                {userData.branches.length > 2 && (
+                {userData.branches.length > 1 && (
                   <Chip
-                    label={`+${userData.branches.length - 2}`}
+                    label={`+${userData.branches.length - 1}`}
                     size="small"
                     variant="outlined"
-                    sx={{ fontSize: '0.7rem', height: 24 }}
+                    sx={{ fontSize: '0.65rem', height: 22 }}
                   />
                 )}
               </>
@@ -431,30 +441,36 @@ export function UserManagement({ user }: UserManagementProps) {
     {
       field: 'isActive',
       headerName: 'Status',
-      width: 100,
+      flex: 0.5,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => (
         <Chip
           label={params.row.isActive ? 'Active' : 'Inactive'}
           size="small"
           color={params.row.isActive ? 'success' : 'error'}
-          sx={{ fontWeight: 500 }}
+          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
         />
       ),
     },
     {
       field: 'createdAt',
       headerName: 'Joined',
-      width: 120,
+      flex: 0.5,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => (
-        <span className="text-sm text-gray-500">
+        <span className="text-xs text-gray-500">
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
     },
     {
       field: 'actions',
-      headerName: 'Actions',
-      width: 80,
+      headerName: '',
+      width: 50,
       sortable: false,
       filterable: false,
       align: 'center',
@@ -484,7 +500,7 @@ export function UserManagement({ user }: UserManagementProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-5 space-y-5">
         {/* Action Menu */}
         <Menu
           anchorEl={menuAnchorEl}
@@ -556,6 +572,18 @@ export function UserManagement({ user }: UserManagementProps) {
                     value={newUser.email}
                     onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+263 77 123 4567"
+                    value={newUser.phone}
+                    onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">For SMS notifications</p>
                 </div>
                 
                 <div>
@@ -761,7 +789,7 @@ export function UserManagement({ user }: UserManagementProps) {
               </div>
             ) : (
               <Box sx={{ width: '100%' }}>
-                <DataGrid
+                <ScrollableDataGrid
                   rows={filteredUsers}
                   columns={userColumns}
                   initialState={{
@@ -775,18 +803,6 @@ export function UserManagement({ user }: UserManagementProps) {
                   pageSizeOptions={[5, 10, 25, 50]}
                   disableRowSelectionOnClick
                   autoHeight
-                  sx={{
-                    '& .MuiDataGrid-cell': {
-                      borderColor: '#f3f4f6',
-                    },
-                    '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: '#f9fafb',
-                      borderBottom: '1px solid #e5e7eb',
-                    },
-                    '& .MuiDataGrid-row:hover': {
-                      backgroundColor: '#f9fafb',
-                    },
-                  }}
                 />
               </Box>
             )}

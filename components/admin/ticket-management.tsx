@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,12 +11,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label'
 import { RatingModal } from '@/components/tickets/rating-modal'
 import { TicketChat } from '@/components/tickets/ticket-chat'
-import { MediaViewer } from '@/components/ui/media-viewer'
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { MediaViewer, MediaHoverPreview } from '@/components/ui/media-viewer'
+import { calculateSLAInfo, getSLAChipColor } from '@/lib/sla-utils'
+import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
+import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
 import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
+import Divider from '@mui/material/Divider'
+import Avatar from '@mui/material/Avatar'
+import CircularProgress from '@mui/material/CircularProgress'
 import { 
   Plus,
   Ticket,
@@ -26,7 +35,6 @@ import {
   User,
   Calendar,
   AlertCircle,
-  Settings,
   Eye,
   Edit,
   UserCheck,
@@ -39,9 +47,9 @@ import {
   DollarSign,
   AlertTriangle,
   XCircle,
-  Ban,
   FileText,
-  Download
+  Download,
+  Timer
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -84,6 +92,12 @@ interface TicketDetails {
   workDescriptionApproved?: boolean
   workDescriptionApprovedAt?: string
   workDescriptionRejectionReason?: string
+  // SLA tracking fields
+  assignedAt?: string
+  contractorAcceptedAt?: string
+  onSiteAt?: string
+  responseDeadline?: string
+  resolutionDeadline?: string
   user: {
     id: string
     name: string
@@ -132,11 +146,28 @@ interface TicketDetails {
 
 interface Contractor {
   id: string
+  userId: string
   email: string
   name: string
-  specializations?: string[]
+  phone?: string
+  bio?: string
+  specialties?: string[]
   rating?: number
-  isAvailable: boolean
+  totalJobs?: number
+  status?: string
+  categories?: {
+    id: string
+    name: string
+    color?: string
+  }[]
+  stats?: {
+    totalRatings: number
+    totalMaintenanceJobs: number
+    avgPunctuality: string
+    avgCustomerService: string
+    avgWorkmanship: string
+  }
+  isAvailable?: boolean
 }
 
 interface HQAdmin {
@@ -154,6 +185,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [tickets, setTickets] = useState<TicketDetails[]>([])
   const [filteredTickets, setFilteredTickets] = useState<TicketDetails[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
+  const [filteredContractors, setFilteredContractors] = useState<Contractor[]>([])
+  const [recommendedContractor, setRecommendedContractor] = useState<Contractor | null>(null)
+  const [loadingContractors, setLoadingContractors] = useState(false)
   const [hqAdmins, setHQAdmins] = useState<HQAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTicket, setSelectedTicket] = useState<TicketDetails | null>(null)
@@ -199,6 +233,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     filterTickets()
   }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter])
 
+  // Fetch filtered contractors when a ticket is selected for assignment
+  useEffect(() => {
+    if (selectedTicket && showTicketModal && !selectedTicket.assignedTo) {
+      // Fetch contractors for this ticket's category
+      fetchContractorsForCategory(selectedTicket.categoryId || undefined)
+    }
+  }, [selectedTicket, showTicketModal])
+
   const fetchTickets = async () => {
     try {
       const response = await fetch('/api/admin/tickets')
@@ -228,6 +270,34 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       }
     } catch (error) {
       console.error('Failed to fetch contractors:', error)
+    }
+  }
+
+  // Fetch contractors filtered by ticket category with detailed info
+  const fetchContractorsForCategory = async (categoryId?: string) => {
+    setLoadingContractors(true)
+    setRecommendedContractor(null)
+    try {
+      const url = categoryId 
+        ? `/api/admin/contractors/available?categoryId=${categoryId}&autoAssign=true`
+        : '/api/admin/contractors/available?autoAssign=true'
+      
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        setFilteredContractors(data.contractors || [])
+        if (data.recommended) {
+          setRecommendedContractor(data.recommended)
+        }
+      } else {
+        console.error('Failed to fetch contractors for category')
+        setFilteredContractors([])
+      }
+    } catch (error) {
+      console.error('Failed to fetch contractors:', error)
+      setFilteredContractors([])
+    } finally {
+      setLoadingContractors(false)
     }
   }
 
@@ -344,6 +414,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [unassignReason, setUnassignReason] = useState('')
   const [unassigning, setUnassigning] = useState(false)
 
+  // Quick edit menu states
+  const [priorityMenuAnchor, setPriorityMenuAnchor] = useState<null | HTMLElement>(null)
+  const [typeMenuAnchor, setTypeMenuAnchor] = useState<null | HTMLElement>(null)
+  const [contractorMenuAnchor, setContractorMenuAnchor] = useState<null | HTMLElement>(null)
+  const [quickEditTicket, setQuickEditTicket] = useState<TicketDetails | null>(null)
+  const [quickAssignLoading, setQuickAssignLoading] = useState(false)
+  const [quickEditLoading, setQuickEditLoading] = useState(false)
+
   const handleUnassignTicket = async () => {
     if (!selectedTicket) return
     
@@ -456,6 +534,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   }
 
   const handlePriorityChange = async (ticketId: string, newPriority: string) => {
+    setQuickEditLoading(true)
     try {
       const response = await fetch(`/api/admin/tickets/${ticketId}`, {
         method: 'PATCH',
@@ -472,6 +551,65 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     } catch (error) {
       console.error('Failed to update priority:', error)
       toast.error('Failed to update priority')
+    } finally {
+      setQuickEditLoading(false)
+      setPriorityMenuAnchor(null)
+      setQuickEditTicket(null)
+    }
+  }
+
+  const handleTypeChange = async (ticketId: string, newType: string) => {
+    setQuickEditLoading(true)
+    try {
+      const response = await fetch(`/api/admin/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: newType })
+      })
+
+      if (response.ok) {
+        toast.success('Type updated successfully')
+        fetchTickets()
+      } else {
+        toast.error('Failed to update type')
+      }
+    } catch (error) {
+      console.error('Failed to update type:', error)
+      toast.error('Failed to update type')
+    } finally {
+      setQuickEditLoading(false)
+      setTypeMenuAnchor(null)
+      setQuickEditTicket(null)
+    }
+  }
+
+  const handleQuickAssign = async (ticketId: string, contractorId: string) => {
+    setQuickAssignLoading(true)
+    try {
+      const response = await fetch(`/api/admin/tickets/${ticketId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractorId,
+          notes: '',
+          status: 'PROCESSING'
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Contractor assigned successfully')
+        fetchTickets()
+      } else {
+        const errorData = await response.json()
+        toast.error(`Failed to assign: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to assign contractor:', error)
+      toast.error('Failed to assign contractor')
+    } finally {
+      setQuickAssignLoading(false)
+      setContractorMenuAnchor(null)
+      setQuickEditTicket(null)
     }
   }
 
@@ -553,81 +691,107 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   // DataGrid column definitions
   const ticketColumns: GridColDef[] = useMemo(() => [
     {
-      field: 'title',
-      headerName: 'Title',
-      flex: 1.5,
-      minWidth: 250,
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const ticket = params.row
-        const hasRejection = ticket.rejectedAt && ticket.status === 'OPEN'
-        const hasCancellationRequest = ticket.cancellationRequestedAt && !ticket.cancelledAt
-        
-        return (
-          <Box sx={{ py: 1.5, width: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-              <Box sx={{ flexShrink: 0, mt: 0.5 }}>
-                {getStatusIcon(ticket.status)}
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-                  <span className="text-base font-semibold text-gray-900 truncate">
-                    {ticket.title}
-                  </span>
-                  <Chip 
-                    label={ticket.type?.replace(/_/g, ' ') || 'GENERAL'} 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ fontSize: '0.7rem', height: 20 }}
-                  />
-                  {hasRejection && (
-                    <Chip 
-                      icon={<XCircle className="h-3 w-3" />}
-                      label="Rejected" 
-                      size="small" 
-                      color="error"
-                      sx={{ fontSize: '0.7rem', height: 20 }}
-                    />
-                  )}
-                  {hasCancellationRequest && (
-                    <Chip 
-                      icon={<AlertTriangle className="h-3 w-3" />}
-                      label="Cancel Requested" 
-                      size="small" 
-                      color="warning"
-                      sx={{ fontSize: '0.7rem', height: 20 }}
-                    />
-                  )}
-                </Box>
-                <p className="text-sm font-medium text-blue-600">{ticket.ticketNumber}</p>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <User className="h-3 w-3" /> {ticket.user.name}
-                  </span>
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Calendar className="h-3 w-3" /> {new Date(ticket.createdAt).toLocaleDateString()}
-                  </span>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )
-      },
+      field: 'ticket',
+      headerName: 'Ticket',
+      flex: 1.2,
+      minWidth: 140,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
+          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
+          <p className="text-xs text-blue-600">{params.row.ticketNumber}</p>
+        </Box>
+      ),
+    },
+    {
+      field: 'ticketId',
+      headerName: 'Ticket ID',
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <span className="text-xs font-mono text-gray-600">
+          {params.row.id.slice(0, 8).toUpperCase()}
+        </span>
+      ),
     },
     {
       field: 'description',
       headerName: 'Description',
       flex: 1.5,
-      minWidth: 200,
+      minWidth: 150,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ py: 1.5 }}>
-          <p className="text-sm text-gray-700 line-clamp-2">{params.row.description}</p>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <Tooltip 
+            title={
+              <Box sx={{ p: 1, maxWidth: 400 }}>
+                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
+                  {params.row.description || 'No description'}
+                </p>
+              </Box>
+            }
+            arrow
+            placement="top"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: 'grey.900',
+                  '& .MuiTooltip-arrow': { color: 'grey.900' },
+                  maxWidth: 400,
+                },
+              },
+            }}
+          >
+            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+              {params.row.description || 'No description'}
+            </p>
+          </Tooltip>
         </Box>
+      ),
+    },
+    {
+      field: 'type',
+      headerName: 'Type',
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <Tooltip title="Click to change type">
+          <Chip
+            label={params.row.type?.replace(/_/g, ' ')}
+            size="small"
+            variant="outlined"
+            onClick={(e) => {
+              e.stopPropagation()
+              setQuickEditTicket(params.row)
+              setTypeMenuAnchor(e.currentTarget)
+            }}
+            sx={{ 
+              fontWeight: 500, 
+              fontSize: '0.7rem', 
+              cursor: 'pointer',
+              '&:hover': { 
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                borderColor: 'primary.main'
+              }
+            }}
+            icon={<Edit className="h-3 w-3" />}
+          />
+        </Tooltip>
       ),
     },
     {
       field: 'priority',
       headerName: 'Priority',
-      width: 110,
+      flex: 0.5,
+      minWidth: 70,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const priorityColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
           LOW: 'success',
@@ -636,51 +800,37 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           CRITICAL: 'error',
         }
         return (
-          <Chip
-            label={params.row.priority}
-            size="small"
-            color={priorityColors[params.row.priority] || 'default'}
-            sx={{ fontWeight: 500 }}
-          />
-        )
-      },
-    },
-    {
-      field: 'assignedTo',
-      headerName: 'Assigned To',
-      width: 150,
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const ticket = params.row
-        return ticket.assignedTo ? (
-          <Box>
-            <p className="text-sm font-medium text-gray-900">{ticket.assignedTo.name}</p>
-            <p className="text-xs text-gray-500">{ticket.assignedTo.email}</p>
-          </Box>
-        ) : (
-          <span className="text-sm text-gray-400">Unassigned</span>
-        )
-      },
-    },
-    {
-      field: 'asset',
-      headerName: 'Asset',
-      width: 130,
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const ticket = params.row
-        return ticket.asset ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Package className="h-3 w-3 text-gray-400" />
-            <span className="text-sm text-gray-900 truncate">{ticket.asset.name}</span>
-          </Box>
-        ) : (
-          <span className="text-sm text-gray-400">-</span>
+          <Tooltip title="Click to change priority">
+            <Chip
+              label={params.row.priority}
+              size="small"
+              color={priorityColors[params.row.priority] || 'default'}
+              onClick={(e) => {
+                e.stopPropagation()
+                setQuickEditTicket(params.row)
+                setPriorityMenuAnchor(e.currentTarget)
+              }}
+              sx={{ 
+                fontWeight: 500, 
+                fontSize: '0.7rem',
+                cursor: 'pointer',
+                '&:hover': { 
+                  filter: 'brightness(0.9)'
+                }
+              }}
+              icon={<Edit className="h-3 w-3" />}
+            />
+          </Tooltip>
         )
       },
     },
     {
       field: 'status',
       headerName: 'Status',
-      width: 140,
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const statusColors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default'> = {
           OPEN: 'primary',
@@ -700,15 +850,130 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             label={params.row.status.replace(/_/g, ' ')}
             size="small"
             color={statusColors[params.row.status] || 'default'}
-            sx={{ fontWeight: 500 }}
+            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
           />
         )
       },
     },
     {
+      field: 'sla',
+      headerName: 'SLA',
+      flex: 0.9,
+      minWidth: 110,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
+        const slaInfo = calculateSLAInfo({
+          createdAt: params.row.createdAt,
+          priority: params.row.priority,
+          status: params.row.status,
+          assignedAt: params.row.assignedAt,
+          contractorAcceptedAt: params.row.contractorAcceptedAt,
+          onSiteAt: params.row.onSiteAt,
+          completedAt: params.row.completedAt,
+          responseDeadline: params.row.responseDeadline,
+          resolutionDeadline: params.row.resolutionDeadline
+        })
+        
+        // Show resolution SLA for active tickets, or final status for closed
+        const showResolution = !['OPEN', 'PROCESSING', 'ASSIGNED'].includes(params.row.status)
+        const status = showResolution ? slaInfo.resolutionStatus : slaInfo.responseStatus
+        const label = showResolution ? slaInfo.formattedResolutionRemaining : slaInfo.formattedResponseRemaining
+        const tooltipText = showResolution 
+          ? `Resolution: ${slaInfo.formattedResolutionRemaining}`
+          : `Response: ${slaInfo.formattedResponseRemaining}`
+        
+        return (
+          <Tooltip title={tooltipText}>
+            <Chip
+              icon={<Timer className="h-3 w-3" />}
+              label={label.length > 12 ? label.substring(0, 12) + '...' : label}
+              size="small"
+              color={getSLAChipColor(status)}
+              sx={{ fontWeight: 500, fontSize: '0.65rem' }}
+            />
+          </Tooltip>
+        )
+      },
+    },
+    {
+      field: 'assignedTo',
+      headerName: 'Contractor',
+      flex: 0.9,
+      minWidth: 120,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
+        const isAssignable = ['OPEN', 'PROCESSING'].includes(params.row.status) || !params.row.assignedTo
+        return (
+          <Tooltip title={params.row.assignedTo ? 'Click to reassign' : 'Click to assign contractor'}>
+            <Box 
+              onClick={(e) => {
+                if (isAssignable) {
+                  e.stopPropagation()
+                  setQuickEditTicket(params.row)
+                  fetchContractorsForCategory(params.row.categoryId || undefined)
+                  setContractorMenuAnchor(e.currentTarget as HTMLElement)
+                }
+              }}
+              sx={{ 
+                textAlign: 'center', 
+                cursor: isAssignable ? 'pointer' : 'default',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                '&:hover': isAssignable ? { 
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                  boxShadow: '0 0 0 1px rgba(25, 118, 210, 0.3)'
+                } : {}
+              }}
+            >
+              {params.row.assignedTo ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                  <UserCheck className="h-3 w-3 text-green-600" />
+                  <p className="text-xs font-medium text-gray-900 truncate">{params.row.assignedTo.name}</p>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                  <Plus className="h-3 w-3 text-blue-600" />
+                  <span className="text-xs text-blue-600 font-medium">Assign</span>
+                </Box>
+              )}
+            </Box>
+          </Tooltip>
+        )
+      },
+    },
+    {
+      field: 'user',
+      headerName: 'Created By',
+      flex: 0.7,
+      minWidth: 90,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <Box sx={{ textAlign: 'center' }}>
+          <p className="text-xs text-gray-900 truncate">{params.row.user.name}</p>
+        </Box>
+      ),
+    },
+    {
+      field: 'createdAt',
+      headerName: 'Created',
+      flex: 0.6,
+      minWidth: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <span className="text-xs text-gray-500">
+          {new Date(params.row.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
-      width: 100,
+      width: 60,
       sortable: false,
       filterable: false,
       align: 'center',
@@ -742,8 +1007,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="bg-gray-50 p-5">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -897,7 +1162,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               </div>
             ) : (
               <Box sx={{ width: '100%' }}>
-                <DataGrid
+                <ScrollableDataGrid
                   rows={filteredTickets}
                   columns={ticketColumns}
                   initialState={{
@@ -919,16 +1184,6 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     return ''
                   }}
                   sx={{
-                    '& .MuiDataGrid-cell': {
-                      borderColor: '#f3f4f6',
-                    },
-                    '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: '#f9fafb',
-                      borderBottom: '1px solid #e5e7eb',
-                    },
-                    '& .MuiDataGrid-row:hover': {
-                      backgroundColor: '#f9fafb',
-                    },
                     '& .bg-red-50': {
                       backgroundColor: '#fef2f2 !important',
                       borderLeft: '4px solid #ef4444',
@@ -1074,28 +1329,183 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     </div>
 
                     {assignmentType === 'contractor' ? (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="contractor">Select Contractor</Label>
-                          <Select value={selectedContractor} onValueChange={setSelectedContractor}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choose a contractor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {contractors.length === 0 ? (
-                                <SelectItem value="no-contractors" disabled>
-                                  No contractors available
-                                </SelectItem>
-                              ) : (
-                                contractors.map(contractor => (
-                                  <SelectItem key={contractor.id} value={contractor.id}>
-                                    {contractor.name || contractor.email} {contractor.isAvailable ? '' : '(Busy)'}
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="space-y-4">
+                        {/* Recommended Contractor */}
+                        {recommendedContractor && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-green-800 flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-current text-yellow-500" />
+                                Recommended Contractor
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => setSelectedContractor(recommendedContractor.userId)}
+                              >
+                                Auto-Assign
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{recommendedContractor.name}</p>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <Tooltip
+                                    title={
+                                      recommendedContractor.stats ? (
+                                        <Box sx={{ p: 0.5 }}>
+                                          <Box sx={{ fontWeight: 600, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.2)', pb: 0.5 }}>
+                                            Rating Breakdown
+                                          </Box>
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: '0.8rem' }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                              <span>Punctuality:</span>
+                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgPunctuality}/5</span>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                              <span>Customer Service:</span>
+                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgCustomerService}/5</span>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                              <span>Workmanship:</span>
+                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgWorkmanship}/5</span>
+                                            </Box>
+                                          </Box>
+                                        </Box>
+                                      ) : 'No ratings yet'
+                                    }
+                                    arrow
+                                  >
+                                    <span className="font-semibold text-blue-600 cursor-help">
+                                      {recommendedContractor.rating?.toFixed(1) || '-'}
+                                    </span>
+                                  </Tooltip>
+                                  <span>•</span>
+                                  <span>{recommendedContractor.totalJobs || 0} jobs</span>
+                                  {recommendedContractor.stats && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{recommendedContractor.stats.totalRatings} reviews</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Contractor Loading State */}
+                        {loadingContractors && (
+                          <div className="text-center py-4">
+                            <RefreshCw className="h-5 w-5 animate-spin mx-auto text-gray-400" />
+                            <p className="text-sm text-gray-500 mt-1">Finding contractors for this category...</p>
+                          </div>
+                        )}
+                        
+                        {/* Contractor Selection */}
+                        {!loadingContractors && (
+                          <>
+                            <div>
+                              <Label htmlFor="contractor">
+                                Select Contractor 
+                                {selectedTicket?.category && (
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
+                                  </span>
+                                )}
+                              </Label>
+                              <Select value={selectedContractor} onValueChange={setSelectedContractor}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Choose a contractor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {filteredContractors.length === 0 ? (
+                                    <SelectItem value="no-contractors" disabled>
+                                      No contractors available for this category
+                                    </SelectItem>
+                                  ) : (
+                                    filteredContractors.map(contractor => (
+                                      <SelectItem key={contractor.id} value={contractor.userId}>
+                                        <div className="flex items-center gap-2">
+                                          <span>{contractor.name}</span>
+                                          <span className="font-semibold text-blue-600">
+                                            {contractor.rating?.toFixed(1) || '-'}
+                                          </span>
+                                          <span className="text-xs text-gray-400">
+                                            ({contractor.totalJobs || 0} jobs)
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    ))
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            {/* Selected Contractor Details */}
+                            {selectedContractor && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                {(() => {
+                                  const contractor = filteredContractors.find(c => c.userId === selectedContractor)
+                                  if (!contractor) return null
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">{contractor.name}</span>
+                                        <Tooltip
+                                          title={
+                                            contractor.stats ? (
+                                              <Box sx={{ p: 0.5 }}>
+                                                <Box sx={{ fontWeight: 600, mb: 1 }}>Overall Rating</Box>
+                                                <Box sx={{ fontSize: '0.8rem' }}>
+                                                  Based on {contractor.stats.totalRatings} review{contractor.stats.totalRatings !== 1 ? 's' : ''}
+                                                </Box>
+                                              </Box>
+                                            ) : 'No ratings yet'
+                                          }
+                                          arrow
+                                        >
+                                          <span className="text-lg font-bold text-blue-600 cursor-help">
+                                            {contractor.rating?.toFixed(1) || '-'}
+                                          </span>
+                                        </Tooltip>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-2 text-sm">
+                                        <div className="text-center p-2 bg-white rounded">
+                                          <div className="font-semibold text-blue-600">{contractor.stats?.avgPunctuality || '-'}</div>
+                                          <div className="text-xs text-gray-500">Punctuality</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded">
+                                          <div className="font-semibold text-green-600">{contractor.stats?.avgCustomerService || '-'}</div>
+                                          <div className="text-xs text-gray-500">Service</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded">
+                                          <div className="font-semibold text-purple-600">{contractor.stats?.avgWorkmanship || '-'}</div>
+                                          <div className="text-xs text-gray-500">Workmanship</div>
+                                        </div>
+                                      </div>
+                                      {contractor.categories && contractor.categories.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 pt-1">
+                                          {contractor.categories.slice(0, 5).map(cat => (
+                                            <Badge 
+                                              key={cat.id} 
+                                              variant="outline" 
+                                              className="text-xs"
+                                              style={{ borderColor: cat.color, color: cat.color }}
+                                            >
+                                              {cat.name}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+                              </div>
+                            )}
+                          </>
+                        )}
                         
                         <div>
                           <Label htmlFor="notes">Assignment Notes</Label>
@@ -1109,7 +1519,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         
                         <Button 
                           onClick={handleAssignContractor} 
-                          disabled={!selectedContractor}
+                          disabled={!selectedContractor || loadingContractors}
                           className="w-full"
                         >
                           <UserCheck className="h-4 w-4 mr-2" />
@@ -1317,14 +1727,19 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           </Badge>
                           <div className="flex items-center space-x-2">
                             {selectedTicket.invoice.invoiceFileUrl && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => window.open(selectedTicket.invoice?.invoiceFileUrl, '_blank')}
+                              <MediaHoverPreview 
+                                file={{ url: selectedTicket.invoice.invoiceFileUrl, filename: 'Invoice PDF', mimeType: 'application/pdf' }}
+                                previewSize="lg"
                               >
-                                <Download className="h-4 w-4 mr-2" />
-                                Invoice PDF
-                              </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => window.open(selectedTicket.invoice?.invoiceFileUrl, '_blank')}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Invoice PDF
+                                </Button>
+                              </MediaHoverPreview>
                             )}
                             <Button 
                               variant="outline" 
@@ -1465,6 +1880,167 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             onRatingSubmitted={handleRatingSubmitted}
           />
         )}
+
+        {/* Quick Edit Priority Menu */}
+        <Menu
+          anchorEl={priorityMenuAnchor}
+          open={Boolean(priorityMenuAnchor)}
+          onClose={() => {
+            setPriorityMenuAnchor(null)
+            setQuickEditTicket(null)
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+          slotProps={{
+            paper: {
+              sx: { minWidth: 140, mt: 0.5 }
+            }
+          }}
+        >
+          {quickEditLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : (
+            ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((priority) => (
+              <MenuItem
+                key={priority}
+                onClick={() => quickEditTicket && handlePriorityChange(quickEditTicket.id, priority)}
+                selected={quickEditTicket?.priority === priority}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                <ListItemIcon>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      bgcolor: priority === 'LOW' ? 'success.main' :
+                               priority === 'MEDIUM' ? 'warning.main' :
+                               priority === 'HIGH' ? 'error.main' : 'error.dark'
+                    }}
+                  />
+                </ListItemIcon>
+                <ListItemText>{priority}</ListItemText>
+              </MenuItem>
+            ))
+          )}
+        </Menu>
+
+        {/* Quick Edit Type Menu */}
+        <Menu
+          anchorEl={typeMenuAnchor}
+          open={Boolean(typeMenuAnchor)}
+          onClose={() => {
+            setTypeMenuAnchor(null)
+            setQuickEditTicket(null)
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+          slotProps={{
+            paper: {
+              sx: { minWidth: 160, mt: 0.5 }
+            }
+          }}
+        >
+          {quickEditLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : (
+            ['REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 'REPLACEMENT', 'EMERGENCY', 'OTHER'].map((type) => (
+              <MenuItem
+                key={type}
+                onClick={() => quickEditTicket && handleTypeChange(quickEditTicket.id, type)}
+                selected={quickEditTicket?.type === type}
+                sx={{ fontSize: '0.875rem' }}
+              >
+                <ListItemText>{type.replace(/_/g, ' ')}</ListItemText>
+              </MenuItem>
+            ))
+          )}
+        </Menu>
+
+        {/* Quick Assign Contractor Menu */}
+        <Menu
+          anchorEl={contractorMenuAnchor}
+          open={Boolean(contractorMenuAnchor)}
+          onClose={() => {
+            setContractorMenuAnchor(null)
+            setQuickEditTicket(null)
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+          slotProps={{
+            paper: {
+              sx: { minWidth: 280, maxHeight: 400, mt: 0.5 }
+            }
+          }}
+        >
+          {loadingContractors || quickAssignLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : filteredContractors.length === 0 ? (
+            <MenuItem disabled>
+              <ListItemText secondary="No contractors available" />
+            </MenuItem>
+          ) : (
+            <>
+              {recommendedContractor && (
+                <>
+                  <MenuItem 
+                    sx={{ bgcolor: 'success.light', '&:hover': { bgcolor: 'success.main' } }}
+                    onClick={() => quickEditTicket && handleQuickAssign(quickEditTicket.id, recommendedContractor.userId)}
+                  >
+                    <ListItemIcon>
+                      <Star className="h-4 w-4 text-yellow-600" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={recommendedContractor.name}
+                      secondary={
+                        <span className="text-xs">
+                          ⭐ Recommended • {recommendedContractor.rating?.toFixed(1) || 'New'}
+                        </span>
+                      }
+                    />
+                  </MenuItem>
+                  <Divider />
+                </>
+              )}
+              {filteredContractors.map((contractor) => (
+                <MenuItem
+                  key={contractor.id}
+                  onClick={() => quickEditTicket && handleQuickAssign(quickEditTicket.id, contractor.userId)}
+                  sx={{ py: 1 }}
+                >
+                  <ListItemIcon>
+                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                      {contractor.name?.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={contractor.name}
+                    secondary={
+                      <Box component="span" sx={{ display: 'flex', flexDirection: 'column', fontSize: '0.7rem' }}>
+                        <span>
+                          {contractor.rating ? `⭐ ${contractor.rating.toFixed(1)}` : 'No rating'} 
+                          {contractor.totalJobs ? ` • ${contractor.totalJobs} jobs` : ''}
+                        </span>
+                        {contractor.categories && contractor.categories.length > 0 && (
+                          <span className="text-gray-400 truncate">
+                            {contractor.categories.map(c => c.name).join(', ')}
+                          </span>
+                        )}
+                      </Box>
+                    }
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                  />
+                </MenuItem>
+              ))}
+            </>
+          )}
+        </Menu>
       </div>
     </div>
   )

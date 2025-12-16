@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendVerificationEmail } from '@/lib/email'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 export async function GET() {
   try {
@@ -142,11 +144,32 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return { tenant, adminUser }
+      // Create verification token
+      const verificationToken = crypto.randomBytes(32).toString('hex')
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+      await tx.verificationToken.create({
+        data: {
+          identifier: adminEmail,
+          token: verificationToken,
+          expires
+        }
+      })
+
+      return { tenant, adminUser, verificationToken }
     })
 
+    // Send verification email (outside transaction)
+    try {
+      const verificationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${result.verificationToken}`
+      await sendVerificationEmail(adminEmail, adminName || name + ' Admin', verificationLink)
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError)
+      // Don't fail the tenant creation if email fails
+    }
+
     return NextResponse.json({
-      message: 'Tenant created successfully',
+      message: 'Tenant created successfully. Verification email sent.',
       tenant: {
         id: result.tenant.id,
         name: result.tenant.name,

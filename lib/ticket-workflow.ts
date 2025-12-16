@@ -84,23 +84,56 @@ export const TICKET_PRIORITIES = {
   LOW: {
     label: 'Low',
     color: 'green',
-    sla: 72 // hours
+    responseTimeMinutes: 48 * 60,  // 48 hours - time for admin to assign + contractor to accept
+    resolutionTimeMinutes: 72 * 60 // 72 hours - time to complete the job
   },
   MEDIUM: {
     label: 'Medium',
     color: 'yellow',
-    sla: 24
+    responseTimeMinutes: 12 * 60,  // 12 hours
+    resolutionTimeMinutes: 24 * 60 // 24 hours
   },
   HIGH: {
     label: 'High',
     color: 'orange',
-    sla: 8
+    responseTimeMinutes: 60,       // 1 hour
+    resolutionTimeMinutes: 8 * 60  // 8 hours
   },
   CRITICAL: {
     label: 'Critical',
     color: 'red',
-    sla: 2
+    responseTimeMinutes: 30,       // 30 minutes
+    resolutionTimeMinutes: 2 * 60  // 2 hours
   }
+}
+
+// Helper to get SLA times in minutes
+export function getSLATimes(priority: string): { responseTime: number; resolutionTime: number } {
+  const priorityConfig = TICKET_PRIORITIES[priority as keyof typeof TICKET_PRIORITIES]
+  if (!priorityConfig) {
+    return { responseTime: 24 * 60, resolutionTime: 48 * 60 } // Default to MEDIUM
+  }
+  return {
+    responseTime: priorityConfig.responseTimeMinutes,
+    resolutionTime: priorityConfig.resolutionTimeMinutes
+  }
+}
+
+// Format minutes to human readable
+export function formatSLATime(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} min${minutes !== 1 ? 's' : ''}`
+  }
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours} hour${hours !== 1 ? 's' : ''}`
+  }
+  const days = Math.floor(hours / 24)
+  const remainingHours = hours % 24
+  if (remainingHours === 0) {
+    return `${days} day${days !== 1 ? 's' : ''}`
+  }
+  return `${days} day${days !== 1 ? 's' : ''} ${remainingHours}h`
 }
 
 export function canUserTransitionTicket(

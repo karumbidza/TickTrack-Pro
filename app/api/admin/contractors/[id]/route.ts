@@ -59,7 +59,7 @@ export async function PATCH(
     }
 
     const contractorId = params.id
-    const { name, email, phone, secondaryPhone, specialties, hourlyRate, isActive } = await request.json()
+    const { name, email, phone, secondaryPhone, isActive } = await request.json()
 
     // Find the contractor user
     const contractor = await prisma.user.findUnique({
@@ -94,8 +94,6 @@ export async function PATCH(
       await prisma.contractor.update({
         where: { id: contractor.contractorProfile.id },
         data: {
-          specialties: specialties || contractor.contractorProfile.specialties,
-          hourlyRate: hourlyRate !== undefined ? hourlyRate : contractor.contractorProfile.hourlyRate,
           secondaryPhone: secondaryPhone !== undefined ? secondaryPhone : contractor.contractorProfile.secondaryPhone
         }
       })

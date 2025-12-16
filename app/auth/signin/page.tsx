@@ -2,21 +2,40 @@
 
 import { useState, useEffect } from 'react'
 import { signIn, getSession, useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Ticket } from 'lucide-react'
+import { Ticket, CheckCircle2, AlertCircle, Mail } from 'lucide-react'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [resendingEmail, setResendingEmail] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
+
+  // Handle URL parameters for verification status
+  useEffect(() => {
+    const verified = searchParams.get('verified')
+    const errorParam = searchParams.get('error')
+    
+    if (verified === 'true') {
+      setSuccessMessage('Email verified successfully! You can now sign in.')
+    } else if (errorParam === 'token_expired') {
+      setError('Verification link has expired. Please request a new one.')
+    } else if (errorParam === 'invalid_token') {
+      setError('Invalid verification link.')
+    } else if (errorParam === 'verification_failed') {
+      setError('Email verification failed. Please try again.')
+    }
+  }, [searchParams])
 
   // Redirect if already logged in
   useEffect(() => {
@@ -34,6 +53,34 @@ export default function SignInPage() {
       }
     }
   }, [session, status, router])
+
+  // Resend verification email
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email address first')
+      return
+    }
+    
+    setResendingEmail(true)
+    try {
+      const response = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      
+      if (response.ok) {
+        setSuccessMessage('Verification email sent! Please check your inbox.')
+        setError('')
+      } else {
+        setError('Failed to send verification email')
+      }
+    } catch (err) {
+      setError('Failed to send verification email')
+    } finally {
+      setResendingEmail(false)
+    }
+  }
 
   // Show loading while checking session
   if (status === 'loading') {
@@ -56,6 +103,7 @@ export default function SignInPage() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setSuccessMessage('')
 
     try {
       const result = await signIn('credentials', {
@@ -147,8 +195,31 @@ export default function SignInPage() {
                 />
               </div>
 
+              {successMessage && (
+                <div className="flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-md">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {successMessage}
+                </div>
+              )}
+
               {error && (
-                <div className="text-red-600 text-sm">{error}</div>
+                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                  <AlertCircle className="h-4 w-4" />
+                  <div className="flex-1">
+                    {error}
+                    {error.includes('expired') && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-red-600 underline p-0 h-auto ml-2"
+                        onClick={handleResendVerification}
+                        disabled={resendingEmail}
+                      >
+                        {resendingEmail ? 'Sending...' : 'Resend verification email'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               )}
 
               <Button
@@ -158,6 +229,21 @@ export default function SignInPage() {
               >
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
+
+              {/* Resend verification link */}
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-500 text-xs"
+                  onClick={handleResendVerification}
+                  disabled={resendingEmail || !email}
+                >
+                  <Mail className="h-3 w-3 mr-1" />
+                  {resendingEmail ? 'Sending...' : "Didn't get verification email? Resend"}
+                </Button>
+              </div>
             </form>
 
             <div className="relative">

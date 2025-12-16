@@ -120,14 +120,27 @@ export async function PATCH(
     // Update other fields as needed
     const allowedFields = [
       'name', 'description', 'categoryId', 'brand', 'model', 'serialNumber',
-      'purchaseDate', 'warrantyExpires', 'endOfLifeDate', 'location', 'specifications',
-      'images', 'manuals', 'lastMaintenanceDate', 'nextMaintenanceDate',
+      'location', 'specifications', 'images', 'manuals',
       'maintenanceInterval', 'purchasePrice', 'currentValue'
     ]
+
+    // Date fields that need conversion
+    const dateFields = ['purchaseDate', 'warrantyExpires', 'endOfLifeDate', 'lastMaintenanceDate', 'nextMaintenanceDate']
 
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {
         updateData[field] = body[field]
+      }
+    })
+
+    // Handle date fields - convert to proper DateTime or null
+    dateFields.forEach(field => {
+      if (body[field] !== undefined) {
+        if (body[field] === null || body[field] === '') {
+          updateData[field] = null
+        } else {
+          updateData[field] = new Date(body[field])
+        }
       }
     })
 

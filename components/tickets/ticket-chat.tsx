@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import { 
   Send, 
   Paperclip, 
@@ -21,7 +22,8 @@ import {
   Download,
   Loader2,
   ZoomIn,
-  ExternalLink
+  ExternalLink,
+  Play
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -269,126 +271,151 @@ export function TicketChat({
     const isPdf = attachment.mimeType === 'application/pdf'
     const displayName = attachment.originalName || attachment.filename
 
+    // Wrap non-image/video files with hover preview
+    const mediaFile = {
+      url: attachment.url,
+      filename: attachment.filename,
+      originalName: attachment.originalName,
+      mimeType: attachment.mimeType
+    }
+
     if (isImage) {
       return (
-        <div className="group relative inline-block">
-          <img 
-            src={attachment.url} 
-            alt={displayName}
-            className="max-w-[200px] max-h-[150px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => {
-              setLightboxAttachment(attachment)
-              setShowLightbox(true)
-            }}
-          />
-          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightboxAttachment(attachment); setShowLightbox(true); }}
-              className="p-1 bg-black/60 rounded text-white hover:bg-black/80"
-              title="View full size"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleDownload(attachment.url, displayName); }}
-              className="p-1 bg-black/60 rounded text-white hover:bg-black/80"
-              title="Download"
-            >
-              <Download className="h-3 w-3" />
-            </button>
+        <MediaHoverPreview file={mediaFile} previewSize="lg" showFileName={false}>
+          <div className="group relative inline-block">
+            <img 
+              src={attachment.url} 
+              alt={displayName}
+              className="max-w-[200px] max-h-[150px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => {
+                setLightboxAttachment(attachment)
+                setShowLightbox(true)
+              }}
+            />
+            <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightboxAttachment(attachment); setShowLightbox(true); }}
+                className="p-1 bg-black/60 rounded text-white hover:bg-black/80"
+                title="View full size"
+              >
+                <ZoomIn className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDownload(attachment.url, displayName); }}
+                className="p-1 bg-black/60 rounded text-white hover:bg-black/80"
+                title="Download"
+              >
+                <Download className="h-3 w-3" />
+              </button>
+            </div>
           </div>
-        </div>
+        </MediaHoverPreview>
       )
     }
 
     if (isVideo) {
       return (
-        <div className="relative group">
-          <video 
-            src={attachment.url} 
-            controls
-            className="max-w-[250px] max-h-[150px] rounded-lg bg-black"
-          />
-          <button
-            onClick={() => handleDownload(attachment.url, displayName)}
-            className="absolute top-1 right-1 p-1 bg-black/60 rounded text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Download"
-          >
-            <Download className="h-3 w-3" />
-          </button>
-        </div>
+        <MediaHoverPreview file={mediaFile} previewSize="lg" showFileName={false}>
+          <div className="relative group cursor-pointer" onClick={() => { setLightboxAttachment(attachment); setShowLightbox(true); }}>
+            <div className="relative max-w-[250px] max-h-[150px] rounded-lg overflow-hidden bg-black">
+              <video 
+                src={attachment.url} 
+                className="max-w-[250px] max-h-[150px] object-cover"
+                muted
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <div className="bg-white/90 rounded-full p-2">
+                  <Play className="h-6 w-6 text-gray-800 fill-gray-800" />
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownload(attachment.url, displayName); }}
+              className="absolute top-1 right-1 p-1 bg-black/60 rounded text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Download"
+            >
+              <Download className="h-3 w-3" />
+            </button>
+          </div>
+        </MediaHoverPreview>
       )
     }
 
     if (isAudio) {
       return (
-        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-2">
-          <Volume2 className="h-4 w-4 text-gray-500 flex-shrink-0" />
-          <audio src={attachment.url} controls className="h-8 flex-1" />
-          <button
-            onClick={() => handleDownload(attachment.url, displayName)}
-            className="p-1 hover:bg-gray-200 rounded"
-            title="Download"
-          >
-            <Download className="h-4 w-4 text-gray-500" />
-          </button>
-        </div>
+        <MediaHoverPreview file={mediaFile} previewSize="sm">
+          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-2">
+            <Volume2 className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            <audio src={attachment.url} controls className="h-8 flex-1" />
+            <button
+              onClick={() => handleDownload(attachment.url, displayName)}
+              className="p-1 hover:bg-gray-200 rounded"
+              title="Download"
+            >
+              <Download className="h-4 w-4 text-gray-500" />
+            </button>
+          </div>
+        </MediaHoverPreview>
       )
     }
 
     if (isPdf) {
       return (
-        <div 
-          className="flex items-center gap-2 bg-red-50 hover:bg-red-100 rounded-lg p-2 cursor-pointer transition-colors"
-          onClick={() => {
-            setLightboxAttachment(attachment)
-            setShowLightbox(true)
-          }}
-        >
-          <FileText className="h-5 w-5 text-red-600 flex-shrink-0" />
+        <MediaHoverPreview file={mediaFile} previewSize="lg">
+          <div 
+            className="flex items-center gap-2 bg-red-50 hover:bg-red-100 rounded-lg p-2 cursor-pointer transition-colors"
+            onClick={() => {
+              setLightboxAttachment(attachment)
+              setShowLightbox(true)
+            }}
+          >
+            <FileText className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <span className="text-sm text-gray-700 truncate max-w-[150px]">{displayName}</span>
+            <div className="flex gap-1 ml-auto">
+              <button
+                onClick={(e) => { e.stopPropagation(); window.open(attachment.url, '_blank'); }}
+                className="p-1 hover:bg-red-200 rounded"
+                title="Open in new tab"
+              >
+                <ExternalLink className="h-4 w-4 text-gray-500" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDownload(attachment.url, displayName); }}
+                className="p-1 hover:bg-red-200 rounded"
+                title="Download"
+              >
+                <Download className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          </div>
+        </MediaHoverPreview>
+      )
+    }
+
+    // Document/other files
+    return (
+      <MediaHoverPreview file={mediaFile} previewSize="md">
+        <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-lg p-2 transition-colors">
+          <FileText className="h-5 w-5 text-blue-500 flex-shrink-0" />
           <span className="text-sm text-gray-700 truncate max-w-[150px]">{displayName}</span>
           <div className="flex gap-1 ml-auto">
             <button
-              onClick={(e) => { e.stopPropagation(); window.open(attachment.url, '_blank'); }}
-              className="p-1 hover:bg-red-200 rounded"
+              onClick={() => window.open(attachment.url, '_blank')}
+              className="p-1 hover:bg-gray-300 rounded"
               title="Open in new tab"
             >
               <ExternalLink className="h-4 w-4 text-gray-500" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); handleDownload(attachment.url, displayName); }}
-              className="p-1 hover:bg-red-200 rounded"
+              onClick={() => handleDownload(attachment.url, displayName)}
+              className="p-1 hover:bg-gray-300 rounded"
               title="Download"
             >
               <Download className="h-4 w-4 text-gray-500" />
             </button>
           </div>
         </div>
-      )
-    }
-
-    // Document/other files
-    return (
-      <div className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-lg p-2 transition-colors">
-        <FileText className="h-5 w-5 text-blue-500 flex-shrink-0" />
-        <span className="text-sm text-gray-700 truncate max-w-[150px]">{displayName}</span>
-        <div className="flex gap-1 ml-auto">
-          <button
-            onClick={() => window.open(attachment.url, '_blank')}
-            className="p-1 hover:bg-gray-300 rounded"
-            title="Open in new tab"
-          >
-            <ExternalLink className="h-4 w-4 text-gray-500" />
-          </button>
-          <button
-            onClick={() => handleDownload(attachment.url, displayName)}
-            className="p-1 hover:bg-gray-300 rounded"
-            title="Download"
-          >
-            <Download className="h-4 w-4 text-gray-500" />
-          </button>
-        </div>
-      </div>
+      </MediaHoverPreview>
     )
   }
 

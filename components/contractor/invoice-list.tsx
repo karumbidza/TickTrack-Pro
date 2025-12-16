@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Table } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import { Eye, Download, FileText, Calendar, DollarSign } from 'lucide-react'
 
 interface Invoice {
@@ -227,23 +228,33 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
                       <Eye className="h-4 w-4" />
                     </Button>
                     {invoice.invoiceFileUrl && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => window.open(invoice.invoiceFileUrl, '_blank')}
+                      <MediaHoverPreview 
+                        file={{ url: invoice.invoiceFileUrl, filename: `Invoice ${invoice.invoiceNumber}`, mimeType: 'application/pdf' }}
+                        previewSize="lg"
                       >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => window.open(invoice.invoiceFileUrl, '_blank')}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </MediaHoverPreview>
                     )}
                     {invoice.proofOfPaymentUrl && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => window.open(invoice.proofOfPaymentUrl, '_blank')}
-                        className="text-green-600"
+                      <MediaHoverPreview 
+                        file={{ url: invoice.proofOfPaymentUrl, filename: 'Proof of Payment', mimeType: 'image/jpeg' }}
+                        previewSize="lg"
                       >
-                        <FileText className="h-4 w-4" />
-                      </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => window.open(invoice.proofOfPaymentUrl, '_blank')}
+                          className="text-green-600"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </MediaHoverPreview>
                     )}
                   </div>
                 </td>

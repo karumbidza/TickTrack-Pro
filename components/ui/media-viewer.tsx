@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { 
@@ -16,7 +16,9 @@ import {
   Video,
   File,
   Music,
-  ExternalLink
+  ExternalLink,
+  Play,
+  Eye
 } from 'lucide-react'
 
 export interface MediaFile {
@@ -471,5 +473,291 @@ export function MediaInline({ files, maxShow = 4 }: { files: MediaFile[] | strin
     </div>
   )
 }
+
+// Hover Preview Component - Shows preview on hover like YouTube
+interface MediaHoverPreviewProps {
+  file: MediaFile | string
+  children: React.ReactNode
+  previewSize?: 'sm' | 'md' | 'lg'
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'auto'
+  showFileName?: boolean
+  className?: string
+}
+
+export function MediaHoverPreview({ 
+  file, 
+  children, 
+  previewSize = 'md',
+  position = 'auto',
+  showFileName = true,
+  className = ''
+}: MediaHoverPreviewProps) {
+  const [isHovering, setIsHovering] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [previewPosition, setPreviewPosition] = useState<'top' | 'bottom' | 'left' | 'right'>('top')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const normalizedFile = normalizeFile(file)
+  const { type, icon: Icon, color } = getFileTypeInfo(normalizedFile)
+  const displayName = getDisplayName(normalizedFile)
+
+  const sizeClasses = {
+    sm: { width: 'w-48', height: 'h-32' },
+    md: { width: 'w-64', height: 'h-44' },
+    lg: { width: 'w-80', height: 'h-56' }
+  }
+
+  // Calculate position on hover
+  useEffect(() => {
+    if (isHovering && containerRef.current && position === 'auto') {
+      const rect = containerRef.current.getBoundingClientRect()
+      const viewportHeight = window.innerHeight
+      const viewportWidth = window.innerWidth
+      
+      // Determine best position based on available space
+      const spaceTop = rect.top
+      const spaceBottom = viewportHeight - rect.bottom
+      const spaceLeft = rect.left
+      const spaceRight = viewportWidth - rect.right
+
+      if (spaceTop > 200) {
+        setPreviewPosition('top')
+      } else if (spaceBottom > 200) {
+        setPreviewPosition('bottom')
+      } else if (spaceRight > 300) {
+        setPreviewPosition('right')
+      } else if (spaceLeft > 300) {
+        setPreviewPosition('left')
+      } else {
+        setPreviewPosition('top')
+      }
+    } else if (position !== 'auto') {
+      setPreviewPosition(position)
+    }
+  }, [isHovering, position])
+
+  // Auto-play video on hover
+  useEffect(() => {
+    if (isHovering && type === 'video' && videoRef.current) {
+      videoRef.current.play().catch(() => {})
+      setIsPlaying(true)
+    } else if (!isHovering && videoRef.current) {
+      videoRef.current.pause()
+      videoRef.current.currentTime = 0
+      setIsPlaying(false)
+    }
+  }, [isHovering, type])
+
+  const handleMouseEnter = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovering(true)
+    }, 300) // Small delay to prevent accidental triggers
+  }
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    setIsHovering(false)
+  }
+
+  const positionStyles: Record<string, string> = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2'
+  }
+
+  const arrowStyles: Record<string, string> = {
+    top: 'top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-gray-800',
+    bottom: 'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-gray-800',
+    left: 'left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-gray-800',
+    right: 'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-gray-800'
+  }
+
+  return (
+    <div 
+      ref={containerRef}
+      className={`relative inline-block ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+
+      {/* Hover Preview Popup */}
+      {isHovering && (
+        <div
+          ref={previewRef}
+          className={`absolute z-50 ${positionStyles[previewPosition]} animate-in fade-in-0 zoom-in-95 duration-200`}
+        >
+          <div className={`bg-gray-800 rounded-lg shadow-2xl overflow-hidden ${sizeClasses[previewSize].width}`}>
+            {/* Preview Content */}
+            <div className={`relative ${sizeClasses[previewSize].height} bg-gray-900 flex items-center justify-center`}>
+              {type === 'image' && (
+                <img
+                  src={normalizedFile.url}
+                  alt={displayName}
+                  className="w-full h-full object-contain"
+                  loading="eager"
+                />
+              )}
+
+              {type === 'video' && (
+                <div className="relative w-full h-full">
+                  <video
+                    ref={videoRef}
+                    src={normalizedFile.url}
+                    className="w-full h-full object-contain"
+                    muted
+                    loop
+                    playsInline
+                  />
+                  {!isPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div className="bg-white/90 rounded-full p-3">
+                        <Play className="h-8 w-8 text-gray-800 fill-gray-800" />
+                      </div>
+                    </div>
+                  )}
+                  {isPlaying && (
+                    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      Preview
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {type === 'audio' && (
+                <div className="flex flex-col items-center justify-center gap-3 p-4">
+                  <div className="bg-orange-500/20 rounded-full p-4">
+                    <Music className="h-12 w-12 text-orange-400" />
+                  </div>
+                  <audio
+                    src={normalizedFile.url}
+                    controls
+                    className="w-full max-w-[200px]"
+                    style={{ height: '32px' }}
+                  />
+                </div>
+              )}
+
+              {type === 'pdf' && (
+                <div className="w-full h-full">
+                  <iframe
+                    src={`${normalizedFile.url}#toolbar=0&navpanes=0`}
+                    className="w-full h-full"
+                    title={displayName}
+                  />
+                </div>
+              )}
+
+              {type === 'file' && (
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="bg-blue-500/20 rounded-full p-4">
+                    <Icon className={`h-12 w-12 ${color}`} />
+                  </div>
+                  <span className="text-gray-400 text-xs uppercase">Document</span>
+                </div>
+              )}
+
+              {/* Eye indicator */}
+              <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                Preview
+              </div>
+            </div>
+
+            {/* File name footer */}
+            {showFileName && (
+              <div className="px-3 py-2 bg-gray-800 border-t border-gray-700">
+                <p className="text-white text-xs truncate" title={displayName}>
+                  {displayName}
+                </p>
+                <p className="text-gray-400 text-[10px] uppercase mt-0.5">
+                  {type === 'image' ? 'Image' : type === 'video' ? 'Video' : type === 'audio' ? 'Audio' : type === 'pdf' ? 'PDF Document' : 'File'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Arrow pointer */}
+          <div className={`absolute w-0 h-0 border-8 ${arrowStyles[previewPosition]}`} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// File link with hover preview
+interface FilePreviewLinkProps {
+  file: MediaFile | string
+  className?: string
+  showIcon?: boolean
+  onClick?: () => void
+}
+
+export function FilePreviewLink({ file, className = '', showIcon = true, onClick }: FilePreviewLinkProps) {
+  const normalizedFile = normalizeFile(file)
+  const { type, icon: Icon, color } = getFileTypeInfo(normalizedFile)
+  const displayName = getDisplayName(normalizedFile)
+
+  return (
+    <MediaHoverPreview file={file}>
+      <button
+        onClick={onClick || (() => window.open(normalizedFile.url, '_blank'))}
+        className={`inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline ${className}`}
+      >
+        {showIcon && <Icon className={`h-4 w-4 ${color}`} />}
+        <span className="truncate max-w-[200px]">{displayName}</span>
+      </button>
+    </MediaHoverPreview>
+  )
+}
+
+// Attachment chip with hover preview
+interface AttachmentChipProps {
+  file: MediaFile | string
+  onRemove?: () => void
+  onClick?: () => void
+  className?: string
+}
+
+export function AttachmentChip({ file, onRemove, onClick, className = '' }: AttachmentChipProps) {
+  const normalizedFile = normalizeFile(file)
+  const { type, icon: Icon, color } = getFileTypeInfo(normalizedFile)
+  const displayName = getDisplayName(normalizedFile)
+
+  return (
+    <MediaHoverPreview file={file} previewSize="sm">
+      <div className={`inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm transition-colors ${className}`}>
+        <Icon className={`h-3.5 w-3.5 ${color}`} />
+        <button
+          onClick={onClick || (() => window.open(normalizedFile.url, '_blank'))}
+          className="truncate max-w-[150px] text-gray-700 hover:text-gray-900"
+        >
+          {displayName}
+        </button>
+        {onRemove && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            className="text-gray-400 hover:text-red-500 ml-1"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </MediaHoverPreview>
+  )
+}
+
+// Export utility functions for use in other components
+export { normalizeFile, getDisplayName, getFileTypeInfo, handleDownload }
 
 export default MediaViewer

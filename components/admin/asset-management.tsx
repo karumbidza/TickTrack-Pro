@@ -519,30 +519,33 @@ export function AdminAssetManagement() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b text-left text-sm text-gray-500">
-                    <th className="pb-3 font-medium">Asset</th>
-                    <th className="pb-3 font-medium">Category</th>
-                    <th className="pb-3 font-medium">Location</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Purchase Price</th>
-                    <th className="pb-3 font-medium">Total Cost</th>
-                    <th className="pb-3 font-medium">Tickets</th>
-                    <th className="pb-3 font-medium">Actions</th>
+                  <tr className="border-b text-center text-sm text-gray-500">
+                    <th className="pb-3 font-medium text-center">Asset</th>
+                    <th className="pb-3 font-medium text-center">Asset ID</th>
+                    <th className="pb-3 font-medium text-center">Category</th>
+                    <th className="pb-3 font-medium text-center">Location</th>
+                    <th className="pb-3 font-medium text-center">Status</th>
+                    <th className="pb-3 font-medium text-center">Purchase Price</th>
+                    <th className="pb-3 font-medium text-center">Total Cost</th>
+                    <th className="pb-3 font-medium text-center">Tickets</th>
+                    <th className="pb-3 font-medium text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assets.map(asset => (
                     <tr key={asset.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3">
+                      <td className="py-3 text-center">
                         <div>
                           <p className="font-medium">{asset.name}</p>
-                          <p className="text-sm text-gray-500">{asset.assetNumber}</p>
                           {asset.brand && asset.model && (
                             <p className="text-xs text-gray-400">{asset.brand} {asset.model}</p>
                           )}
                         </div>
                       </td>
-                      <td className="py-3">
+                      <td className="py-3 text-center">
+                        <span className="text-sm font-mono text-gray-600">{asset.assetNumber}</span>
+                      </td>
+                      <td className="py-3 text-center">
                         {asset.category ? (
                           <Badge variant="outline" style={{ borderColor: asset.category.color }}>
                             {asset.category.name}
@@ -551,15 +554,15 @@ export function AdminAssetManagement() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="py-3">
-                        <div className="flex items-center gap-1 text-sm">
+                      <td className="py-3 text-center">
+                        <div className="flex items-center justify-center gap-1 text-sm">
                           <MapPin className="h-3 w-3 text-gray-400" />
                           {asset.location}
                         </div>
                       </td>
-                      <td className="py-3">{getStatusBadge(asset.status)}</td>
-                      <td className="py-3 text-sm">{formatCurrency(asset.purchasePrice)}</td>
-                      <td className="py-3">
+                      <td className="py-3 text-center">{getStatusBadge(asset.status)}</td>
+                      <td className="py-3 text-center text-sm">{formatCurrency(asset.purchasePrice)}</td>
+                      <td className="py-3 text-center">
                         <div className="text-sm">
                           <p className="font-medium">{formatCurrency(asset.totalCost)}</p>
                           {asset.totalRepairCost > 0 && (
@@ -569,10 +572,10 @@ export function AdminAssetManagement() {
                           )}
                         </div>
                       </td>
-                      <td className="py-3">
+                      <td className="py-3 text-center">
                         <Badge variant="outline">{asset._count.tickets}</Badge>
                       </td>
-                      <td className="py-3">
+                      <td className="py-3 text-center">
                         <Button 
                           variant="ghost" 
                           size="sm"
