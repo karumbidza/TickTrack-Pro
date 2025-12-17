@@ -96,6 +96,8 @@ model Branch {
 
   tenant        Tenant       @relation(fields: [tenantId], references: [id])
   userBranches  UserBranch[]
+  tickets       Ticket[]
+  assets        Asset[]
 
   @@unique([tenantId, name])
   @@map("branches")
@@ -129,6 +131,8 @@ enum UserRole {
 
 enum TicketStatus {
   OPEN
+  AWAITING_QUOTE          // Admin requested quote from contractor
+  QUOTE_SUBMITTED         // Contractor submitted quote, waiting for admin approval
   PROCESSING
   ACCEPTED
   IN_PROGRESS
@@ -237,6 +241,8 @@ model User {
   ratings             Rating[]
   contractorInvoices  Invoice[]      @relation("ContractorInvoices")
   contractorKYC       ContractorKYC?
+  processedPaymentBatches PaymentBatch[] @relation("ProcessedPayments")
+  approvedInvoices    Invoice[]      @relation("ApprovedInvoices")
   
   // Asset management relations
   decommissionRequestedAssets Asset[] @relation("DecommissionRequester")
@@ -277,6 +283,7 @@ model Tenant {
   invoices      Invoice[]
   quotes        Quote[]      // For custom feature quotes
   payments      Payment[]
+  paymentBatches PaymentBatch[]
   contractorInvitations ContractorInvitation[]
   contractorKYCs        ContractorKYC[]
 
@@ -421,11 +428,23 @@ model Ticket {
   workDescriptionApprovedAt  DateTime?  // When user approved/rejected the description
   workDescriptionRejectionReason String? // Reason if user rejected the description
 
+  // Quote/Estimate Workflow fields
+  quoteRequested            Boolean     @default(false)  // Whether quote was requested
+  quoteRequestedAt          DateTime?   // When admin requested quote
+  quoteAmount               Float?      // Quoted amount from contractor
+  quoteDescription          String?     // Description/breakdown of quote
+  quoteFileUrl              String?     // Uploaded quote document
+  quoteSubmittedAt          DateTime?   // When contractor submitted quote
+  quoteApproved             Boolean?    // Whether admin approved the quote
+  quoteApprovedAt           DateTime?   // When quote was approved/rejected
+  quoteRejectionReason      String?     // Reason if quote was rejected
+
   // Foreign keys
   userId       String // who created it
   tenantId     String
   assignedToId String? // contractor assigned
   adminId      String? // admin responsible
+  branchId     String? // branch/site where ticket was created
 
   // Relations
   user         User           @relation("CreatedTickets", fields: [userId], references: [id])
@@ -434,6 +453,7 @@ model Ticket {
   admin        User?          @relation("AdminTickets", fields: [adminId], references: [id])
   asset        Asset?         @relation(fields: [assetId], references: [id])
   category     AssetCategory? @relation(fields: [categoryId], references: [id])
+  branch       Branch?        @relation(fields: [branchId], references: [id])
   messages     Message[]
   attachments  Attachment[]
   statusHistory StatusHistory[]
@@ -498,6 +518,7 @@ model ContractorCategory {
 model Asset {
   id              String        @id @default(cuid())
   tenantId        String
+  branchId        String?       // Branch/site where asset is located
   assetNumber     String        // Unique asset identifier (ASSET-001, etc.)
   name            String
   description     String?
@@ -508,7 +529,7 @@ model Asset {
   purchaseDate    DateTime?
   warrantyExpires DateTime?
   status          AssetStatus   @default(ACTIVE)
-  location        String        // Site/building/floor/room
+  location        String?       // Additional location details within branch
   
   // Technical specifications
   specifications  Json          @default("{}")  // Store tech specs as JSON
@@ -549,6 +570,7 @@ model Asset {
 
   // Relations
   tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  branch          Branch?       @relation(fields: [branchId], references: [id])
   category        AssetCategory? @relation(fields: [categoryId], references: [id])
   tickets         Ticket[]      // Maintenance tickets for this asset
   maintenanceHistory MaintenanceHistory[]
@@ -689,6 +711,33 @@ model StatusHistory {
   @@map("status_history")
 }
 
+// Payment Batch - Groups multiple approved invoices paid together with single POP
+model PaymentBatch {
+  id              String    @id @default(cuid())
+  batchNumber     String    @unique
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  
+  // Payment details
+  totalAmount     Float
+  popFileUrl      String    // Proof of Payment file
+  popReference    String?   // Bank reference number
+  paymentDate     DateTime  @default(now())
+  notes           String?
+  
+  // Who processed the payment
+  processedById   String
+  processedBy     User      @relation("ProcessedPayments", fields: [processedById], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  invoices        Invoice[]
+  
+  @@index([tenantId])
+  @@map("payment_batches")
+}
+
 model Invoice {
   id                String        @id @default(cuid())
   contractorId      String?
@@ -713,13 +762,22 @@ model Invoice {
   
   // File attachments
   invoiceFileUrl    String?       // Contractor's fiscalized invoice
-  proofOfPaymentUrl String?       // Admin's payment proof
+  proofOfPaymentUrl String?       // Admin's payment proof (legacy - now use paymentBatch)
+  
+  // Payment batch relation (for batch payments with single POP)
+  paymentBatchId    String?
+  paymentBatch      PaymentBatch? @relation(fields: [paymentBatchId], references: [id])
   
   // Payment tracking
   paidDate          DateTime?
   paidAmount        Float         @default(0)
   balance           Float         @default(0)
   notes             String?
+  
+  // Approval tracking
+  approvedAt        DateTime?
+  approvedById      String?
+  approvedBy        User?         @relation("ApprovedInvoices", fields: [approvedById], references: [id])
   
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
@@ -729,6 +787,7 @@ model Invoice {
   // Performance indexes
   @@index([tenantId, status])
   @@index([contractorId])
+  @@index([paymentBatchId])
   @@map("invoices")
 }
 

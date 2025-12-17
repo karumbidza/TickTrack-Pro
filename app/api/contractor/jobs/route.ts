@@ -108,6 +108,12 @@ export async function GET(request: NextRequest) {
               status: true,
               invoiceFileUrl: true
             }
+          },
+          branch: {
+            select: {
+              id: true,
+              name: true
+            }
           }
         },
         orderBy: {
@@ -147,6 +153,16 @@ export async function GET(request: NextRequest) {
       completedAt: ticket.completedAt?.toISOString() || null,
       responseDeadline: ticket.responseDeadline?.toISOString() || null,
       resolutionDeadline: ticket.resolutionDeadline?.toISOString() || null,
+      // Quote/Estimate workflow fields
+      quoteRequested: (ticket as any).quoteRequested || false,
+      quoteRequestedAt: (ticket as any).quoteRequestedAt?.toISOString() || null,
+      quoteAmount: (ticket as any).quoteAmount || null,
+      quoteDescription: (ticket as any).quoteDescription || null,
+      quoteFileUrl: (ticket as any).quoteFileUrl || null,
+      quoteSubmittedAt: (ticket as any).quoteSubmittedAt?.toISOString() || null,
+      quoteApproved: (ticket as any).quoteApproved || false,
+      quoteApprovedAt: (ticket as any).quoteApprovedAt?.toISOString() || null,
+      quoteRejectionReason: (ticket as any).quoteRejectionReason || null,
       tenant: {
         name: ticket.tenant.name
       },

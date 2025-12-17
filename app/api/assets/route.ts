@@ -32,17 +32,29 @@ export async function GET(request: NextRequest) {
         where: whereClause,
         include: {
           category: true,
-          tickets: {
+          branch: {
             select: {
               id: true,
-              title: true,
-              status: true,
-              createdAt: true,
+              name: true
+            }
+          },
+          tickets: {
+            include: {
+              invoice: {
+                select: {
+                  id: true,
+                  invoiceNumber: true,
+                  amount: true,
+                  status: true
+                }
+              },
+              assignedTo: {
+                select: { id: true, name: true, email: true }
+              }
             },
             orderBy: {
               createdAt: 'desc'
-            },
-            take: 5
+            }
           },
           _count: {
             select: {
@@ -97,13 +109,38 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Merge repair costs with assets
-    const assetsWithCosts = assets.map(asset => ({
-      ...asset,
-      categoryId: asset.categoryId,
-      category: asset.category,
-      totalRepairCost: assetCostMap.get(asset.id) || 0
-    }))
+    // Merge repair costs with assets and format repair history
+    const assetsWithCosts = assets.map(asset => {
+      // Format repair history for each asset
+      const repairHistory = asset.tickets.map(ticket => ({
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        description: ticket.description,
+        status: ticket.status,
+        type: ticket.type,
+        priority: ticket.priority,
+        workDescription: ticket.workDescription,
+        workDescriptionApproved: ticket.workDescriptionApproved,
+        contractorId: ticket.assignedTo?.id || null,
+        contractorName: ticket.assignedTo?.name || null,
+        contractorEmail: ticket.assignedTo?.email || null,
+        createdAt: ticket.createdAt.toISOString(),
+        completedAt: ticket.completedAt?.toISOString() || null,
+        invoiceId: ticket.invoice?.id || null,
+        invoiceNumber: ticket.invoice?.invoiceNumber || null,
+        invoiceAmount: ticket.invoice?.amount || null,
+        invoiceStatus: ticket.invoice?.status || null
+      }))
+
+      return {
+        ...asset,
+        categoryId: asset.categoryId,
+        category: asset.category,
+        repairHistory,
+        totalRepairCost: assetCostMap.get(asset.id) || 0
+      }
+    })
 
     return NextResponse.json({ 
       assets: assetsWithCosts,
@@ -156,6 +193,7 @@ export async function POST(request: NextRequest) {
         serialNumber: data.serialNumber,
         status: data.status || 'ACTIVE',
         location: data.location,
+        branchId: data.branchId || session.user.branchId || null,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
         warrantyExpires: data.warrantyExpires ? new Date(data.warrantyExpires) : null,
         purchasePrice: data.purchasePrice,
@@ -165,7 +203,8 @@ export async function POST(request: NextRequest) {
         tenantId: user.tenant.id
       },
       include: {
-        category: true
+        category: true,
+        branch: true
       }
     })
 

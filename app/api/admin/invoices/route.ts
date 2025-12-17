@@ -29,6 +29,17 @@ export async function GET(request: NextRequest) {
           select: {
             title: true,
             id: true,
+            ticketNumber: true,
+          }
+        },
+        paymentBatch: {
+          select: {
+            id: true,
+            batchNumber: true,
+            popFileUrl: true,
+            popReference: true,
+            paymentDate: true,
+            totalAmount: true,
           }
         }
       },

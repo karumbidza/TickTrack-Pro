@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +23,11 @@ import {
   Trash2,
   Save,
   Package,
-  Wrench
+  Wrench,
+  FileSpreadsheet,
+  Download,
+  Calendar,
+  Filter
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { UserManagement } from './user-management'
@@ -85,6 +90,34 @@ interface AdminSettingsProps {
 export function AdminSettings({ user }: AdminSettingsProps) {
   const [activeTab, setActiveTab] = useState('assets')
   const [loading, setLoading] = useState(false)
+
+  // Reports State
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportDateFrom, setReportDateFrom] = useState('')
+  const [reportDateTo, setReportDateTo] = useState('')
+  const [reportStatus, setReportStatus] = useState('all')
+  const [reportColumns, setReportColumns] = useState<Record<string, boolean>>({
+    ticketNumber: true,
+    title: true,
+    description: true,
+    siteBranch: true,
+    requesterName: true,
+    requesterEmail: true,
+    requesterPhone: true,
+    dateCreated: true,
+    dateClosed: true,
+    timeToClose: true,
+    slaStatus: true,
+    contractor: true,
+    category: true,
+    type: true,
+    assetName: true,
+    assetNumber: true,
+    repairCost: true,
+    invoiceNumber: true,
+    priority: true,
+    status: true
+  })
 
   // Asset Categories State
   const [categories, setCategories] = useState<AssetCategory[]>([])
@@ -309,6 +342,129 @@ export function AdminSettings({ user }: AdminSettingsProps) {
     { value: 'OTHER', label: 'Other' }
   ]
 
+  // ==================== REPORTS ====================
+  const handleDownloadTicketReport = async () => {
+    setReportLoading(true)
+    try {
+      // Build query params
+      const params = new URLSearchParams()
+      if (reportDateFrom) params.append('dateFrom', reportDateFrom)
+      if (reportDateTo) params.append('dateTo', reportDateTo)
+      if (reportStatus && reportStatus !== 'all') params.append('status', reportStatus)
+      
+      const res = await fetch(`/api/admin/reports/tickets?${params.toString()}`)
+      if (!res.ok) {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to generate report')
+        return
+      }
+
+      const tickets = await res.json()
+
+      // Define all available columns with their data extractors
+      const columnConfig: { key: string; header: string; getValue: (ticket: any) => string }[] = [
+        { key: 'ticketNumber', header: 'Ticket Number', getValue: (t) => t.ticketNumber || '' },
+        { key: 'title', header: 'Title', getValue: (t) => t.title || '' },
+        { key: 'description', header: 'Description', getValue: (t) => t.description || '' },
+        { key: 'siteBranch', header: 'Site/Branch', getValue: (t) => t.location || '' },
+        { key: 'requesterName', header: 'Requester Name', getValue: (t) => t.user?.name || '' },
+        { key: 'requesterEmail', header: 'Requester Email', getValue: (t) => t.user?.email || '' },
+        { key: 'requesterPhone', header: 'Requester Phone', getValue: (t) => t.user?.phone || '' },
+        { key: 'dateCreated', header: 'Date Created', getValue: (t) => t.createdAt ? new Date(t.createdAt).toLocaleString() : '' },
+        { key: 'dateClosed', header: 'Date Closed', getValue: (t) => t.completedAt ? new Date(t.completedAt).toLocaleString() : '' },
+        { key: 'timeToClose', header: 'Time to Close (Hours)', getValue: (t) => {
+          if (t.completedAt && t.createdAt) {
+            const hours = Math.round((new Date(t.completedAt).getTime() - new Date(t.createdAt).getTime()) / (1000 * 60 * 60) * 100) / 100
+            return hours.toString()
+          }
+          return ''
+        }},
+        { key: 'slaStatus', header: 'SLA Status', getValue: (t) => {
+          if (!t.resolutionDeadline) return 'N/A'
+          if (t.completedAt) {
+            return new Date(t.completedAt) <= new Date(t.resolutionDeadline) ? 'Met' : 'Breached'
+          }
+          return new Date() > new Date(t.resolutionDeadline) ? 'Breached' : 'Pending'
+        }},
+        { key: 'contractor', header: 'Contractor', getValue: (t) => t.contractor?.name || '' },
+        { key: 'category', header: 'Category', getValue: (t) => t.category?.name || '' },
+        { key: 'type', header: 'Type', getValue: (t) => t.type?.replace(/_/g, ' ') || '' },
+        { key: 'assetName', header: 'Asset Name', getValue: (t) => t.asset?.name || '' },
+        { key: 'assetNumber', header: 'Asset Number', getValue: (t) => t.asset?.assetNumber || '' },
+        { key: 'repairCost', header: 'Repair Cost', getValue: (t) => t.repairCost ? `$${t.repairCost.toFixed(2)}` : '' },
+        { key: 'invoiceNumber', header: 'Invoice Number', getValue: (t) => t.invoiceNumber || '' },
+        { key: 'priority', header: 'Priority', getValue: (t) => t.priority || '' },
+        { key: 'status', header: 'Status', getValue: (t) => t.status || '' }
+      ]
+
+      // Filter to only selected columns
+      const selectedColumns = columnConfig.filter(col => reportColumns[col.key])
+      
+      if (selectedColumns.length === 0) {
+        toast.error('Please select at least one column for the report')
+        return
+      }
+
+      // Generate CSV content with selected columns only
+      const headers = selectedColumns.map(col => col.header)
+      const rows = tickets.map((ticket: any) => selectedColumns.map(col => col.getValue(ticket)))
+
+      // Escape CSV values
+      const escapeCSV = (value: string) => {
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          return `"${value.replace(/"/g, '""')}"`
+        }
+        return value
+      }
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row: string[]) => row.map(escapeCSV).join(','))
+      ].join('\n')
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const filename = `tickets-report-${new Date().toISOString().split('T')[0]}.csv`
+      link.setAttribute('download', filename)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success(`Report downloaded: ${tickets.length} tickets`)
+    } catch (error) {
+      console.error('Failed to generate report:', error)
+      toast.error('Failed to generate report')
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  const handleQuickExport = (type: 'this-month' | 'last-month' | 'closed-only') => {
+    const now = new Date()
+    
+    if (type === 'this-month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      setReportDateFrom(firstDay.toISOString().split('T')[0])
+      setReportDateTo(now.toISOString().split('T')[0])
+      setReportStatus('all')
+    } else if (type === 'last-month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+      setReportDateFrom(firstDay.toISOString().split('T')[0])
+      setReportDateTo(lastDay.toISOString().split('T')[0])
+      setReportStatus('all')
+    } else if (type === 'closed-only') {
+      setReportStatus('CLOSED')
+    }
+    
+    // Trigger download after state update
+    setTimeout(() => handleDownloadTicketReport(), 100)
+  }
+
   // ==================== TICKET TYPES ====================
   const handleSaveTicketType = () => {
     if (!ticketTypeForm.name.trim()) {
@@ -478,6 +634,17 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                   >
                     <Bell className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">Notifications</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('reports')}
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
+                      activeTab === 'reports' 
+                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Reports</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('organization')}
@@ -1028,6 +1195,197 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                   <p className="text-sm text-gray-500 mt-2">
                     Note: Full notification configuration coming soon.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ==================== REPORTS TAB ==================== */}
+          {activeTab === 'reports' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Reports & Data Export
+                </CardTitle>
+                <CardDescription>
+                  Download CSV reports of tickets and repair data for analysis.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Ticket Report */}
+                <div className="border rounded-lg p-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-lg">Ticket Report</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Export detailed ticket data including site, requester, dates, SLA, contractor, category, asset, cost, and status.
+                      </p>
+                    </div>
+                    <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                  </div>
+                  
+                  {/* Filters */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+                    <div>
+                      <Label htmlFor="report-date-from" className="text-xs">From Date</Label>
+                      <Input 
+                        id="report-date-from"
+                        type="date" 
+                        value={reportDateFrom}
+                        onChange={(e) => setReportDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="report-date-to" className="text-xs">To Date</Label>
+                      <Input 
+                        id="report-date-to"
+                        type="date" 
+                        value={reportDateTo}
+                        onChange={(e) => setReportDateTo(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="report-status" className="text-xs">Status Filter</Label>
+                      <Select value={reportStatus} onValueChange={setReportStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="OPEN">Open</SelectItem>
+                          <SelectItem value="PROCESSING">Processing</SelectItem>
+                          <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                          <SelectItem value="COMPLETED">Completed</SelectItem>
+                          <SelectItem value="CLOSED">Closed</SelectItem>
+                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button 
+                        onClick={handleDownloadTicketReport} 
+                        disabled={reportLoading}
+                        className="w-full"
+                      >
+                        {reportLoading ? (
+                          <>Generating...</>
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download CSV
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Report Columns Selection */}
+                  <div className="bg-gray-50 rounded-lg p-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-700">Select columns to include:</h4>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setReportColumns(prev => {
+                            const allTrue: Record<string, boolean> = {}
+                            Object.keys(prev).forEach(key => allTrue[key] = true)
+                            return allTrue
+                          })}
+                        >
+                          Select All
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setReportColumns(prev => {
+                            const allFalse: Record<string, boolean> = {}
+                            Object.keys(prev).forEach(key => allFalse[key] = false)
+                            return allFalse
+                          })}
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { key: 'ticketNumber', label: 'Ticket Number' },
+                        { key: 'title', label: 'Title' },
+                        { key: 'description', label: 'Description' },
+                        { key: 'siteBranch', label: 'Site/Branch Name' },
+                        { key: 'requesterName', label: 'Requester Name' },
+                        { key: 'requesterEmail', label: 'Requester Email' },
+                        { key: 'requesterPhone', label: 'Requester Phone' },
+                        { key: 'dateCreated', label: 'Date Created' },
+                        { key: 'dateClosed', label: 'Date Closed' },
+                        { key: 'timeToClose', label: 'Time to Close' },
+                        { key: 'slaStatus', label: 'SLA Status' },
+                        { key: 'contractor', label: 'Contractor Assigned' },
+                        { key: 'category', label: 'Category' },
+                        { key: 'type', label: 'Type' },
+                        { key: 'assetName', label: 'Asset Name' },
+                        { key: 'assetNumber', label: 'Asset Number' },
+                        { key: 'repairCost', label: 'Repair Cost' },
+                        { key: 'invoiceNumber', label: 'Invoice Number' },
+                        { key: 'priority', label: 'Priority' },
+                        { key: 'status', label: 'Status' }
+                      ].map(col => (
+                        <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
+                          <Checkbox 
+                            checked={reportColumns[col.key]} 
+                            onCheckedChange={(checked) => 
+                              setReportColumns(prev => ({ ...prev, [col.key]: !!checked }))
+                            }
+                          />
+                          <span className="text-gray-700">{col.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Export Options */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      const today = new Date()
+                      const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+                      setReportDateFrom(firstDayOfMonth.toISOString().split('T')[0])
+                      setReportDateTo(today.toISOString().split('T')[0])
+                      setReportStatus('all')
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    This Month
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      const today = new Date()
+                      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+                      const lastDayOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0)
+                      setReportDateFrom(lastMonth.toISOString().split('T')[0])
+                      setReportDateTo(lastDayOfLastMonth.toISOString().split('T')[0])
+                      setReportStatus('all')
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Last Month
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setReportStatus('CLOSED')
+                      setReportDateFrom('')
+                      setReportDateTo('')
+                    }}
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Closed Tickets Only
+                  </Button>
                 </div>
               </CardContent>
             </Card>

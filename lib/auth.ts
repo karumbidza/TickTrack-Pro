@@ -25,7 +25,13 @@ export const authOptions: AuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { tenant: true }
+          include: { 
+            tenant: true,
+            branches: {
+              include: { branch: true },
+              take: 1 // Get the user's primary/first branch
+            }
+          }
         })
 
         if (!user || !user.password) {
@@ -48,6 +54,9 @@ export const authOptions: AuthOptions = {
         //   throw new Error('Please verify your email before logging in')
         // }
 
+        // Get user's primary branch
+        const primaryBranch = user.branches?.[0]?.branch
+
         return {
           id: user.id,
           email: user.email,
@@ -55,7 +64,9 @@ export const authOptions: AuthOptions = {
           role: user.role,
           tenantId: user.tenantId,
           image: user.image,
-          emailVerified: user.emailVerified
+          emailVerified: user.emailVerified,
+          branchId: primaryBranch?.id || null,
+          branchName: primaryBranch?.name || null
         }
       }
     })
@@ -68,18 +79,29 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.role = user.role
         token.tenantId = user.tenantId
+        token.branchId = user.branchId || null
+        token.branchName = user.branchName || null
       }
 
       // If user updates their profile, refresh the token
       if (trigger === "update" && session) {
         const dbUser = await prisma.user.findUnique({
           where: { email: token.email! },
-          include: { tenant: true }
+          include: { 
+            tenant: true,
+            branches: {
+              include: { branch: true },
+              take: 1
+            }
+          }
         })
         if (dbUser) {
           token.role = dbUser.role
           token.tenantId = dbUser.tenantId
           token.name = dbUser.name
+          const primaryBranch = dbUser.branches?.[0]?.branch
+          token.branchId = primaryBranch?.id || null
+          token.branchName = primaryBranch?.name || null
         }
       }
 
@@ -90,6 +112,8 @@ export const authOptions: AuthOptions = {
         session.user.id = token.sub!
         session.user.role = token.role as any
         session.user.tenantId = token.tenantId as string | null
+        session.user.branchId = token.branchId as string | null
+        session.user.branchName = token.branchName as string | null
       }
       return session
     },

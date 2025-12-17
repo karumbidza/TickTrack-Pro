@@ -9,42 +9,35 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user) {
+    // Only admins can upload POPs
+    const adminRoles = ['TENANT_ADMIN', 'SUPER_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+    if (!session?.user || !adminRoles.includes(session.user.role)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const ticketId = formData.get('ticketId') as string
 
     if (!file) {
       return NextResponse.json({ message: 'No file uploaded' }, { status: 400 })
     }
 
-    if (!ticketId) {
-      return NextResponse.json({ message: 'Ticket ID required' }, { status: 400 })
-    }
-
-    // Validate file type - allow PDFs and common document/image formats
+    // Validate file type - allow PDFs and images
     const allowedTypes = [
       'application/pdf',
       'image/jpeg',
       'image/png',
       'image/gif',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ]
     
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ 
-        message: 'Only PDF, images (JPEG, PNG, GIF), Word, and Excel files are allowed' 
+        message: 'Only PDF and image files (JPEG, PNG, GIF) are allowed' 
       }, { status: 400 })
     }
 
     // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'invoices')
+    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'payments')
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }
@@ -52,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now()
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileName = `${ticketId}-${timestamp}-${sanitizedFileName}`
+    const fileName = `POP-${timestamp}-${sanitizedFileName}`
     const filePath = join(uploadsDir, fileName)
 
     // Write file
@@ -61,14 +54,14 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer)
 
     // Return public URL
-    const fileUrl = `/uploads/invoices/${fileName}`
+    const url = `/uploads/payments/${fileName}`
 
     return NextResponse.json({ 
-      fileUrl,
-      message: 'File uploaded successfully' 
+      url,
+      message: 'Proof of Payment uploaded successfully' 
     })
   } catch (error) {
-    console.error('Error uploading invoice:', error)
+    console.error('Error uploading POP:', error)
     return NextResponse.json(
       { message: 'Failed to upload file' },
       { status: 500 }

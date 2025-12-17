@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -917,7 +918,8 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                   </div>
                 </div>
 
-                {/* Cost Summary */}
+                {/* Cost Summary - Only visible to admins */}
+                {userRole !== 'END_USER' && (
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
                     <DollarSign className="h-4 w-4" />
@@ -950,6 +952,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                     </div>
                   </div>
                 </div>
+                )}
 
                 {/* Repair History List */}
                 <div>
@@ -1103,6 +1106,12 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 }
 
 function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, onOpenCategoryManager }: { onAssetCreated: () => void; tenantId: string; onCancel: () => void; categories: AssetCategory[]; branches: Branch[]; onOpenCategoryManager?: () => void }) {
+  const { data: session } = useSession()
+  
+  // Get user's branch or first available branch
+  const defaultBranchId = session?.user?.branchId || (branches.length > 0 ? branches[0].id : '')
+  const defaultBranch = branches.find(b => b.id === defaultBranchId)
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -1111,7 +1120,8 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
     model: '',
     serialNumber: '',
     status: 'ACTIVE',
-    location: branches.length > 0 ? branches[0].name : '',
+    branchId: defaultBranchId,
+    location: '', // Additional location details within branch
     purchaseDate: '',
     warrantyExpires: '',
     purchasePrice: '',
@@ -1120,6 +1130,13 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
   const [loading, setLoading] = useState(false)
   const [images, setImages] = useState<File[]>([])
   const [submitted, setSubmitted] = useState(false)
+  
+  // Update branchId when session loads
+  useEffect(() => {
+    if (session?.user?.branchId && !formData.branchId) {
+      setFormData(prev => ({ ...prev, branchId: session.user.branchId! }))
+    }
+  }, [session])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1129,8 +1146,8 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
     }
     
     // Validate required fields
-    if (!formData.name.trim() || !formData.category || !formData.location.trim()) {
-      toast.error('Please fill in all required fields (Name, Category, Location)')
+    if (!formData.name.trim() || !formData.category || !formData.branchId) {
+      toast.error('Please fill in all required fields (Name, Category, Branch)')
       return
     }
     
@@ -1282,8 +1299,8 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
             />
           </div>
           <div>
-            <Label htmlFor="location">Branch / Site *</Label>
-            <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+            <Label htmlFor="branchId">Branch / Site *</Label>
+            <Select value={formData.branchId} onValueChange={(value) => setFormData({...formData, branchId: value})}>
               <SelectTrigger>
                 <SelectValue placeholder="Select branch/site" />
               </SelectTrigger>
@@ -1292,7 +1309,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
                   <SelectItem value="__none__" disabled>No branches available</SelectItem>
                 ) : (
                   branches.map(branch => (
-                    <SelectItem key={branch.id} value={branch.name}>
+                    <SelectItem key={branch.id} value={branch.id}>
                       {branch.name} {branch.isHeadOffice ? '(Head Office)' : ''}
                     </SelectItem>
                   ))
@@ -1300,6 +1317,16 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="location">Location Details (floor, room, etc.)</Label>
+          <Input
+            id="location"
+            value={formData.location}
+            onChange={(e) => setFormData({...formData, location: e.target.value})}
+            placeholder="e.g., Floor 2, Room 201"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

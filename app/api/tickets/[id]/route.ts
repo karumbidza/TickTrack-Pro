@@ -124,6 +124,8 @@ export async function PATCH(
     let description: string | undefined
     let priority: string | undefined
     let type: string | undefined
+    let categoryId: string | undefined
+    let location: string | undefined
     let deleteAttachments: string[] = []
     let files: File[] = []
     
@@ -134,6 +136,8 @@ export async function PATCH(
       description = formData.get('description') as string | undefined
       priority = formData.get('priority') as string | undefined
       type = formData.get('type') as string | undefined
+      categoryId = formData.get('categoryId') as string | undefined
+      location = formData.get('location') as string | undefined
       
       const deleteAttachmentsJson = formData.get('deleteAttachments') as string | undefined
       if (deleteAttachmentsJson) {
@@ -153,6 +157,8 @@ export async function PATCH(
       description = body.description
       priority = body.priority
       type = body.type
+      categoryId = body.categoryId
+      location = body.location
     }
 
     // First, fetch the ticket to check permissions
@@ -250,9 +256,11 @@ export async function PATCH(
       where: { id: ticketId },
       data: {
         ...(title && { title: title.trim() }),
-        ...(description !== undefined && { description: description.trim() }),
+        ...(description !== undefined && description !== null && { description: description.trim() }),
         ...(priority && { priority }),
         ...(type && { type }),
+        ...(categoryId && { categoryId }),
+        ...(location !== undefined && location !== null && { location: location.trim() }),
         updatedAt: new Date()
       },
       include: {
@@ -273,6 +281,9 @@ export async function PATCH(
               }
             }
           }
+        },
+        category: {
+          select: { id: true, name: true, color: true }
         },
         attachments: {
           select: {

@@ -70,6 +70,19 @@ export async function GET(request: NextRequest) {
               location: true
             }
           },
+          branch: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          category: {
+            select: {
+              id: true,
+              name: true,
+              color: true
+            }
+          },
           attachments: {
             select: {
               id: true,

@@ -43,7 +43,7 @@ export function Navbar() {
   if (status === 'loading') {
     return (
       <nav className="border-b bg-white sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-5">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
               <Ticket className="h-8 w-8 text-blue-600" />
@@ -61,7 +61,7 @@ export function Navbar() {
   if (!session) {
     return (
       <nav className="border-b bg-white sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-5">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
               <Ticket className="h-8 w-8 text-blue-600" />
@@ -126,7 +126,7 @@ export function Navbar() {
 
   return (
     <nav className="border-b bg-white sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-5">
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
           <div className="flex items-center">

@@ -74,6 +74,12 @@ export async function GET(request: NextRequest) {
         admin: {
           select: { id: true, name: true, email: true }
         },
+        branch: {
+          select: { id: true, name: true }
+        },
+        category: {
+          select: { id: true, name: true, color: true }
+        },
         attachments: {
           select: {
             id: true,
@@ -142,7 +148,8 @@ export async function POST(request: NextRequest) {
         department: (formData.get('department') as string) || 'MAINTENANCE',
         assetId: formData.get('assetId') ? (formData.get('assetId') as string) : null,
         categoryId: formData.get('categoryId') ? (formData.get('categoryId') as string) : null,
-        location: (formData.get('location') as string) || null
+        location: (formData.get('location') as string) || null,
+        branchId: formData.get('branchId') ? (formData.get('branchId') as string) : null
       }
 
       // Get uploaded files
@@ -176,6 +183,7 @@ export async function POST(request: NextRequest) {
         assetId: data.assetId || null,
         categoryId: data.categoryId || null,
         location: data.location || null,
+        branchId: data.branchId || session.user.branchId || null,
         status: 'OPEN',
         userId: session.user.id,
         tenantId: userTenantId,
@@ -189,6 +197,9 @@ export async function POST(request: NextRequest) {
         },
         asset: {
           select: { id: true, name: true, assetNumber: true, location: true }
+        },
+        branch: {
+          select: { id: true, name: true }
         }
       }
     })

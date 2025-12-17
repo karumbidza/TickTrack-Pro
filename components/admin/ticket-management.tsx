@@ -92,6 +92,17 @@ interface TicketDetails {
   workDescriptionApproved?: boolean
   workDescriptionApprovedAt?: string
   workDescriptionRejectionReason?: string
+  // Quote/Estimate Workflow fields
+  quoteRequested?: boolean
+  quoteRequestedAt?: string
+  quoteAmount?: number
+  quoteDescription?: string
+  quoteFileUrl?: string
+  quoteSubmittedAt?: string
+  quoteApproved?: boolean
+  quoteApprovedAt?: string
+  quoteRejectionReason?: string
+  categoryId?: string
   // SLA tracking fields
   assignedAt?: string
   contractorAcceptedAt?: string
@@ -113,6 +124,15 @@ interface TicketDetails {
     name: string
     assetNumber: string
     location: string
+  }
+  branch?: {
+    id: string
+    name: string
+  }
+  category?: {
+    id: string
+    name: string
+    color?: string
   }
   attachments: Array<{
     id: string
@@ -209,9 +229,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [selectedHQAdmin, setSelectedHQAdmin] = useState('')
   const [assignmentNotes, setAssignmentNotes] = useState('')
   const [assignmentType, setAssignmentType] = useState<'contractor' | 'hq-admin'>('contractor')
+  const [requestQuote, setRequestQuote] = useState(false)
+  
+  // Quote approval states
+  const [quoteRejectionReason, setQuoteRejectionReason] = useState('')
+  const [processingQuote, setProcessingQuote] = useState(false)
 
   const statusOptions = [
-    'OPEN', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
+    'OPEN', 'AWAITING_QUOTE', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
   ]
   
   const priorityOptions = [
@@ -511,15 +536,17 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         body: JSON.stringify({
           contractorId: selectedContractor,
           notes: assignmentNotes,
-          status: 'PROCESSING' // Admin assignment sets to PROCESSING until contractor accepts
+          status: requestQuote ? 'AWAITING_QUOTE' : 'PROCESSING',
+          requestQuote: requestQuote
         })
       })
 
       if (response.ok) {
-        toast.success('Ticket assigned to contractor successfully')
+        toast.success(requestQuote ? 'Quote requested from contractor' : 'Ticket assigned to contractor successfully')
         setShowAssignDialog(false)
         setSelectedContractor('')
         setAssignmentNotes('')
+        setRequestQuote(false)
         setShowTicketModal(false)
         fetchTickets()
       } else {
@@ -530,6 +557,46 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     } catch (error) {
       console.error('Failed to assign ticket:', error)
       toast.error('Failed to assign ticket: Network error')
+    }
+  }
+
+  // Handle quote approval or rejection
+  const handleQuoteAction = async (action: 'approve' | 'reject') => {
+    if (!selectedTicket) return
+    
+    if (action === 'reject' && !quoteRejectionReason.trim()) {
+      toast.error('Please provide a reason for rejection')
+      return
+    }
+
+    setProcessingQuote(true)
+    try {
+      const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          rejectionReason: action === 'reject' ? quoteRejectionReason : undefined
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(action === 'approve' 
+          ? 'Quote approved! Job is now assigned to contractor.' 
+          : 'Quote rejected. Contractor will be asked to resubmit.')
+        setQuoteRejectionReason('')
+        setShowTicketModal(false)
+        fetchTickets()
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || `Failed to ${action} quote`)
+      }
+    } catch (error) {
+      console.error(`Failed to ${action} quote:`, error)
+      toast.error(`Failed to ${action} quote`)
+    } finally {
+      setProcessingQuote(false)
     }
   }
 
@@ -635,6 +702,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const getStatusColor = (status: string) => {
     const colors = {
       OPEN: 'bg-blue-100 text-blue-800',
+      AWAITING_QUOTE: 'bg-amber-100 text-amber-800',
+      QUOTE_SUBMITTED: 'bg-indigo-100 text-indigo-800',
       PROCESSING: 'bg-yellow-100 text-yellow-800',
       ACCEPTED: 'bg-blue-100 text-blue-800',
       IN_PROGRESS: 'bg-orange-100 text-orange-800',
@@ -699,8 +768,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
-          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
-          <p className="text-xs text-blue-600">{params.row.ticketNumber}</p>
+          <p className="font-semibold text-gray-900 text-sm truncate">{params.row.title}</p>
+          <p className="text-sm text-blue-600 font-medium">{params.row.ticketNumber}</p>
         </Box>
       ),
     },
@@ -712,9 +781,26 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-xs font-mono text-gray-600">
+        <span className="text-sm font-mono text-gray-600">
           {params.row.id.slice(0, 8).toUpperCase()}
         </span>
+      ),
+    },
+    {
+      field: 'branch',
+      headerName: 'Site',
+      flex: 0.7,
+      minWidth: 100,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
+        <Tooltip title={params.row.branch?.name || params.row.location || 'No site specified'}>
+          <Box sx={{ textAlign: 'center' }}>
+            <p className="text-sm text-gray-900 font-medium truncate">
+              {params.row.branch?.name || params.row.location || '-'}
+            </p>
+          </Box>
+        </Tooltip>
       ),
     },
     {
@@ -746,7 +832,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               },
             }}
           >
-            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+            <p className="text-sm text-gray-700 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -754,33 +840,29 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       ),
     },
     {
-      field: 'type',
-      headerName: 'Type',
+      field: 'category',
+      headerName: 'Category',
       flex: 0.7,
-      minWidth: 90,
+      minWidth: 100,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Tooltip title="Click to change type">
+        <Tooltip title={params.row.category?.name || 'No category'}>
           <Chip
-            label={params.row.type?.replace(/_/g, ' ')}
-            size="small"
+            label={params.row.category?.name || 'N/A'}
+            size="medium"
             variant="outlined"
-            onClick={(e) => {
-              e.stopPropagation()
-              setQuickEditTicket(params.row)
-              setTypeMenuAnchor(e.currentTarget)
-            }}
             sx={{ 
-              fontWeight: 500, 
-              fontSize: '0.7rem', 
-              cursor: 'pointer',
-              '&:hover': { 
-                backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                borderColor: 'primary.main'
+              fontWeight: 600, 
+              fontSize: '0.8rem',
+              py: 0.5,
+              borderRadius: '8px',
+              borderColor: params.row.category?.color || '#6B7280',
+              color: params.row.category?.color || '#6B7280',
+              '& .MuiChip-label': {
+                color: params.row.category?.color || '#6B7280'
               }
             }}
-            icon={<Edit className="h-3 w-3" />}
           />
         </Tooltip>
       ),
@@ -803,7 +885,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           <Tooltip title="Click to change priority">
             <Chip
               label={params.row.priority}
-              size="small"
+              size="medium"
               color={priorityColors[params.row.priority] || 'default'}
               onClick={(e) => {
                 e.stopPropagation()
@@ -811,14 +893,18 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 setPriorityMenuAnchor(e.currentTarget)
               }}
               sx={{ 
-                fontWeight: 500, 
-                fontSize: '0.7rem',
+                fontWeight: 600, 
+                fontSize: '0.8rem',
+                py: 0.5,
+                borderRadius: '8px',
                 cursor: 'pointer',
+                transition: 'all 0.2s ease',
                 '&:hover': { 
-                  filter: 'brightness(0.9)'
+                  filter: 'brightness(0.9)',
+                  transform: 'scale(1.02)'
                 }
               }}
-              icon={<Edit className="h-3 w-3" />}
+              icon={<Edit className="h-4 w-4" />}
             />
           </Tooltip>
         )
@@ -834,6 +920,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const statusColors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default'> = {
           OPEN: 'primary',
+          AWAITING_QUOTE: 'warning',
+          QUOTE_SUBMITTED: 'info',
           PROCESSING: 'warning',
           ACCEPTED: 'info',
           IN_PROGRESS: 'warning',
@@ -848,9 +936,15 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         return (
           <Chip
             label={params.row.status.replace(/_/g, ' ')}
-            size="small"
+            size="medium"
             color={statusColors[params.row.status] || 'default'}
-            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+            sx={{ 
+              fontWeight: 600, 
+              fontSize: '0.8rem',
+              py: 0.5,
+              borderRadius: '8px',
+              letterSpacing: '0.02em'
+            }}
           />
         )
       },
@@ -886,11 +980,16 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         return (
           <Tooltip title={tooltipText}>
             <Chip
-              icon={<Timer className="h-3 w-3" />}
-              label={label.length > 12 ? label.substring(0, 12) + '...' : label}
-              size="small"
+              icon={<Timer className="h-4 w-4" />}
+              label={label.length > 14 ? label.substring(0, 14) + '...' : label}
+              size="medium"
               color={getSLAChipColor(status)}
-              sx={{ fontWeight: 500, fontSize: '0.65rem' }}
+              sx={{ 
+                fontWeight: 600, 
+                fontSize: '0.75rem',
+                py: 0.5,
+                borderRadius: '8px'
+              }}
             />
           </Tooltip>
         )
@@ -929,14 +1028,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               }}
             >
               {params.row.assignedTo ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                  <UserCheck className="h-3 w-3 text-green-600" />
-                  <p className="text-xs font-medium text-gray-900 truncate">{params.row.assignedTo.name}</p>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <UserCheck className="h-4 w-4 text-green-600" />
+                  <p className="text-sm font-medium text-gray-900 truncate">{params.row.assignedTo.name}</p>
                 </Box>
               ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                  <Plus className="h-3 w-3 text-blue-600" />
-                  <span className="text-xs text-blue-600 font-medium">Assign</span>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <Plus className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm text-blue-600 font-semibold">Assign</span>
                 </Box>
               )}
             </Box>
@@ -953,7 +1052,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Box sx={{ textAlign: 'center' }}>
-          <p className="text-xs text-gray-900 truncate">{params.row.user.name}</p>
+          <p className="text-sm text-gray-900 font-medium truncate">{params.row.user.name}</p>
         </Box>
       ),
     },
@@ -965,7 +1064,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-xs text-gray-500">
+        <span className="text-sm text-gray-600 font-medium">
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -981,14 +1080,21 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Tooltip title="View Details">
           <IconButton
-            size="small"
+            size="medium"
             onClick={() => {
               setSelectedTicket(params.row)
               setShowTicketModal(true)
             }}
-            sx={{ color: 'primary.main' }}
+            sx={{ 
+              color: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                transform: 'scale(1.1)'
+              },
+              transition: 'all 0.2s ease'
+            }}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-5 w-5" />
           </IconButton>
         </Tooltip>
       ),
@@ -1176,6 +1282,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   pageSizeOptions={[5, 10, 25, 50]}
                   disableRowSelectionOnClick
                   autoHeight
+                  rowHeight={60}
                   getRowClassName={(params) => {
                     const hasRejection = params.row.rejectedAt && params.row.status === 'OPEN'
                     const hasCancellationRequest = params.row.cancellationRequestedAt && !params.row.cancelledAt
@@ -1184,6 +1291,26 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     return ''
                   }}
                   sx={{
+                    border: 'none',
+                    borderRadius: '12px',
+                    '& .MuiDataGrid-columnHeaders': {
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '12px 12px 0 0',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                    },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      fontWeight: 600,
+                    },
+                    '& .MuiDataGrid-cell': {
+                      borderBottom: '1px solid #f1f5f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    },
+                    '& .MuiDataGrid-row:hover': {
+                      backgroundColor: '#f8fafc',
+                    },
                     '& .bg-red-50': {
                       backgroundColor: '#fef2f2 !important',
                       borderLeft: '4px solid #ef4444',
@@ -1517,13 +1644,41 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           />
                         </div>
                         
+                        {/* Request Quote Option */}
+                        <div className="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <input
+                            type="checkbox"
+                            id="requestQuote"
+                            checked={requestQuote}
+                            onChange={(e) => setRequestQuote(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <Label htmlFor="requestQuote" className="text-sm font-medium text-amber-800 cursor-pointer">
+                            Request Quote/Estimate First
+                          </Label>
+                        </div>
+                        {requestQuote && (
+                          <p className="text-xs text-amber-600 -mt-2">
+                            Contractor will submit a quote for approval before the job is formally assigned.
+                          </p>
+                        )}
+                        
                         <Button 
                           onClick={handleAssignContractor} 
                           disabled={!selectedContractor || loadingContractors}
-                          className="w-full"
+                          className={`w-full ${requestQuote ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
                         >
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Assign to Contractor
+                          {requestQuote ? (
+                            <>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Request Quote
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Assign to Contractor
+                            </>
+                          )}
                         </Button>
                       </div>
                     ) : (
@@ -1618,6 +1773,95 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Mark Job Complete
                       </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Awaiting Quote - Waiting for contractor to submit quote */}
+                {selectedTicket.status === 'AWAITING_QUOTE' && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <h4 className="text-lg font-medium text-amber-800 mb-2 flex items-center">
+                      <FileText className="h-5 w-5 mr-2" />
+                      Awaiting Quote from Contractor
+                    </h4>
+                    <p className="text-sm text-amber-700">
+                      Waiting for {selectedTicket.assignedTo?.name || 'the contractor'} to submit a quote for this job.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Quote Submitted - Admin needs to approve/reject */}
+                {selectedTicket.status === 'QUOTE_SUBMITTED' && selectedTicket.quoteAmount && (
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <h4 className="text-lg font-medium text-indigo-800 mb-2 flex items-center">
+                      <DollarSign className="h-5 w-5 mr-2" />
+                      Quote Submitted - Review Required
+                    </h4>
+                    <div className="bg-white rounded-lg p-4 border border-indigo-200 mb-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm text-gray-600">Quoted Amount:</span>
+                        <span className="text-2xl font-bold text-indigo-800">${selectedTicket.quoteAmount.toFixed(2)}</span>
+                      </div>
+                      {selectedTicket.quoteDescription && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs text-gray-500 font-medium mb-1">Description/Breakdown:</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTicket.quoteDescription}</p>
+                        </div>
+                      )}
+                      {selectedTicket.quoteFileUrl && (
+                        <div className="mt-3 pt-3 border-t">
+                          <a 
+                            href={selectedTicket.quoteFileUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            View Quote Document
+                          </a>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-3">
+                        Submitted by {selectedTicket.assignedTo?.name} on {selectedTicket.quoteSubmittedAt && new Date(selectedTicket.quoteSubmittedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="quoteRejectionReason">Rejection Reason (required if rejecting)</Label>
+                        <Textarea
+                          id="quoteRejectionReason"
+                          placeholder="Explain why the quote is being rejected..."
+                          value={quoteRejectionReason}
+                          onChange={(e) => setQuoteRejectionReason(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="flex space-x-3">
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleQuoteAction('reject')}
+                          disabled={processingQuote}
+                          className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Reject Quote
+                        </Button>
+                        <Button 
+                          onClick={() => handleQuoteAction('approve')}
+                          disabled={processingQuote}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Approve Quote
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 text-center">
+                        Note: Approving the quote will formally assign the job to the contractor.
+                      </p>
                     </div>
                   </div>
                 )}

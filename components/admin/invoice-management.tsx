@@ -16,9 +16,10 @@ import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import { 
   Eye, Download, FileText, DollarSign, Check, X, AlertCircle, 
   MessageSquare, Printer, Clock, User, Building, MapPin, Star,
-  CheckCircle, XCircle, Loader2, ExternalLink
+  CheckCircle, XCircle, Loader2, ExternalLink, CreditCard, Wallet
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface Invoice {
   id: string
@@ -39,6 +40,8 @@ interface Invoice {
   paidDate?: string
   invoiceFileUrl?: string
   proofOfPaymentUrl?: string
+  approvedAt?: string
+  paymentBatchId?: string
   contractor: {
     name: string
     email: string
@@ -47,6 +50,14 @@ interface Invoice {
     id: string
     title: string
     ticketNumber: string
+  }
+  paymentBatch?: {
+    id: string
+    batchNumber: string
+    popFileUrl: string
+    popReference?: string
+    paymentDate: string
+    totalAmount: number
   }
 }
 
@@ -137,10 +148,42 @@ export function AdminInvoiceManagement() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [showClarificationDialog, setShowClarificationDialog] = useState(false)
   const [actionInvoice, setActionInvoice] = useState<Invoice | null>(null)
+  
+  // Batch payment states
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(new Set())
+  const [showBatchPaymentDialog, setShowBatchPaymentDialog] = useState(false)
+  const [batchPaymentData, setBatchPaymentData] = useState({
+    popFile: null as File | null,
+    popReference: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  })
+  const [batchProcessing, setBatchProcessing] = useState(false)
+  
+  // Payment batches for Paid view
+  const [paymentBatches, setPaymentBatches] = useState<{
+    id: string
+    batchNumber: string
+    popFileUrl: string
+    popReference?: string
+    paymentDate: string
+    totalAmount: number
+    notes?: string
+    processedBy?: { name: string; email: string }
+    invoices: Invoice[]
+  }[]>([])
+  const [expandedBatch, setExpandedBatch] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInvoices()
   }, [])
+  
+  useEffect(() => {
+    // Fetch payment batches when viewing paid tab
+    if (filter === 'paid') {
+      fetchPaymentBatches()
+    }
+  }, [filter])
 
   const fetchInvoices = async () => {
     try {
@@ -153,6 +196,18 @@ export function AdminInvoiceManagement() {
       console.error('Error fetching invoices:', error)
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const fetchPaymentBatches = async () => {
+    try {
+      const response = await fetch('/api/admin/invoices/batch-payment')
+      if (response.ok) {
+        const data = await response.json()
+        setPaymentBatches(data)
+      }
+    } catch (error) {
+      console.error('Error fetching payment batches:', error)
     }
   }
 
@@ -324,6 +379,93 @@ export function AdminInvoiceManagement() {
       setProcessing(false)
     }
   }
+  
+  // Batch payment handler
+  const handleBatchPayment = async () => {
+    if (selectedInvoiceIds.size === 0 || !batchPaymentData.popFile) {
+      toast.error('Please select invoices and upload a Proof of Payment')
+      return
+    }
+    
+    setBatchProcessing(true)
+    try {
+      // First upload the POP file using the dedicated POP upload endpoint
+      const formData = new FormData()
+      formData.append('file', batchPaymentData.popFile)
+      
+      const uploadResponse = await fetch('/api/upload/pop', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!uploadResponse.ok) {
+        const uploadError = await uploadResponse.json()
+        throw new Error(uploadError.message || 'Failed to upload Proof of Payment')
+      }
+      
+      const { url: popFileUrl } = await uploadResponse.json()
+      
+      // Now create the batch payment
+      const response = await fetch('/api/admin/invoices/batch-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceIds: Array.from(selectedInvoiceIds),
+          popFileUrl,
+          popReference: batchPaymentData.popReference,
+          paymentDate: batchPaymentData.paymentDate,
+          notes: batchPaymentData.notes
+        })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        toast.success(result.message)
+        setShowBatchPaymentDialog(false)
+        setSelectedInvoiceIds(new Set())
+        setBatchPaymentData({
+          popFile: null,
+          popReference: '',
+          paymentDate: new Date().toISOString().split('T')[0],
+          notes: ''
+        })
+        await fetchInvoices()
+        await fetchPaymentBatches()
+      } else {
+        const error = await response.json()
+        toast.error(error.message || 'Failed to process batch payment')
+      }
+    } catch (error) {
+      console.error('Error processing batch payment:', error)
+      toast.error('Failed to process batch payment')
+    } finally {
+      setBatchProcessing(false)
+    }
+  }
+  
+  // Toggle invoice selection
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedInvoiceIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(invoiceId)) {
+        newSet.delete(invoiceId)
+      } else {
+        newSet.add(invoiceId)
+      }
+      return newSet
+    })
+  }
+  
+  // Select all approved invoices
+  const selectAllApproved = () => {
+    const approvedInvoices = invoices.filter(inv => inv.status === 'APPROVED')
+    setSelectedInvoiceIds(new Set(approvedInvoices.map(inv => inv.id)))
+  }
+  
+  // Deselect all
+  const deselectAll = () => {
+    setSelectedInvoiceIds(new Set())
+  }
 
   const openDetailModal = async (invoice: Invoice) => {
     setShowDetailModal(true)
@@ -483,12 +625,142 @@ export function AdminInvoiceManagement() {
         </Button>
       </div>
 
+      {/* Batch Payment Actions for Approved Tab */}
+      {filter === 'approved' && invoices.filter(i => i.status === 'APPROVED').length > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Wallet className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">Batch Payment</p>
+                  <p className="text-sm text-blue-700">
+                    Select invoices below and process payment with a single Proof of Payment
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={selectAllApproved}>
+                  Select All
+                </Button>
+                {selectedInvoiceIds.size > 0 && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={deselectAll}>
+                      Deselect All
+                    </Button>
+                    <Button 
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => setShowBatchPaymentDialog(true)}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay {selectedInvoiceIds.size} Invoice{selectedInvoiceIds.size > 1 ? 's' : ''} 
+                      (${invoices.filter(i => selectedInvoiceIds.has(i.id)).reduce((sum, i) => sum + i.amount, 0).toFixed(2)})
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Paid Tab - Show Payment Batches */}
+      {filter === 'paid' && paymentBatches.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              Payment Batches
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {paymentBatches.map((batch) => (
+                <div key={batch.id} className="border rounded-lg overflow-hidden">
+                  <div 
+                    className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    onClick={() => setExpandedBatch(expandedBatch === batch.id ? null : batch.id)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <FileText className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{batch.batchNumber}</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(batch.paymentDate).toLocaleDateString()} • {batch.invoices.length} invoice{batch.invoices.length > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-green-600">${batch.totalAmount.toFixed(2)}</p>
+                        {batch.popReference && <p className="text-sm text-gray-500">Ref: {batch.popReference}</p>}
+                      </div>
+                      <MediaHoverPreview 
+                        file={{ url: batch.popFileUrl, filename: `POP-${batch.batchNumber}.pdf`, mimeType: 'application/pdf' }}
+                        previewSize="lg"
+                      >
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); window.open(batch.popFileUrl, '_blank') }}>
+                          <FileText className="h-4 w-4 mr-1" />
+                          View POP
+                        </Button>
+                      </MediaHoverPreview>
+                    </div>
+                  </div>
+                  
+                  {expandedBatch === batch.id && (
+                    <div className="border-t bg-white p-4">
+                      <p className="text-sm font-medium text-gray-600 mb-3">Invoices in this batch:</p>
+                      <div className="space-y-2">
+                        {batch.invoices.map((inv) => (
+                          <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <p className="font-medium">{inv.invoiceNumber}</p>
+                                <p className="text-sm text-gray-600">{inv.ticket?.ticketNumber} - {inv.ticket?.title}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="font-medium">${inv.amount.toFixed(2)}</p>
+                                <p className="text-sm text-gray-500">{inv.contractor?.name}</p>
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => openDetailModal(inv as Invoice)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {batch.processedBy && (
+                        <p className="text-xs text-gray-500 mt-3">
+                          Processed by: {batch.processedBy.name} ({batch.processedBy.email})
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Invoice Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <thead>
               <tr className="border-b bg-gray-50">
+                {filter === 'approved' && (
+                  <th className="text-left p-4 font-medium w-12">
+                    <Checkbox 
+                      checked={selectedInvoiceIds.size === invoices.filter(i => i.status === 'APPROVED').length && selectedInvoiceIds.size > 0}
+                      onCheckedChange={(checked) => checked ? selectAllApproved() : deselectAll()}
+                    />
+                  </th>
+                )}
                 <th className="text-left p-4 font-medium">Invoice</th>
                 <th className="text-left p-4 font-medium">Contractor</th>
                 <th className="text-left p-4 font-medium">Ticket</th>
@@ -501,7 +773,15 @@ export function AdminInvoiceManagement() {
             </thead>
             <tbody>
               {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b hover:bg-gray-50">
+                <tr key={invoice.id} className={`border-b hover:bg-gray-50 ${selectedInvoiceIds.has(invoice.id) ? 'bg-blue-50' : ''}`}>
+                  {filter === 'approved' && (
+                    <td className="p-4">
+                      <Checkbox 
+                        checked={selectedInvoiceIds.has(invoice.id)}
+                        onCheckedChange={() => toggleInvoiceSelection(invoice.id)}
+                      />
+                    </td>
+                  )}
                   <td className="p-4">
                     <div>
                       <div className="font-medium">{invoice.invoiceNumber}</div>
@@ -609,6 +889,105 @@ export function AdminInvoiceManagement() {
               <Button variant="outline" onClick={() => { setShowClarificationDialog(false); setClarificationRequest(''); setActionInvoice(null) }}>Cancel</Button>
               <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => actionInvoice && handleClarificationRequest(actionInvoice.id, clarificationRequest)} disabled={processing || !clarificationRequest.trim()}>
                 {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Send Request'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Payment Dialog */}
+      <Dialog open={showBatchPaymentDialog} onOpenChange={setShowBatchPaymentDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CreditCard className="h-5 w-5" />
+              Process Batch Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-sm text-green-700">Total Amount to Pay</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    ${invoices.filter(i => selectedInvoiceIds.has(i.id)).reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-green-700 mt-1">{selectedInvoiceIds.size} invoice{selectedInvoiceIds.size > 1 ? 's' : ''} selected</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="max-h-40 overflow-y-auto">
+              <p className="text-sm font-medium text-gray-600 mb-2">Invoices to be paid:</p>
+              <div className="space-y-1">
+                {invoices.filter(i => selectedInvoiceIds.has(i.id)).map(inv => (
+                  <div key={inv.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
+                    <span>{inv.invoiceNumber} - {inv.contractor.name}</span>
+                    <span className="font-medium">${inv.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="popFile">Proof of Payment (POP) *</Label>
+              <div className="mt-2">
+                <FileUpload 
+                  onFileSelect={(file) => setBatchPaymentData(prev => ({ ...prev, popFile: file }))} 
+                  onFileRemove={() => setBatchPaymentData(prev => ({ ...prev, popFile: null }))} 
+                  selectedFile={batchPaymentData.popFile} 
+                  accept=".pdf,.jpg,.jpeg,.png" 
+                  maxSize={10} 
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="popReference">Bank Reference (Optional)</Label>
+                <Input 
+                  id="popReference" 
+                  value={batchPaymentData.popReference} 
+                  onChange={(e) => setBatchPaymentData(prev => ({ ...prev, popReference: e.target.value }))} 
+                  placeholder="e.g., TRF-123456"
+                />
+              </div>
+              <div>
+                <Label htmlFor="paymentDate">Payment Date</Label>
+                <Input 
+                  id="paymentDate" 
+                  type="date"
+                  value={batchPaymentData.paymentDate} 
+                  onChange={(e) => setBatchPaymentData(prev => ({ ...prev, paymentDate: e.target.value }))} 
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="batchNotes">Notes (Optional)</Label>
+              <Textarea 
+                id="batchNotes" 
+                value={batchPaymentData.notes} 
+                onChange={(e) => setBatchPaymentData(prev => ({ ...prev, notes: e.target.value }))} 
+                placeholder="Any additional notes about this payment..."
+                rows={2}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setShowBatchPaymentDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700" 
+                onClick={handleBatchPayment}
+                disabled={batchProcessing || !batchPaymentData.popFile}
+              >
+                {batchProcessing ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                ) : (
+                  <><DollarSign className="h-4 w-4 mr-2" />Confirm Payment</>
+                )}
               </Button>
             </div>
           </div>
@@ -776,53 +1155,33 @@ export function AdminInvoiceManagement() {
                   )}
                   
                   {invoiceDetails.invoice.status === 'APPROVED' && (
+                    <Card className="border-blue-200 bg-blue-50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-6 w-6 text-blue-600" />
+                          <div>
+                            <p className="font-medium text-blue-900">Invoice Approved</p>
+                            <p className="text-sm text-blue-700">
+                              This invoice is approved and awaiting payment. Use the &quot;Approved&quot; tab to process batch payments with a single Proof of Payment.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {invoiceDetails.invoice.status === 'PAID' && (
                     <Card className="border-green-200 bg-green-50">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-green-800">Process Payment</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <DollarSign className="h-6 w-6 text-green-600" />
                           <div>
-                            <Label htmlFor="modalPaymentAmount">Payment Amount</Label>
-                            <Input 
-                              id="modalPaymentAmount" 
-                              type="number" 
-                              step="0.01" 
-                              value={paymentData.amount} 
-                              onChange={(e) => setPaymentData(prev => ({ ...prev, amount: e.target.value }))} 
-                              max={invoiceDetails.invoice.balance}
-                              placeholder={`Max: $${invoiceDetails.invoice.balance.toFixed(2)}`}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="modalPaymentNotes">Reference/Notes</Label>
-                            <Input 
-                              id="modalPaymentNotes" 
-                              value={paymentData.notes} 
-                              onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))} 
-                              placeholder="Payment reference..."
-                            />
+                            <p className="font-medium text-green-900">Invoice Paid</p>
+                            <p className="text-sm text-green-700">
+                              Payment processed on {invoiceDetails.invoice.paidDate ? new Date(invoiceDetails.invoice.paidDate).toLocaleDateString() : 'N/A'}
+                            </p>
                           </div>
                         </div>
-                        <div>
-                          <Label>Proof of Payment</Label>
-                          <div className="mt-2">
-                            <FileUpload 
-                              onFileSelect={(file) => setPaymentData(prev => ({ ...prev, proofFile: file }))} 
-                              onFileRemove={() => setPaymentData(prev => ({ ...prev, proofFile: null }))} 
-                              selectedFile={paymentData.proofFile} 
-                              accept=".pdf,.jpg,.jpeg,.png" 
-                              maxSize={10} 
-                            />
-                          </div>
-                        </div>
-                        <Button 
-                          className="w-full bg-green-600 hover:bg-green-700" 
-                          onClick={() => { setSelectedInvoice({ id: invoiceDetails.invoice.id } as Invoice); handlePayment() }}
-                          disabled={processing || !paymentData.amount}
-                        >
-                          {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</> : <><DollarSign className="h-4 w-4 mr-2" />Mark as Paid</>}
-                        </Button>
                       </CardContent>
                     </Card>
                   )}

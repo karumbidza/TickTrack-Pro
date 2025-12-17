@@ -68,6 +68,11 @@ interface TicketSummary {
   status: string
   type: string
   priority: string
+  category?: {
+    id: string
+    name: string
+    color: string
+  }
   assignedTo?: {
     id: string
     name: string
@@ -103,6 +108,10 @@ interface TicketSummary {
   createdAt: string
   updatedAt: string
   location?: string
+  branch?: {
+    id: string
+    name: string
+  }
   _count: {
     messages: number
   }
@@ -128,8 +137,11 @@ export function UserDashboard({ user }: UserDashboardProps) {
     title: '',
     description: '',
     priority: '',
-    type: ''
+    type: '',
+    categoryId: '',
+    location: ''
   })
+  const [editCategories, setEditCategories] = useState<{id: string, name: string, color: string}[]>([])
   const [editMediaFiles, setEditMediaFiles] = useState<File[]>([])
   const [existingAttachments, setExistingAttachments] = useState<{id: string, filename: string, originalName: string, url: string, mimeType: string}[]>([])
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
@@ -423,17 +435,31 @@ export function UserDashboard({ user }: UserDashboardProps) {
     return ticket.status === 'OPEN' || (ticket.status === 'PROCESSING' && !ticket.assignedTo)
   }
 
+  // Fetch categories for edit dialog
+  const fetchEditCategories = async () => {
+    try {
+      const response = await fetch('/api/asset-categories')
+      const data = await response.json()
+      setEditCategories(data.categories || [])
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+    }
+  }
+
   // Open edit dialog with current ticket data
   const openEditDialog = (ticket: TicketSummary) => {
     setEditFormData({
       title: ticket.title,
       description: ticket.description,
       priority: ticket.priority,
-      type: ticket.type
+      type: ticket.type,
+      categoryId: ticket.category?.id || '',
+      location: ticket.location || ''
     })
     setExistingAttachments(ticket.attachments || [])
     setAttachmentsToDelete([])
     setEditMediaFiles([])
+    fetchEditCategories()
     setShowEditDialog(true)
   }
 
@@ -454,6 +480,12 @@ export function UserDashboard({ user }: UserDashboardProps) {
       formData.append('description', editFormData.description.trim())
       formData.append('priority', editFormData.priority)
       formData.append('type', editFormData.type)
+      if (editFormData.categoryId) {
+        formData.append('categoryId', editFormData.categoryId)
+      }
+      if (editFormData.location) {
+        formData.append('location', editFormData.location.trim())
+      }
       
       // Add attachments to delete
       if (attachmentsToDelete.length > 0) {
@@ -593,18 +625,22 @@ export function UserDashboard({ user }: UserDashboardProps) {
       ),
     },
     {
-      field: 'type',
-      headerName: 'Type',
+      field: 'category',
+      headerName: 'Category',
       flex: 0.6,
       minWidth: 80,
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
-          label={params.row.type?.replace(/_/g, ' ')}
+          label={params.row.category?.name || 'Uncategorized'}
           size="small"
-          variant="outlined"
-          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+          sx={{ 
+            fontWeight: 500, 
+            fontSize: '0.7rem',
+            backgroundColor: params.row.category?.color || '#9e9e9e',
+            color: '#fff'
+          }}
         />
       ),
     },
@@ -1386,6 +1422,41 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 </div>
               </div>
               
+              {/* Category */}
+              <div>
+                <Label htmlFor="editCategory">Category</Label>
+                <Select value={editFormData.categoryId} onValueChange={(value) => setEditFormData({ ...editFormData, categoryId: value })}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Location */}
+              <div>
+                <Label htmlFor="editLocation">Location</Label>
+                <Input
+                  id="editLocation"
+                  value={editFormData.location}
+                  onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                  placeholder="e.g., Building A, Floor 2, Room 201"
+                  className="mt-1"
+                />
+              </div>
+              
               {/* Existing Attachments */}
               {existingAttachments.length > 0 && (
                 <div>
@@ -1606,6 +1677,15 @@ export function UserDashboard({ user }: UserDashboardProps) {
             onRatingSubmitted={handleRatingSubmitted}
           />
         )}
+
+        {/* Controlled Create Ticket Dialog for Empty State */}
+        <CreateTicketDialog 
+          tenantId={user.tenantId || ''} 
+          onTicketCreated={fetchUserTickets}
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          hideTrigger={true}
+        />
       </div>
     </div>
   )

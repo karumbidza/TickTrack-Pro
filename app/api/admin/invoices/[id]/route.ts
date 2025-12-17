@@ -133,11 +133,17 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {}
     
     if (status) {
-      const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'PROCESSING']
+      const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'PROCESSING', 'PAID']
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ message: 'Invalid status' }, { status: 400 })
       }
       updateData.status = status
+      
+      // Set approval tracking when approved
+      if (status === 'APPROVED') {
+        updateData.approvedAt = new Date()
+        updateData.approvedById = session.user.id
+      }
     }
     
     if (rejectionReason !== undefined) {
@@ -165,7 +171,7 @@ export async function PATCH(
       
       if (status === 'APPROVED') {
         notificationTitle = 'Invoice Approved'
-        notificationMessage = `Your invoice has been approved for payment.`
+        notificationMessage = `Your invoice has been approved. Expect payment within 7 working days.`
       } else if (status === 'REJECTED') {
         notificationTitle = 'Invoice Rejected'
         notificationMessage = `Your invoice has been rejected. Reason: ${rejectionReason || 'Not specified'}`

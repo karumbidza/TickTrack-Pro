@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { contractorId, notes, status = 'ASSIGNED' } = await request.json()
+    const { contractorId, notes, status = 'ASSIGNED', requestQuote = false } = await request.json()
     const ticketId = params.id
 
     if (!contractorId) {
@@ -103,8 +103,11 @@ export async function POST(
       where: { id: ticketId },
       data: {
         assignedToId: contractorId,
-        status: status, // Use provided status (PROCESSING from admin assignment)
+        status: status, // Use provided status (PROCESSING or AWAITING_QUOTE)
         assignedAt: existingTicket.assignedAt || new Date(), // Only set if not already assigned
+        // Quote request fields
+        quoteRequested: requestQuote,
+        quoteRequestedAt: requestQuote ? new Date() : null,
         updatedAt: new Date()
       },
       include: {
@@ -128,7 +131,9 @@ export async function POST(
     })
 
     // Create assignment message
-    const assignmentMessage = `Ticket assigned to ${contractor.name || contractor.email} by ${user.name || user.email}`
+    const assignmentMessage = requestQuote 
+      ? `Quote requested from ${contractor.name || contractor.email} by ${user.name || user.email}`
+      : `Ticket assigned to ${contractor.name || contractor.email} by ${user.name || user.email}`
     const fullMessage = notes ? `${assignmentMessage}. Notes: ${notes}` : assignmentMessage
 
     await prisma.message.create({
