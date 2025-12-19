@@ -254,20 +254,24 @@ export async function PATCH(
       }
     }
 
+    // Build update data object
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date()
+    }
+    
+    if (title) updateData.title = title.trim()
+    if (description !== undefined && description !== null) updateData.description = description.trim()
+    if (priority) updateData.priority = priority
+    if (type) updateData.type = type
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null
+    if (location !== undefined && location !== null) updateData.location = location.trim()
+    if (assetId !== undefined) updateData.assetId = assetId || null
+
     // Update the ticket
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
-      data: {
-        ...(title && { title: title.trim() }),
-        ...(description !== undefined && description !== null && { description: description.trim() }),
-        ...(priority && { priority }),
-        ...(type && { type }),
-        ...(categoryId && { categoryId }),
-        ...(location !== undefined && location !== null && { location: location.trim() }),
-        // Handle assetId - can be empty string to clear, or a valid ID to set
-        ...(assetId !== undefined && { assetId: assetId || null }),
-        updatedAt: new Date()
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: updateData as any,
       include: {
         user: {
           select: { id: true, name: true, email: true, phone: true }
