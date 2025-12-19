@@ -112,7 +112,7 @@ export async function PATCH(
       try {
         await sendContractorPasswordSetupEmail(
           kyc.companyEmail,
-          kyc.contactPerson || kyc.companyName,
+          kyc.companyName,
           passwordSetupLink,
           kyc.tenant?.name || 'TickTrack Pro'
         )
