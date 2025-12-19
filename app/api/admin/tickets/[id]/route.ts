@@ -239,7 +239,7 @@ export async function PATCH(
 
     // Add system message for category change
     if (categoryId !== undefined && categoryId !== existingTicket.categoryId) {
-      const newCategory = categoryId ? await prisma.category.findUnique({
+      const newCategory = categoryId ? await prisma.assetCategory.findUnique({
         where: { id: categoryId },
         select: { name: true }
       }) : null
