@@ -1,8 +1,23 @@
 'use client'
 
-import { createTheme, ThemeProvider } from '@mui/material/styles'
+import { createTheme, ThemeProvider, Theme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { ReactNode } from 'react'
+
+// Extend theme type to include DataGrid
+declare module '@mui/material/styles' {
+  interface Components {
+    MuiDataGrid?: {
+      styleOverrides?: {
+        root?: React.CSSProperties | Record<string, unknown>
+        columnHeaders?: React.CSSProperties | Record<string, unknown>
+        columnHeader?: React.CSSProperties | Record<string, unknown>
+        row?: React.CSSProperties | Record<string, unknown>
+        cell?: React.CSSProperties | Record<string, unknown>
+      }
+    }
+  }
+}
 
 const theme = createTheme({
   palette: {
