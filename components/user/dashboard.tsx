@@ -73,6 +73,12 @@ interface TicketSummary {
     name: string
     color: string
   }
+  asset?: {
+    id: string
+    name: string
+    assetNumber: string
+    location?: string
+  }
   assignedTo?: {
     id: string
     name: string
@@ -139,9 +145,11 @@ export function UserDashboard({ user }: UserDashboardProps) {
     priority: '',
     type: '',
     categoryId: '',
-    location: ''
+    location: '',
+    assetId: ''
   })
   const [editCategories, setEditCategories] = useState<{id: string, name: string, color: string}[]>([])
+  const [editAssets, setEditAssets] = useState<{id: string, name: string, assetNumber: string, categoryId?: string, category?: {id: string, name: string, color?: string}}[]>([])
   const [editMediaFiles, setEditMediaFiles] = useState<File[]>([])
   const [existingAttachments, setExistingAttachments] = useState<{id: string, filename: string, originalName: string, url: string, mimeType: string}[]>([])
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
@@ -446,6 +454,17 @@ export function UserDashboard({ user }: UserDashboardProps) {
     }
   }
 
+  // Fetch assets for edit dialog
+  const fetchEditAssets = async () => {
+    try {
+      const response = await fetch('/api/assets')
+      const data = await response.json()
+      setEditAssets(data.assets || [])
+    } catch (error) {
+      console.error('Failed to fetch assets:', error)
+    }
+  }
+
   // Open edit dialog with current ticket data
   const openEditDialog = (ticket: TicketSummary) => {
     setEditFormData({
@@ -454,12 +473,14 @@ export function UserDashboard({ user }: UserDashboardProps) {
       priority: ticket.priority,
       type: ticket.type,
       categoryId: ticket.category?.id || '',
-      location: ticket.location || ''
+      location: ticket.location || '',
+      assetId: ticket.asset?.id || ''
     })
     setExistingAttachments(ticket.attachments || [])
     setAttachmentsToDelete([])
     setEditMediaFiles([])
     fetchEditCategories()
+    fetchEditAssets()
     setShowEditDialog(true)
   }
 
@@ -486,6 +507,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       if (editFormData.location) {
         formData.append('location', editFormData.location.trim())
       }
+      // Include assetId (can be empty to clear asset)
+      formData.append('assetId', editFormData.assetId || '')
       
       // Add attachments to delete
       if (attachmentsToDelete.length > 0) {
@@ -1420,6 +1443,38 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              
+              {/* Asset */}
+              <div>
+                <Label htmlFor="editAsset">Related Asset</Label>
+                <Select 
+                  value={editFormData.assetId || 'none'} 
+                  onValueChange={(value) => {
+                    // When asset changes, also update category to match asset's category
+                    const selectedAsset = editAssets.find(a => a.id === value)
+                    setEditFormData({ 
+                      ...editFormData, 
+                      assetId: value === 'none' ? '' : value,
+                      categoryId: selectedAsset?.categoryId || editFormData.categoryId
+                    })
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select asset (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Asset</SelectItem>
+                    {editAssets.map((asset) => (
+                      <SelectItem key={asset.id} value={asset.id}>
+                        {asset.name} ({asset.assetNumber}) {asset.category ? `- ${asset.category.name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  * Changing asset will update the category automatically
+                </p>
               </div>
               
               {/* Category */}

@@ -113,7 +113,20 @@ export default function SignInPage() {
       })
 
       if (result?.error) {
-        setError('Invalid email or password')
+        // Parse custom error messages from auth.ts
+        const errorMessage = result.error
+        
+        if (errorMessage.includes('PENDING_APPROVAL:')) {
+          setError('Your account is pending administrator approval. You will receive an email once approved.')
+        } else if (errorMessage.includes('EMAIL_PENDING:')) {
+          setError('Please check your email and click the activation link to complete your account setup.')
+        } else if (errorMessage.includes('SUSPENDED:')) {
+          setError('Your account has been suspended. Please contact your administrator.')
+        } else if (errorMessage.includes('DEACTIVATED:')) {
+          setError('Your account has been deactivated. Please contact your administrator.')
+        } else {
+          setError('Invalid email or password')
+        }
       } else {
         // Get the session to determine redirect path
         const session = await getSession()

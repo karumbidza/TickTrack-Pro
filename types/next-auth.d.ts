@@ -9,6 +9,7 @@ declare module "next-auth" {
       image?: string | null
       role: "SUPER_ADMIN" | "TENANT_ADMIN" | "IT_ADMIN" | "SALES_ADMIN" | "RETAIL_ADMIN" | "MAINTENANCE_ADMIN" | "PROJECTS_ADMIN" | "CONTRACTOR" | "END_USER"
       tenantId: string | null
+      tenantName: string | null
       branchId: string | null
       branchName: string | null
     }
@@ -18,6 +19,7 @@ declare module "next-auth" {
     id: string
     role: "SUPER_ADMIN" | "TENANT_ADMIN" | "IT_ADMIN" | "SALES_ADMIN" | "RETAIL_ADMIN" | "MAINTENANCE_ADMIN" | "PROJECTS_ADMIN" | "CONTRACTOR" | "END_USER"
     tenantId: string | null
+    tenantName?: string | null
     branchId?: string | null
     branchName?: string | null
   }
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     role: "SUPER_ADMIN" | "TENANT_ADMIN" | "IT_ADMIN" | "SALES_ADMIN" | "RETAIL_ADMIN" | "MAINTENANCE_ADMIN" | "PROJECTS_ADMIN" | "CONTRACTOR" | "END_USER"
     tenantId: string | null
+    tenantName: string | null
     branchId: string | null
     branchName: string | null
   }

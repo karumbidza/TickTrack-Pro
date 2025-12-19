@@ -182,6 +182,21 @@ export async function POST(request: NextRequest) {
     })
     const assetNumber = `AST${String(assetCount + 1).padStart(6, '0')}`
 
+    // Get branch name for location if branchId is provided
+    const branchId = data.branchId || session.user.branchId || null
+    let locationFromBranch = data.location || ''
+    
+    if (branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { name: true }
+      })
+      if (branch) {
+        // Use branch name as location, append any additional location details
+        locationFromBranch = data.location ? `${branch.name} - ${data.location}` : branch.name
+      }
+    }
+
     const asset = await prisma.asset.create({
       data: {
         assetNumber,
@@ -192,8 +207,8 @@ export async function POST(request: NextRequest) {
         model: data.model,
         serialNumber: data.serialNumber,
         status: data.status || 'ACTIVE',
-        location: data.location,
-        branchId: data.branchId || session.user.branchId || null,
+        location: locationFromBranch,
+        branchId: branchId,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
         warrantyExpires: data.warrantyExpires ? new Date(data.warrantyExpires) : null,
         purchasePrice: data.purchasePrice,

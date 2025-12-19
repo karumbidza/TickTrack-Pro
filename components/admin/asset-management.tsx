@@ -95,6 +95,10 @@ interface Asset {
   serialNumber?: string
   status: string
   location: string
+  branch?: {
+    id: string
+    name: string
+  }
   purchaseDate?: string
   warrantyExpires?: string
   endOfLifeDate?: string
@@ -144,10 +148,12 @@ export function AdminAssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [stats, setStats] = useState<AssetStats | null>(null)
   const [categories, setCategories] = useState<AssetCategory[]>([])
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [branchFilter, setBranchFilter] = useState('all')
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showAssetDetail, setShowAssetDetail] = useState(false)
   const [showRejectDialog, setShowRejectDialog] = useState(false)
@@ -160,6 +166,7 @@ export function AdminAssetManagement() {
       const params = new URLSearchParams()
       if (statusFilter !== 'all') params.set('status', statusFilter)
       if (categoryFilter !== 'all') params.set('category', categoryFilter)
+      if (branchFilter !== 'all') params.set('branch', branchFilter)
       if (searchQuery) params.set('search', searchQuery)
 
       const response = await fetch(`/api/admin/assets?${params}`)
@@ -188,6 +195,18 @@ export function AdminAssetManagement() {
     }
   }
 
+  const fetchBranches = async () => {
+    try {
+      const response = await fetch('/api/branches')
+      if (response.ok) {
+        const data = await response.json()
+        setBranches(data.branches || [])
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error)
+    }
+  }
+
   const fetchAssetDetail = async (assetId: string) => {
     try {
       const response = await fetch(`/api/admin/assets/${assetId}`)
@@ -205,7 +224,8 @@ export function AdminAssetManagement() {
   useEffect(() => {
     fetchAssets()
     fetchCategories()
-  }, [statusFilter, categoryFilter])
+    fetchBranches()
+  }, [statusFilter, categoryFilter, branchFilter])
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -421,6 +441,17 @@ export function AdminAssetManagement() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by branch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Branches</SelectItem>
+                {branches.map(branch => (
+                  <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={fetchAssets}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -523,10 +554,10 @@ export function AdminAssetManagement() {
                     <th className="pb-3 font-medium text-center">Asset</th>
                     <th className="pb-3 font-medium text-center">Asset ID</th>
                     <th className="pb-3 font-medium text-center">Category</th>
-                    <th className="pb-3 font-medium text-center">Location</th>
+                    <th className="pb-3 font-medium text-center">Site/Branch</th>
                     <th className="pb-3 font-medium text-center">Status</th>
                     <th className="pb-3 font-medium text-center">Purchase Price</th>
-                    <th className="pb-3 font-medium text-center">Total Cost</th>
+                    <th className="pb-3 font-medium text-center">Service Cost</th>
                     <th className="pb-3 font-medium text-center">Tickets</th>
                     <th className="pb-3 font-medium text-center">Actions</th>
                   </tr>
@@ -557,7 +588,7 @@ export function AdminAssetManagement() {
                       <td className="py-3 text-center">
                         <div className="flex items-center justify-center gap-1 text-sm">
                           <MapPin className="h-3 w-3 text-gray-400" />
-                          {asset.location}
+                          {asset.branch?.name || asset.location || '-'}
                         </div>
                       </td>
                       <td className="py-3 text-center">{getStatusBadge(asset.status)}</td>
@@ -672,10 +703,10 @@ export function AdminAssetManagement() {
                         <p>{selectedAsset.serialNumber || '-'}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Location</Label>
+                        <Label className="text-gray-500">Site / Branch</Label>
                         <p className="flex items-center gap-1">
                           <MapPin className="h-4 w-4 text-gray-400" />
-                          {selectedAsset.location}
+                          {selectedAsset.branch?.name || selectedAsset.location || '-'}
                         </p>
                       </div>
                     </div>
@@ -719,8 +750,9 @@ export function AdminAssetManagement() {
                         <p className="text-lg font-semibold text-blue-600">{formatCurrency(selectedAsset.totalMaintenanceCost)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500 text-xs">Total Cost of Ownership</Label>
-                        <p className="text-lg font-bold">{formatCurrency(selectedAsset.totalCost)}</p>
+                        <Label className="text-gray-500 text-xs">Total Service Cost</Label>
+                        <p className="text-lg font-bold text-orange-600">{formatCurrency(selectedAsset.totalCost)}</p>
+                        <p className="text-[10px] text-gray-400">Repairs + Maintenance</p>
                       </div>
                     </div>
                   </div>

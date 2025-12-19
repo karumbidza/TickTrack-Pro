@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const category = searchParams.get('category')
+    const branch = searchParams.get('branch')
     const search = searchParams.get('search')
 
     // Build where clause
@@ -47,6 +48,10 @@ export async function GET(request: Request) {
       where.categoryId = category
     }
 
+    if (branch && branch !== 'all') {
+      where.branchId = branch
+    }
+
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -62,6 +67,9 @@ export async function GET(request: Request) {
       where,
       include: {
         category: true,
+        branch: {
+          select: { id: true, name: true }
+        },
         tenant: {
           select: { id: true, name: true }
         },
@@ -139,7 +147,7 @@ export async function GET(request: Request) {
         repairHistory,
         totalRepairCost,
         totalMaintenanceCost: maintenanceCost,
-        totalCost: totalRepairCost + maintenanceCost + (asset.purchasePrice || 0)
+        totalCost: totalRepairCost + maintenanceCost
       }
     })
 

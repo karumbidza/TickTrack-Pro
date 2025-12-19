@@ -17,6 +17,7 @@ async function main() {
       name: 'Super Admin',
       password: hashedPassword,
       role: 'SUPER_ADMIN',
+      status: 'ACTIVE',
       isActive: true,
     },
   })
@@ -106,6 +107,7 @@ async function main() {
       password: tenantAdminPassword,
       role: 'TENANT_ADMIN',
       tenantId: demoTenant.id,
+      status: 'ACTIVE',
       isActive: true,
     },
   })
@@ -124,6 +126,7 @@ async function main() {
       password: endUserPassword,
       role: 'END_USER',
       tenantId: demoTenant.id,
+      status: 'ACTIVE',
       isActive: true,
     },
   })
@@ -142,6 +145,7 @@ async function main() {
       password: contractorPassword,
       role: 'CONTRACTOR',
       tenantId: demoTenant.id,
+      status: 'ACTIVE',
       isActive: true,
     },
   })
@@ -171,6 +175,7 @@ async function main() {
       password: contractorPassword,
       role: 'CONTRACTOR',
       tenantId: demoTenant.id,
+      status: 'ACTIVE',
       isActive: true,
     },
   })

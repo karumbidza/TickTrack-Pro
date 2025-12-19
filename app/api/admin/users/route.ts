@@ -36,6 +36,7 @@ export async function GET() {
         name: true,
         email: true,
         role: true,
+        status: true,
         isActive: true,
         phone: true,
         createdAt: true,

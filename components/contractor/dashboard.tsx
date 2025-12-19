@@ -76,6 +76,18 @@ interface Job {
   quoteApproved?: boolean
   quoteApprovedAt?: string
   quoteRejectionReason?: string
+  // Multi-contractor quote request
+  myQuoteRequest?: {
+    id: string
+    status: string
+    quoteAmount?: number
+    quoteDescription?: string
+    quoteFileUrl?: string
+    estimatedDays?: number
+    notes?: string
+    submittedAt?: string
+    requestedAt?: string
+  }
   // SLA tracking fields
   assignedAt?: string
   contractorAcceptedAt?: string
@@ -149,6 +161,7 @@ interface InvoiceForm {
   invoiceNumber: string
   amount: string
   workDescription: string
+  variationDescription: string
   file: File | null
 }
 
@@ -191,6 +204,7 @@ export function ContractorDashboard() {
     invoiceNumber: '',
     amount: '',
     workDescription: '',
+    variationDescription: '',
     file: null
   })
   const [uploadingInvoice, setUploadingInvoice] = useState(false)
@@ -202,12 +216,11 @@ export function ContractorDashboard() {
   const [workDescriptionForm, setWorkDescriptionForm] = useState({
     workSummary: '',
     workArea: '',
-    otherArea: '',
     faultIdentified: '',
     workPerformed: '',
     materialsUsed: '',
-    testingDone: [] as string[],
-    testNotes: '',
+    equipmentTested: false,
+    testDescription: '',
     outstandingIssues: 'none' as 'none' | 'followup',
     followUpDetails: ''
   })
@@ -442,6 +455,7 @@ export function ContractorDashboard() {
           invoiceNumber: invoiceForm.invoiceNumber,
           amount: parseFloat(invoiceForm.amount),
           workDescription: invoiceForm.workDescription,
+          variationDescription: invoiceForm.variationDescription || undefined,
           invoiceFileUrl: fileUrl
         })
       })
@@ -449,7 +463,7 @@ export function ContractorDashboard() {
       if (response.ok) {
         toast.success('Invoice uploaded successfully')
         setShowInvoiceDialog(false)
-        setInvoiceForm({ invoiceNumber: '', amount: '', workDescription: '', file: null })
+        setInvoiceForm({ invoiceNumber: '', amount: '', workDescription: '', variationDescription: '', file: null })
         fetchContractorData()
       } else {
         const data = await response.json()
@@ -488,8 +502,8 @@ export function ContractorDashboard() {
       toast.error('Please list the materials/parts used (or enter "None" if no materials were used)')
       return
     }
-    if (workDescriptionForm.testingDone.length === 0) {
-      toast.error('Please select at least one testing/verification item')
+    if (!workDescriptionForm.equipmentTested) {
+      toast.error('Please confirm that equipment was tested and verified')
       return
     }
     if (workDescriptionForm.outstandingIssues === 'followup' && !workDescriptionForm.followUpDetails.trim()) {
@@ -532,7 +546,7 @@ export function ContractorDashboard() {
 
   // Compile structured work description form into formatted text
   const compileWorkDescription = () => {
-    const { workSummary, workArea, otherArea, faultIdentified, workPerformed, materialsUsed, testingDone, testNotes, outstandingIssues, followUpDetails } = workDescriptionForm
+    const { workSummary, workArea, faultIdentified, workPerformed, materialsUsed, equipmentTested, testDescription, outstandingIssues, followUpDetails } = workDescriptionForm
     
     let description = ''
     
@@ -540,8 +554,7 @@ export function ContractorDashboard() {
     description += `📋 WORK SUMMARY\n${workSummary}\n\n`
     
     // 2. Location
-    const areaDisplay = workArea === 'other' ? otherArea : workArea
-    description += `📍 WORK LOCATION\n${selectedJob?.location || 'On-site'} - ${areaDisplay}\n\n`
+    description += `📍 WORK LOCATION\n${selectedJob?.location || 'On-site'} - ${workArea}\n\n`
     
     // 3. Fault Identified
     description += `⚠️ FAULT IDENTIFIED\n${faultIdentified}\n\n`
@@ -555,13 +568,11 @@ export function ContractorDashboard() {
     }
     
     // 6. Testing
-    if (testingDone.length > 0) {
+    if (equipmentTested) {
       description += `✅ TESTING & VERIFICATION\n`
-      testingDone.forEach(test => {
-        description += `• ${test}\n`
-      })
-      if (testNotes.trim()) {
-        description += `Notes: ${testNotes}\n`
+      description += `• Equipment tested and verified\n`
+      if (testDescription.trim()) {
+        description += `Test conducted: ${testDescription}\n`
       }
       description += '\n'
     }
@@ -582,12 +593,11 @@ export function ContractorDashboard() {
     setWorkDescriptionForm({
       workSummary: '',
       workArea: '',
-      otherArea: '',
       faultIdentified: '',
       workPerformed: '',
       materialsUsed: '',
-      testingDone: [],
-      testNotes: '',
+      equipmentTested: false,
+      testDescription: '',
       outstandingIssues: 'none',
       followUpDetails: ''
     })
@@ -820,14 +830,49 @@ export function ContractorDashboard() {
       minWidth: 90,
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Job>) => (
-        <Chip
-          label={params.row.status.replace(/_/g, ' ')}
-          size="small"
-          color={getStatusChipColor(params.row.status)}
-          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-        />
-      ),
+      renderCell: (params: GridRenderCellParams<Job>) => {
+        // If this contractor has a quote request, show their specific status
+        if (params.row.myQuoteRequest) {
+          const quoteStatus = params.row.myQuoteRequest.status
+          let label = ''
+          let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default'
+          
+          if (quoteStatus === 'pending') {
+            label = 'QUOTE PENDING'
+            color = 'warning'
+          } else if (quoteStatus === 'submitted') {
+            label = 'QUOTE SENT'
+            color = 'info'
+          } else if (quoteStatus === 'awarded') {
+            label = 'AWARDED'
+            color = 'success'
+          } else if (quoteStatus === 'rejected') {
+            label = 'NOT AWARDED'
+            color = 'error'
+          } else {
+            label = quoteStatus.toUpperCase()
+          }
+          
+          return (
+            <Chip
+              label={label}
+              size="small"
+              color={color}
+              sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+            />
+          )
+        }
+        
+        // Fallback to ticket status for directly assigned jobs
+        return (
+          <Chip
+            label={params.row.status.replace(/_/g, ' ')}
+            size="small"
+            color={getStatusChipColor(params.row.status)}
+            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+          />
+        )
+      },
     },
     {
       field: 'sla',
@@ -1567,16 +1612,25 @@ export function ContractorDashboard() {
 
                 {/* Action Buttons */}
                 <div className="flex justify-end space-x-3 pt-4 border-t">
-                  {/* Quote Submission - Admin requested quote */}
-                  {selectedJob.status === 'AWAITING_QUOTE' && (
+                  {/* Quote Submission - Admin requested quote (multi-contractor or direct) */}
+                  {(selectedJob.status === 'AWAITING_QUOTE' || 
+                    (selectedJob.myQuoteRequest && selectedJob.myQuoteRequest.status === 'pending')) && (
                     <div className="w-full bg-amber-50 border border-amber-200 rounded-lg p-4">
                       <h4 className="font-medium text-amber-800 mb-2 flex items-center">
                         <FileText className="h-5 w-5 mr-2" />
                         Quote/Estimate Required
                       </h4>
                       <p className="text-sm text-amber-700 mb-3">
-                        The admin has requested a quote for this job. Please review the details and submit your estimate.
+                        {selectedJob.myQuoteRequest 
+                          ? 'You have been invited to submit a quote for this job. Other contractors may also be quoting.'
+                          : 'The admin has requested a quote for this job. Please review the details and submit your estimate.'}
                       </p>
+                      {selectedJob.myQuoteRequest?.notes && (
+                        <div className="bg-white border border-amber-200 rounded p-3 mb-3">
+                          <p className="text-xs text-gray-500 font-medium">Admin Notes:</p>
+                          <p className="text-sm text-gray-700">{selectedJob.myQuoteRequest.notes}</p>
+                        </div>
+                      )}
                       {selectedJob.quoteRejectionReason && (
                         <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
                           <p className="text-sm text-red-700 font-medium">Previous quote was rejected:</p>
@@ -1593,8 +1647,37 @@ export function ContractorDashboard() {
                     </div>
                   )}
 
-                  {/* Quote Submitted - Waiting for approval */}
-                  {selectedJob.status === 'QUOTE_SUBMITTED' && (
+                  {/* Quote Submitted - Waiting for approval (multi-contractor) */}
+                  {selectedJob.myQuoteRequest && selectedJob.myQuoteRequest.status === 'submitted' && (
+                    <div className="w-full bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                      <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
+                        <Clock className="h-5 w-5 mr-2" />
+                        Quote Submitted - Awaiting Decision
+                      </h4>
+                      <p className="text-sm text-indigo-700 mb-2">
+                        Your quote has been submitted. The admin will review all quotes and award the job.
+                      </p>
+                      <div className="bg-white rounded p-3 border border-indigo-200">
+                        <p className="text-lg font-bold text-indigo-800">
+                          ${selectedJob.myQuoteRequest.quoteAmount?.toFixed(2)}
+                        </p>
+                        {selectedJob.myQuoteRequest.quoteDescription && (
+                          <p className="text-sm text-gray-600 mt-1">{selectedJob.myQuoteRequest.quoteDescription}</p>
+                        )}
+                        {selectedJob.myQuoteRequest.estimatedDays && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Estimated completion: {selectedJob.myQuoteRequest.estimatedDays} day(s)
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Submitted: {selectedJob.myQuoteRequest.submittedAt && new Date(selectedJob.myQuoteRequest.submittedAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quote Submitted - Single contractor flow (old) */}
+                  {selectedJob.status === 'QUOTE_SUBMITTED' && !selectedJob.myQuoteRequest && (
                     <div className="w-full bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                       <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
                         <Clock className="h-5 w-5 mr-2" />
@@ -2072,6 +2155,18 @@ export function ContractorDashboard() {
                     />
                   </div>
                   
+                  {/* Show Quoted Amount if available */}
+                  {(selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-blue-800">Quoted Amount:</span>
+                        <span className="text-lg font-bold text-blue-900">
+                          ${(selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div>
                     <Label htmlFor="amount">Invoice Amount ($) *</Label>
                     <Input
@@ -2082,7 +2177,37 @@ export function ContractorDashboard() {
                       value={invoiceForm.amount}
                       onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
                     />
+                    {/* Show warning if invoice exceeds quote */}
+                    {invoiceForm.amount && (selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
+                      parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) && (
+                      <p className="text-xs text-amber-600 mt-1 flex items-center">
+                        <span className="mr-1">⚠️</span>
+                        Invoice amount exceeds quoted amount. Please provide a variation description below.
+                      </p>
+                    )}
                   </div>
+
+                  {/* Variation Description - only show if invoice exceeds quote */}
+                  {(selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
+                    invoiceForm.amount && 
+                    parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      <Label htmlFor="variationDescription" className="text-amber-800 font-medium">
+                        Variation Description *
+                      </Label>
+                      <p className="text-xs text-amber-700 mt-1 mb-2">
+                        Please explain why the final invoice amount is higher than the quoted amount.
+                      </p>
+                      <Textarea
+                        id="variationDescription"
+                        placeholder="e.g., Additional parts were required, scope of work expanded due to unforeseen issues, etc."
+                        value={invoiceForm.variationDescription}
+                        onChange={(e) => setInvoiceForm({ ...invoiceForm, variationDescription: e.target.value })}
+                        rows={3}
+                        className="bg-white"
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="workDescription">
@@ -2143,13 +2268,24 @@ export function ContractorDashboard() {
             <DialogFooter>
               <Button variant="outline" onClick={() => {
                 setShowInvoiceDialog(false)
-                setInvoiceForm({ invoiceNumber: '', amount: '', workDescription: '', file: null })
+                setInvoiceForm({ invoiceNumber: '', amount: '', workDescription: '', variationDescription: '', file: null })
               }}>
                 Cancel
               </Button>
               <Button 
                 onClick={handleInvoiceUpload}
-                disabled={uploadingInvoice || !invoiceForm.invoiceNumber || !invoiceForm.amount || !invoiceForm.workDescription || !invoiceForm.file}
+                disabled={
+                  uploadingInvoice || 
+                  !invoiceForm.invoiceNumber || 
+                  !invoiceForm.amount || 
+                  !invoiceForm.workDescription || 
+                  !invoiceForm.file ||
+                  // Require variation description if invoice exceeds quote
+                  (selectedJob && 
+                    (selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
+                    parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) &&
+                    !invoiceForm.variationDescription.trim())
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {uploadingInvoice ? 'Uploading...' : 'Submit Invoice'}
@@ -2201,30 +2337,12 @@ export function ContractorDashboard() {
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">2</span>
                   Exact Location of Work *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Select where the work was carried out.</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {['Forecourt', 'Pump Area', 'Tank Area', 'Canopy', 'Generator Room', 'Electrical Room', 'Store/Office', 'Server Room', 'HVAC System', 'Other'].map((area) => (
-                    <label key={area} className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.workArea === area ? 'border-amber-500 bg-amber-50' : ''}`}>
-                      <input
-                        type="radio"
-                        name="workArea"
-                        value={area}
-                        checked={workDescriptionForm.workArea === area}
-                        onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, workArea: e.target.value})}
-                        className="accent-amber-600"
-                      />
-                      <span className="text-sm">{area}</span>
-                    </label>
-                  ))}
-                </div>
-                {workDescriptionForm.workArea === 'Other' && (
-                  <Input
-                    className="mt-2"
-                    placeholder="Specify location..."
-                    value={workDescriptionForm.otherArea}
-                    onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, otherArea: e.target.value})}
-                  />
-                )}
+                <p className="text-xs text-gray-500 mt-1 mb-2">Specify where the work was carried out.</p>
+                <Input
+                  placeholder="e.g., Main building rooftop, Server room B2, Parking lot entrance"
+                  value={workDescriptionForm.workArea}
+                  onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, workArea: e.target.value})}
+                />
               </div>
 
               {/* 3. Fault Identified */}
@@ -2278,31 +2396,22 @@ export function ContractorDashboard() {
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">6</span>
                   Testing & Verification *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Select at least one test performed after completing the work.</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {['Equipment tested and operational', 'Leak test performed', 'Electrical readings normal', 'System handed back to site', 'Safety checks completed', 'Client walkthrough done'].map((test) => (
-                    <label key={test} className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.testingDone.includes(test) ? 'border-green-500 bg-green-50' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={workDescriptionForm.testingDone.includes(test)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setWorkDescriptionForm({...workDescriptionForm, testingDone: [...workDescriptionForm.testingDone, test]})
-                          } else {
-                            setWorkDescriptionForm({...workDescriptionForm, testingDone: workDescriptionForm.testingDone.filter(t => t !== test)})
-                          }
-                        }}
-                        className="accent-green-600"
-                      />
-                      <span className="text-sm">{test}</span>
-                    </label>
-                  ))}
-                </div>
-                <Input
-                  className="mt-2"
-                  placeholder="Additional test notes (optional)..."
-                  value={workDescriptionForm.testNotes}
-                  onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, testNotes: e.target.value})}
+                <p className="text-xs text-gray-500 mt-1 mb-2">Confirm testing was performed and describe what was tested.</p>
+                <label className={`flex items-center gap-2 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.equipmentTested ? 'border-green-500 bg-green-50' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={workDescriptionForm.equipmentTested}
+                    onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, equipmentTested: e.target.checked})}
+                    className="accent-green-600 w-4 h-4"
+                  />
+                  <span className="text-sm font-medium">Equipment tested and verified</span>
+                </label>
+                <Textarea
+                  className="mt-3"
+                  placeholder="Brief description of test conducted (e.g., Ran pump for 10 minutes, checked for leaks, verified pressure readings were within normal range)"
+                  value={workDescriptionForm.testDescription}
+                  onChange={(e) => setWorkDescriptionForm({...workDescriptionForm, testDescription: e.target.value})}
+                  rows={2}
                 />
               </div>
 
@@ -2358,7 +2467,7 @@ export function ContractorDashboard() {
               </Button>
               <Button 
                 onClick={handleSubmitWorkDescription}
-                disabled={submittingWorkDescription || !workDescriptionForm.workSummary.trim() || !workDescriptionForm.workArea || !workDescriptionForm.faultIdentified.trim() || !workDescriptionForm.workPerformed.trim() || !workDescriptionForm.materialsUsed.trim() || workDescriptionForm.testingDone.length === 0}
+                disabled={submittingWorkDescription || !workDescriptionForm.workSummary.trim() || !workDescriptionForm.workArea.trim() || !workDescriptionForm.faultIdentified.trim() || !workDescriptionForm.workPerformed.trim() || !workDescriptionForm.materialsUsed.trim() || !workDescriptionForm.equipmentTested}
                 className="bg-amber-600 hover:bg-amber-700"
               >
                 {submittingWorkDescription ? 'Submitting...' : 'Submit for Approval'}

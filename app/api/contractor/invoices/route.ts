@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
       hourlyRate,
       description,
       notes,
-      workDescription
+      workDescription,
+      variationDescription
     } = body
 
     // Validate required fields (simplified - only invoice number, amount, and file required)
@@ -92,6 +93,17 @@ export async function POST(request: NextRequest) {
         id: ticketId,
         assignedToId: session.user.id,
         status: 'CLOSED' // Only allow invoice creation for closed tickets
+      },
+      include: {
+        quoteRequests: {
+          where: {
+            contractorId: session.user.id,
+            status: 'AWARDED'
+          },
+          select: {
+            quoteAmount: true
+          }
+        }
       }
     })
 
@@ -101,6 +113,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       )
     }
+
+    // Get the quoted amount if available
+    const quotedAmount = ticket.quoteRequests?.[0]?.quoteAmount || ticket.quoteAmount || null
 
     // Check if invoice already exists for this ticket
     const existingInvoice = await prisma.invoice.findFirst({
@@ -122,6 +137,8 @@ export async function POST(request: NextRequest) {
       data: {
         invoiceNumber,
         amount: parseFloat(amount),
+        quotedAmount,
+        variationDescription: variationDescription || null,
         hoursWorked: hoursWorked ? parseFloat(hoursWorked) : null,
         hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
         description: description || `Invoice for ticket ${ticket.ticketNumber}`,

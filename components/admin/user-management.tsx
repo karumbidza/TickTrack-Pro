@@ -33,7 +33,9 @@ import {
   Search,
   MoreHorizontal,
   Mail,
-  UserCog
+  UserCog,
+  Send,
+  Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -42,6 +44,7 @@ interface UserData {
   name: string | null
   email: string
   role: string
+  status: string
   isActive: boolean
   createdAt: string
   phone?: string | null
@@ -85,9 +88,16 @@ export function UserManagement({ user }: UserManagementProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false)
+  const [showInviteDialog, setShowInviteDialog] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedBranches, setSelectedBranches] = useState<string[]>([])
+  
+  // Invite form state
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteName, setInviteName] = useState('')
+  const [inviteExpiry, setInviteExpiry] = useState('72')
+  const [isInviting, setIsInviting] = useState(false)
   
   const [newUser, setNewUser] = useState({
     name: '',
@@ -140,6 +150,53 @@ export function UserManagement({ user }: UserManagementProps) {
       toast.error('Failed to fetch users')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail) {
+      toast.error('Email is required')
+      return
+    }
+
+    setIsInviting(true)
+    try {
+      const response = await fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
+          name: inviteName || undefined,
+          expiresInHours: parseInt(inviteExpiry)
+        })
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success(data.message || 'Invitation sent successfully')
+        // If email didn't send, show the link for manual copying
+        if (data.invitation?.inviteLink) {
+          console.log('Invitation link:', data.invitation.inviteLink)
+          // Copy link to clipboard
+          try {
+            await navigator.clipboard.writeText(data.invitation.inviteLink)
+            toast.info('Invitation link copied to clipboard (check console for link)', { duration: 5000 })
+          } catch (e) {
+            toast.info('Check browser console for invitation link', { duration: 5000 })
+          }
+        }
+        setShowInviteDialog(false)
+        setInviteEmail('')
+        setInviteName('')
+        setInviteExpiry('72')
+      } else {
+        toast.error(data.error || 'Failed to send invitation')
+      }
+    } catch (error) {
+      toast.error('Failed to send invitation')
+    } finally {
+      setIsInviting(false)
     }
   }
 
@@ -267,6 +324,37 @@ export function UserManagement({ user }: UserManagementProps) {
       toast.error('Failed to reset password')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleSendActivationEmail = async (userData: UserData) => {
+    try {
+      toast.loading(`Sending activation email to ${userData.email}...`, { id: 'activation-email' })
+      const response = await fetch(`/api/admin/users/${userData.id}/send-activation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success(`Activation email sent to ${userData.email}`, { id: 'activation-email' })
+        // Copy link to clipboard for development
+        if (data.activationLink) {
+          try {
+            await navigator.clipboard.writeText(data.activationLink)
+            toast.info('Activation link also copied to clipboard', { duration: 3000 })
+          } catch (e) {
+            console.log('Activation link:', data.activationLink)
+          }
+        }
+        fetchUsers()
+      } else {
+        toast.error(data.error || 'Failed to send activation email', { id: 'activation-email' })
+      }
+    } catch (error) {
+      console.error('Failed to send activation email:', error)
+      toast.error('Failed to send activation email', { id: 'activation-email' })
     }
   }
 
@@ -439,20 +527,31 @@ export function UserManagement({ user }: UserManagementProps) {
       },
     },
     {
-      field: 'isActive',
+      field: 'status',
       headerName: 'Status',
-      flex: 0.5,
-      minWidth: 80,
+      flex: 0.6,
+      minWidth: 120,
       align: 'center',
       headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => (
-        <Chip
-          label={params.row.isActive ? 'Active' : 'Inactive'}
-          size="small"
-          color={params.row.isActive ? 'success' : 'error'}
-          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-        />
-      ),
+      renderCell: (params: GridRenderCellParams<UserData>) => {
+        const status = params.row.status || (params.row.isActive ? 'ACTIVE' : 'DEACTIVATED')
+        const statusConfig: Record<string, { label: string; color: 'success' | 'warning' | 'error' | 'info' | 'default' }> = {
+          'ACTIVE': { label: 'Active', color: 'success' },
+          'PENDING_APPROVAL': { label: 'Pending', color: 'warning' },
+          'APPROVED_EMAIL_PENDING': { label: 'Awaiting Setup', color: 'info' },
+          'SUSPENDED': { label: 'Suspended', color: 'error' },
+          'DEACTIVATED': { label: 'Inactive', color: 'error' }
+        }
+        const config = statusConfig[status] || { label: status, color: 'default' }
+        return (
+          <Chip
+            label={config.label}
+            size="small"
+            color={config.color}
+            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
+          />
+        )
+      },
     },
     {
       field: 'createdAt',
@@ -514,6 +613,10 @@ export function UserManagement({ user }: UserManagementProps) {
             <ListItemText>Edit User</ListItemText>
           </MenuItem>
           <Divider />
+          <MenuItem onClick={() => { if (menuUser) handleSendActivationEmail(menuUser); handleMenuClose(); }}>
+            <ListItemIcon><Mail className="h-4 w-4 text-blue-500" /></ListItemIcon>
+            <ListItemText>Send Activation Email</ListItemText>
+          </MenuItem>
           <MenuItem onClick={() => { if (menuUser) handleResetPassword(menuUser); handleMenuClose(); }}>
             <ListItemIcon><Key className="h-4 w-4" /></ListItemIcon>
             <ListItemText>Reset Password</ListItemText>
@@ -541,13 +644,19 @@ export function UserManagement({ user }: UserManagementProps) {
             <p className="text-gray-600">Manage users and department admins</p>
           </div>
           
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setShowInviteDialog(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+            
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add User
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
@@ -695,7 +804,74 @@ export function UserManagement({ user }: UserManagementProps) {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
+
+        {/* Invite User Dialog */}
+        <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite User</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-500 mb-4">
+              Send an invitation email to a new user. They will be able to create their account after accepting.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="invite-email">Email Address *</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="invite-name">Name (Optional)</Label>
+                <Input
+                  id="invite-name"
+                  type="text"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <Label htmlFor="invite-expiry">Invitation Expiry</Label>
+                <Select value={inviteExpiry} onValueChange={setInviteExpiry}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24">24 hours</SelectItem>
+                    <SelectItem value="48">48 hours</SelectItem>
+                    <SelectItem value="72">72 hours (default)</SelectItem>
+                    <SelectItem value="168">7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSendInvite} disabled={isInviting}>
+                  {isInviting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

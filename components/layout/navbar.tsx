@@ -162,13 +162,20 @@ export function Navbar() {
           </div>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {session && (
               <>
                 <NotificationBell pollInterval={30000} />
-                <Badge variant="outline">
-                  {formatRole(session.user.role)}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {session.user.tenantName || (session.user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack Pro')}
+                  </Badge>
+                  {session.user.branchName && session.user.role !== 'SUPER_ADMIN' && (
+                    <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                      📍 {session.user.branchName}
+                    </Badge>
+                  )}
+                </div>
               </>
             )}
             

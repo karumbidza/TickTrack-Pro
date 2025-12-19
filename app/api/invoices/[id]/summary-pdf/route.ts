@@ -30,6 +30,11 @@ export async function GET(
                 phone: true
               }
             },
+            branch: {
+              select: {
+                name: true
+              }
+            },
             assignedTo: {
               select: {
                 name: true,
@@ -38,7 +43,16 @@ export async function GET(
                 contractorProfile: {
                   select: {
                     specialties: true,
-                    bio: true
+                    bio: true,
+                    contractorCategories: {
+                      include: {
+                        category: {
+                          select: {
+                            name: true
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -68,7 +82,16 @@ export async function GET(
             contractorProfile: {
               select: {
                 specialties: true,
-                bio: true
+                bio: true,
+                contractorCategories: {
+                  include: {
+                    category: {
+                      select: {
+                        name: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -100,6 +123,13 @@ export async function GET(
       })
     }
 
+    // Get contractor categories
+    const contractorCategories = invoice.contractor?.contractorProfile?.contractorCategories?.map(
+      cc => cc.category.name
+    ) || ticket.assignedTo?.contractorProfile?.contractorCategories?.map(
+      cc => cc.category.name
+    ) || []
+
     // Prepare data for PDF
     const pdfData = {
       // Invoice details
@@ -111,8 +141,8 @@ export async function GET(
       ticketNumber: ticket.ticketNumber || 'N/A',
       ticketTitle: ticket.title,
       ticketDescription: ticket.description || '',
-      ticketType: ticket.type || 'General',
-      ticketPriority: ticket.priority,
+      ticketType: String(ticket.type) || 'General',
+      ticketPriority: String(ticket.priority),
       dateRaised: formatDate(ticket.createdAt) || '',
       timeRaised: formatTime(ticket.createdAt) || '',
       dateClosed: formatDate(ticket.completedAt),
@@ -125,11 +155,16 @@ export async function GET(
         phone: ticket.user.phone || undefined
       },
       
+      // Branch info
+      branch: ticket.branch ? {
+        name: ticket.branch.name
+      } : undefined,
+      
       // Asset details
       asset: ticket.asset ? {
         name: ticket.asset.name,
         assetNumber: ticket.asset.assetNumber,
-        location: ticket.asset.location,
+        location: ticket.asset.location || 'N/A',
         brand: ticket.asset.brand || undefined,
         model: ticket.asset.model || undefined,
         serialNumber: ticket.asset.serialNumber || undefined
@@ -142,8 +177,7 @@ export async function GET(
         phone: invoice.contractor?.phone || ticket.assignedTo?.phone || undefined,
         company: invoice.contractor?.contractorProfile?.bio || 
                  ticket.assignedTo?.contractorProfile?.bio || undefined,
-        specialties: invoice.contractor?.contractorProfile?.specialties || 
-                     ticket.assignedTo?.contractorProfile?.specialties || undefined
+        categories: contractorCategories.length > 0 ? contractorCategories : undefined
       },
       
       // Work description
@@ -161,7 +195,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Invoice-Summary-${invoice.invoiceNumber}.pdf"`,
+        'Content-Disposition': `attachment; filename="Ticket-Summary-${ticket.ticketNumber || invoice.invoiceNumber}.pdf"`,
         'Content-Length': pdfBuffer.length.toString()
       }
     })

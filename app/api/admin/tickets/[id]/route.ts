@@ -23,7 +23,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { status, priority, type, notes } = await request.json()
+    const { status, priority, type, notes, assetId, categoryId } = await request.json()
     const ticketId = params.id
 
     // Ensure user has tenantId
@@ -62,6 +62,8 @@ export async function PATCH(
     const updateData: any = {}
     if (status) updateData.status = status
     if (type) updateData.type = type
+    if (assetId !== undefined) updateData.assetId = assetId || null
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null
     updateData.updatedAt = new Date()
 
     // If priority is changing, recalculate SLA deadlines
@@ -96,7 +98,21 @@ export async function PATCH(
             email: true
           }
         },
-        asset: true
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            assetNumber: true,
+            location: true,
+            categoryId: true,
+            category: {
+              select: { id: true, name: true, color: true }
+            }
+          }
+        },
+        category: {
+          select: { id: true, name: true, color: true }
+        }
       }
     })
 
@@ -193,6 +209,48 @@ export async function PATCH(
       await prisma.message.create({
         data: {
           content: `🔄 Ticket type changed from ${existingTicket.type} to ${type} by ${user.name || 'Admin'}.`,
+          ticketId,
+          userId: user.id,
+          isInternal: false
+        }
+      })
+    }
+
+    // Add system message for asset change
+    if (assetId !== undefined && assetId !== existingTicket.assetId) {
+      const newAsset = assetId ? await prisma.asset.findUnique({
+        where: { id: assetId },
+        select: { name: true, assetNumber: true }
+      }) : null
+      
+      const message = newAsset 
+        ? `📦 Asset changed to ${newAsset.name} (${newAsset.assetNumber}) by ${user.name || 'Admin'}.`
+        : `📦 Asset removed from ticket by ${user.name || 'Admin'}.`
+      
+      await prisma.message.create({
+        data: {
+          content: message,
+          ticketId,
+          userId: user.id,
+          isInternal: false
+        }
+      })
+    }
+
+    // Add system message for category change
+    if (categoryId !== undefined && categoryId !== existingTicket.categoryId) {
+      const newCategory = categoryId ? await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { name: true }
+      }) : null
+      
+      const message = newCategory 
+        ? `🏷️ Category changed to ${newCategory.name} by ${user.name || 'Admin'}.`
+        : `🏷️ Category removed from ticket by ${user.name || 'Admin'}.`
+      
+      await prisma.message.create({
+        data: {
+          content: message,
           ticketId,
           userId: user.id,
           isInternal: false

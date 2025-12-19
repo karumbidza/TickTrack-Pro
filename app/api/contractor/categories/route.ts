@@ -65,10 +65,10 @@ export async function PATCH(request: NextRequest) {
     // Get contractor profile
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { contractor: true }
+      include: { contractorProfile: true }
     })
 
-    if (!user?.contractor) {
+    if (!user?.contractorProfile) {
       return NextResponse.json({ error: 'Contractor profile not found' }, { status: 404 })
     }
 
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     const contractorCategory = await prisma.contractorCategory.upsert({
       where: {
         contractorId_categoryId: {
-          contractorId: user.contractor.id,
+          contractorId: user.contractorProfile.id,
           categoryId: categoryId
         }
       },
@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest) {
         isAvailable: isAvailable
       },
       create: {
-        contractorId: user.contractor.id,
+        contractorId: user.contractorProfile.id,
         categoryId: categoryId,
         isAvailable: isAvailable
       },

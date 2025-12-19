@@ -20,13 +20,72 @@ export async function POST(
     }
 
     const ticketId = params.id
-    const { quoteAmount, quoteDescription, quoteFileUrl } = await request.json()
+    const { quoteAmount, quoteDescription, quoteFileUrl, estimatedDays } = await request.json()
 
     if (!quoteAmount || quoteAmount <= 0) {
       return NextResponse.json({ error: 'Quote amount is required and must be positive' }, { status: 400 })
     }
 
-    // Get the ticket and verify it's assigned to this contractor and awaiting quote
+    // Check if there's a QuoteRequest for this contractor on this ticket
+    const quoteRequest = await prisma.quoteRequest.findFirst({
+      where: {
+        ticketId: ticketId,
+        contractorId: session.user.id,
+        status: 'pending'
+      }
+    })
+
+    if (quoteRequest) {
+      // Update the QuoteRequest with the submitted quote
+      await prisma.quoteRequest.update({
+        where: { id: quoteRequest.id },
+        data: {
+          status: 'submitted',
+          quoteAmount: parseFloat(quoteAmount.toString()),
+          quoteDescription: quoteDescription || null,
+          quoteFileUrl: quoteFileUrl || null,
+          estimatedDays: estimatedDays ? parseInt(estimatedDays.toString()) : null,
+          submittedAt: new Date()
+        }
+      })
+
+      // Check if all quote requests for this ticket have been submitted
+      const pendingRequests = await prisma.quoteRequest.count({
+        where: {
+          ticketId: ticketId,
+          status: 'pending'
+        }
+      })
+
+      // Update ticket status if at least one quote is submitted
+      await prisma.ticket.update({
+        where: { id: ticketId },
+        data: {
+          status: 'QUOTE_SUBMITTED' as any,
+          updatedAt: new Date()
+        }
+      })
+
+      // Create a message about the quote submission
+      await prisma.message.create({
+        data: {
+          content: `Quote submitted by ${session.user.name || session.user.email}: $${parseFloat(quoteAmount).toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}${estimatedDays ? `. Estimated completion: ${estimatedDays} days` : ''}`,
+          ticketId,
+          userId: session.user.id,
+          isInternal: true
+        }
+      })
+
+      logger.info('Quote submitted via QuoteRequest', { ticketId, quoteRequestId: quoteRequest.id, quoteAmount, contractorId: session.user.id })
+
+      return NextResponse.json({ 
+        success: true,
+        message: 'Quote submitted successfully',
+        pendingQuotes: pendingRequests
+      })
+    }
+
+    // Fallback: Check if ticket is directly assigned to this contractor (old flow)
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
@@ -42,7 +101,7 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Update ticket with quote details
+    // Update ticket with quote details (old flow - single contractor)
     const updatedTicket = await prisma.ticket.update({
       where: { id: ticketId },
       data: {

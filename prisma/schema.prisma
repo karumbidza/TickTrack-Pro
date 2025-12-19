@@ -129,6 +129,14 @@ enum UserRole {
   END_USER
 }
 
+enum UserStatus {
+  PENDING_APPROVAL      // User accepted invite, waiting for admin to assign role/site
+  APPROVED_EMAIL_PENDING // Admin approved, waiting for email verification & password setup
+  ACTIVE                // Fully verified and operational
+  SUSPENDED             // Temporarily blocked by admin
+  DEACTIVATED           // Permanently disabled
+}
+
 enum TicketStatus {
   OPEN
   AWAITING_QUOTE          // Admin requested quote from contractor
@@ -210,19 +218,31 @@ enum PaymentProvider {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
   emailVerified DateTime?
   name          String?
   image         String?
-  password      String?   // For credential authentication
-  role          UserRole  @default(END_USER)
-  tenantId      String?   // null for super admin
-  isActive      Boolean   @default(true)
+  password      String?    // For credential authentication
+  role          UserRole   @default(END_USER)
+  tenantId      String?    // null for super admin
+  isActive      Boolean    @default(true)
+  status        UserStatus @default(ACTIVE) // Account lifecycle status
   phone         String?
   department    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  // Invitation tracking
+  invitedById       String?    // User who invited this user
+  invitedBy         User?      @relation("InvitedUsers", fields: [invitedById], references: [id])
+  invitedUsers      User[]     @relation("InvitedUsers")
+  approvedById      String?    // Admin who approved this user
+  approvedBy        User?      @relation("ApprovedUsers", fields: [approvedById], references: [id])
+  approvedUsers     User[]     @relation("ApprovedUsers")
+  approvedAt        DateTime?  // When user was approved
+  activationToken   String?    @unique // Token for email verification + password setup
+  activationExpires DateTime?  // Token expiry
 
   // NextAuth relations
   accounts Account[]
@@ -249,10 +269,19 @@ model User {
   decommissionApprovedAssets  Asset[] @relation("DecommissionApprover")
   decommissionRejectedAssets  Asset[] @relation("DecommissionRejecter")
   assetHistory                AssetHistory[]
+  
+  // Invitation relations
+  sentInvitations      UserInvitation[] @relation("SentInvitations")
+  invitedFromInvitation UserInvitation? @relation("InvitedFromInvitation")
+  
+  // Quote request relations
+  contractorQuoteRequests QuoteRequest[] @relation("ContractorQuoteRequests") // Quote requests received as contractor
+  adminQuoteRequests      QuoteRequest[] @relation("AdminQuoteRequests")      // Quote requests sent as admin
 
   // Performance indexes
   @@index([tenantId, role])
   @@index([tenantId, isActive])
+  @@index([tenantId, status])
   @@map("users")
 }
 
@@ -284,6 +313,7 @@ model Tenant {
   quotes        Quote[]      // For custom feature quotes
   payments      Payment[]
   paymentBatches PaymentBatch[]
+  userInvitations       UserInvitation[]
   contractorInvitations ContractorInvitation[]
   contractorKYCs        ContractorKYC[]
 
@@ -460,6 +490,7 @@ model Ticket {
   invoice      Invoice?
   ratings      Rating[]
   maintenanceHistory MaintenanceHistory[]
+  quoteRequests QuoteRequest[] // Multiple quote requests sent to contractors
 
   // Performance indexes
   @@index([tenantId, status])
@@ -469,6 +500,45 @@ model Ticket {
   @@index([categoryId])
   @@index([createdAt])
   @@map("tickets")
+}
+
+// Quote Request model for requesting quotes from multiple contractors
+model QuoteRequest {
+  id                String    @id @default(cuid())
+  ticketId          String
+  contractorId      String    // The contractor user ID
+  
+  // Request details
+  requestedAt       DateTime  @default(now())
+  requestedBy       String    // Admin who requested the quote
+  notes             String?   // Notes/instructions for the contractor
+  
+  // Quote response from contractor
+  status            String    @default("pending") // pending, submitted, declined, awarded, rejected
+  quoteAmount       Float?
+  quoteDescription  String?   // Description/breakdown of quote
+  quoteFileUrl      String?   // Uploaded quote document
+  submittedAt       DateTime?
+  estimatedDays     Int?      // Estimated days to complete
+  
+  // Award/Rejection
+  isAwarded         Boolean   @default(false)
+  awardedAt         DateTime?
+  awardedBy         String?
+  rejectionReason   String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  ticket            Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  contractor        User      @relation("ContractorQuoteRequests", fields: [contractorId], references: [id])
+  requestedByUser   User      @relation("AdminQuoteRequests", fields: [requestedBy], references: [id])
+
+  @@unique([ticketId, contractorId]) // Prevent duplicate requests to same contractor
+  @@index([ticketId])
+  @@index([contractorId, status])
+  @@map("quote_requests")
 }
 
 model Contractor {
@@ -753,6 +823,8 @@ model Invoice {
   hourlyRate        Float?
   description       String?
   workDescription   String?       // Detailed work done description from contractor
+  variationDescription String?    // Explanation if invoice amount exceeds quoted amount
+  quotedAmount      Float?        // Original quoted amount for reference
   status            InvoiceStatus @default(PENDING)
   
   // Clarification/Rejection
@@ -857,6 +929,33 @@ enum KYCStatus {
   ACTIVE       // Password set, contractor can login
   REJECTED     // KYC rejected
   SUSPENDED    // Account suspended
+}
+
+// User Invitations - for inviting staff/managers to join a company
+model UserInvitation {
+  id          String    @id @default(cuid())
+  tenantId    String
+  email       String
+  name        String?   // Optional pre-filled name
+  token       String    @unique @default(cuid())
+  invitedById String    // User ID of admin who sent the invite
+  status      String    @default("pending") // pending, accepted, expired, cancelled
+  expiresAt   DateTime
+  acceptedAt  DateTime? // When user accepted the invitation
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // The user created from this invitation (after acceptance)
+  userId      String?   @unique
+  user        User?     @relation("InvitedFromInvitation", fields: [userId], references: [id])
+  
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  invitedBy   User      @relation("SentInvitations", fields: [invitedById], references: [id])
+
+  @@unique([tenantId, email])
+  @@index([token])
+  @@index([tenantId, status])
+  @@map("user_invitations")
 }
 
 model ContractorInvitation {

@@ -222,18 +222,38 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [departmentFilter, setDepartmentFilter] = useState('all')
   const [assignedFilter, setAssignedFilter] = useState('all')
+  const [branchFilter, setBranchFilter] = useState('all')
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([])
   const [showFilters, setShowFilters] = useState(false)
 
   // Assignment states
   const [selectedContractor, setSelectedContractor] = useState('')
+  const [selectedContractors, setSelectedContractors] = useState<string[]>([]) // Multi-select for quote requests
   const [selectedHQAdmin, setSelectedHQAdmin] = useState('')
   const [assignmentNotes, setAssignmentNotes] = useState('')
   const [assignmentType, setAssignmentType] = useState<'contractor' | 'hq-admin'>('contractor')
   const [requestQuote, setRequestQuote] = useState(false)
   
+  // Quote request management states
+  const [quoteRequests, setQuoteRequests] = useState<any[]>([])
+  const [loadingQuoteRequests, setLoadingQuoteRequests] = useState(false)
+  
   // Quote approval states
   const [quoteRejectionReason, setQuoteRejectionReason] = useState('')
   const [processingQuote, setProcessingQuote] = useState(false)
+
+  // Asset editing states
+  const [assets, setAssets] = useState<Array<{
+    id: string
+    name: string
+    assetNumber: string
+    location: string
+    categoryId?: string
+    category?: { id: string; name: string; color?: string }
+  }>>([])
+  const [editingAsset, setEditingAsset] = useState(false)
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('')
+  const [assetUpdateLoading, setAssetUpdateLoading] = useState(false)
 
   const statusOptions = [
     'OPEN', 'AWAITING_QUOTE', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
@@ -252,17 +272,27 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     fetchTickets()
     fetchContractors()
     fetchHQAdmins()
+    fetchAssets()
+    fetchBranches()
   }, [user])
 
   useEffect(() => {
     filterTickets()
-  }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter])
+  }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter, branchFilter])
 
   // Fetch filtered contractors when a ticket is selected for assignment
   useEffect(() => {
     if (selectedTicket && showTicketModal && !selectedTicket.assignedTo) {
       // Fetch contractors for this ticket's category
       fetchContractorsForCategory(selectedTicket.categoryId || undefined)
+    }
+  }, [selectedTicket, showTicketModal])
+
+  // Fetch quote requests when viewing a ticket with quotes
+  useEffect(() => {
+    if (selectedTicket && showTicketModal && 
+        (selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED')) {
+      fetchQuoteRequests(selectedTicket.id)
     }
   }, [selectedTicket, showTicketModal])
 
@@ -295,6 +325,34 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       }
     } catch (error) {
       console.error('Failed to fetch contractors:', error)
+    }
+  }
+
+  const fetchAssets = async () => {
+    try {
+      const response = await fetch('/api/admin/assets')
+      if (response.ok) {
+        const data = await response.json()
+        setAssets(data.assets || [])
+      } else {
+        console.error('Failed to fetch assets:', response.status)
+      }
+    } catch (error) {
+      console.error('Failed to fetch assets:', error)
+    }
+  }
+
+  const fetchBranches = async () => {
+    try {
+      const response = await fetch('/api/branches')
+      if (response.ok) {
+        const data = await response.json()
+        setBranches(data.branches || [])
+      } else {
+        console.error('Failed to fetch branches:', response.status)
+      }
+    } catch (error) {
+      console.error('Failed to fetch branches:', error)
     }
   }
 
@@ -520,6 +578,11 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       }
     }
 
+    // Branch filter
+    if (branchFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.branch?.id === branchFilter)
+    }
+
     setFilteredTickets(filtered)
   }
 
@@ -558,6 +621,117 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       console.error('Failed to assign ticket:', error)
       toast.error('Failed to assign ticket: Network error')
     }
+  }
+
+  // Handle multi-contractor quote request
+  const handleRequestQuotesFromMultiple = async () => {
+    if (!selectedTicket || selectedContractors.length === 0) {
+      toast.error('Please select at least one contractor')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/request-quotes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contractorIds: selectedContractors,
+          notes: assignmentNotes
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success(`Quote requests sent to ${selectedContractors.length} contractor(s)`)
+        setShowAssignDialog(false)
+        setSelectedContractors([])
+        setSelectedContractor('')
+        setAssignmentNotes('')
+        setRequestQuote(false)
+        setShowTicketModal(false)
+        fetchTickets()
+      } else {
+        const errorData = await response.json()
+        toast.error(`Failed to request quotes: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to request quotes:', error)
+      toast.error('Failed to request quotes: Network error')
+    }
+  }
+
+  // Fetch quote requests for a ticket
+  const fetchQuoteRequests = async (ticketId: string) => {
+    setLoadingQuoteRequests(true)
+    try {
+      const response = await fetch(`/api/admin/tickets/${ticketId}/request-quotes`)
+      if (response.ok) {
+        const data = await response.json()
+        setQuoteRequests(data.quoteRequests || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch quote requests:', error)
+    } finally {
+      setLoadingQuoteRequests(false)
+    }
+  }
+
+  // Award quote to a contractor
+  const handleAwardQuote = async (quoteRequestId: string) => {
+    if (!selectedTicket) return
+    
+    try {
+      const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/quote-requests/${quoteRequestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'award' })
+      })
+
+      if (response.ok) {
+        toast.success('Quote awarded successfully!')
+        fetchQuoteRequests(selectedTicket.id)
+        fetchTickets()
+      } else {
+        const errorData = await response.json()
+        toast.error(`Failed to award quote: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to award quote:', error)
+      toast.error('Failed to award quote')
+    }
+  }
+
+  // Reject a quote
+  const handleRejectQuote = async (quoteRequestId: string, reason?: string) => {
+    if (!selectedTicket) return
+    
+    try {
+      const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/quote-requests/${quoteRequestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', rejectionReason: reason })
+      })
+
+      if (response.ok) {
+        toast.success('Quote rejected')
+        fetchQuoteRequests(selectedTicket.id)
+      } else {
+        const errorData = await response.json()
+        toast.error(`Failed to reject quote: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Failed to reject quote:', error)
+      toast.error('Failed to reject quote')
+    }
+  }
+
+  // Toggle contractor selection for multi-select
+  const toggleContractorSelection = (contractorId: string) => {
+    setSelectedContractors(prev => 
+      prev.includes(contractorId)
+        ? prev.filter(id => id !== contractorId)
+        : [...prev, contractorId]
+    )
   }
 
   // Handle quote approval or rejection
@@ -647,6 +821,52 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       setQuickEditLoading(false)
       setTypeMenuAnchor(null)
       setQuickEditTicket(null)
+    }
+  }
+
+  const handleAssetChange = async () => {
+    if (!selectedTicket) return
+    
+    setAssetUpdateLoading(true)
+    try {
+      // Get the selected asset's category
+      const selectedAsset = assets.find(a => a.id === selectedAssetId)
+      const categoryId = selectedAsset?.categoryId || null
+      
+      const response = await fetch(`/api/admin/tickets/${selectedTicket.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          assetId: selectedAssetId || null,
+          categoryId: categoryId // Update category based on asset
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast.success('Asset updated successfully')
+        setEditingAsset(false)
+        fetchTickets()
+        // Update the selected ticket with new data
+        setSelectedTicket(prev => prev ? {
+          ...prev,
+          asset: data.ticket.asset,
+          category: data.ticket.category,
+          categoryId: data.ticket.category?.id
+        } : null)
+        // Refetch contractors for new category
+        if (categoryId) {
+          fetchContractorsForCategory(categoryId)
+        }
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to update asset')
+      }
+    } catch (error) {
+      console.error('Failed to update asset:', error)
+      toast.error('Failed to update asset')
+    } finally {
+      setAssetUpdateLoading(false)
     }
   }
 
@@ -745,6 +965,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     setPriorityFilter('all')
     setDepartmentFilter('all')
     setAssignedFilter('all')
+    setBranchFilter('all')
   }
 
   const getActiveFilterCount = () => {
@@ -754,6 +975,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     if (priorityFilter !== 'all') count++
     if (departmentFilter !== 'all') count++
     if (assignedFilter !== 'all') count++
+    if (branchFilter !== 'all') count++
     return count
   }
 
@@ -1083,6 +1305,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             size="medium"
             onClick={() => {
               setSelectedTicket(params.row)
+              setEditingAsset(false) // Reset asset editing state
               setShowTicketModal(true)
             }}
             sx={{ 
@@ -1227,6 +1450,23 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         <SelectItem value="all">All Tickets</SelectItem>
                         <SelectItem value="assigned">Assigned</SelectItem>
                         <SelectItem value="unassigned">Unassigned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Site / Branch</label>
+                    <Select value={branchFilter} onValueChange={setBranchFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Branches</SelectItem>
+                        {branches.map(branch => (
+                          <SelectItem key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1392,9 +1632,129 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       
                       {selectedTicket.asset && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Related Asset:</p>
-                          <p className="text-sm text-gray-900">{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
-                          <p className="text-xs text-gray-500">{selectedTicket.asset.location}</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-700">Related Asset:</p>
+                            {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && !editingAsset && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAssetId(selectedTicket.asset?.id || '')
+                                  setEditingAsset(true)
+                                }}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Change
+                              </Button>
+                            )}
+                          </div>
+                          {!editingAsset ? (
+                            <>
+                              <p className="text-sm text-gray-900">{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
+                              <p className="text-xs text-gray-500">{selectedTicket.asset.location}</p>
+                              {selectedTicket.category && (
+                                <Badge variant="outline" className="mt-1" style={{ borderColor: selectedTicket.category.color }}>
+                                  {selectedTicket.category.name}
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <div className="space-y-2 mt-2">
+                              <Select value={selectedAssetId || 'none'} onValueChange={(v) => setSelectedAssetId(v === 'none' ? '' : v)}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select an asset..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">No Asset</SelectItem>
+                                  {assets.map(asset => (
+                                    <SelectItem key={asset.id} value={asset.id}>
+                                      {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleAssetChange}
+                                  disabled={assetUpdateLoading}
+                                >
+                                  {assetUpdateLoading ? 'Saving...' : 'Save'}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingAsset(false)}
+                                  disabled={assetUpdateLoading}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                * Category will be updated to match the selected asset
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Show add asset option if no asset is set */}
+                      {!selectedTicket.asset && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-700">Related Asset:</p>
+                            {!editingAsset && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedAssetId('')
+                                  setEditingAsset(true)
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add
+                              </Button>
+                            )}
+                          </div>
+                          {!editingAsset ? (
+                            <p className="text-sm text-gray-500">No asset linked</p>
+                          ) : (
+                            <div className="space-y-2 mt-2">
+                              <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Select an asset..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {assets.map(asset => (
+                                    <SelectItem key={asset.id} value={asset.id}>
+                                      {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleAssetChange}
+                                  disabled={assetUpdateLoading || !selectedAssetId}
+                                >
+                                  {assetUpdateLoading ? 'Saving...' : 'Save'}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingAsset(false)}
+                                  disabled={assetUpdateLoading}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                * Category will be updated to match the selected asset
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1530,58 +1890,146 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           </div>
                         )}
                         
+                        {/* Request Quote Option - Moved to top */}
+                        <div className="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <input
+                            type="checkbox"
+                            id="requestQuote"
+                            checked={requestQuote}
+                            onChange={(e) => {
+                              setRequestQuote(e.target.checked)
+                              if (!e.target.checked) {
+                                setSelectedContractors([])
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <Label htmlFor="requestQuote" className="text-sm font-medium text-amber-800 cursor-pointer">
+                            Request Quote/Estimate First (can select multiple contractors)
+                          </Label>
+                        </div>
+                        
                         {/* Contractor Selection */}
                         {!loadingContractors && (
                           <>
-                            <div>
-                              <Label htmlFor="contractor">
-                                Select Contractor 
-                                {selectedTicket?.category && (
-                                  <span className="text-xs text-gray-500 ml-2">
-                                    (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
-                                  </span>
-                                )}
-                              </Label>
-                              <Select value={selectedContractor} onValueChange={setSelectedContractor}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Choose a contractor" />
-                                </SelectTrigger>
-                                <SelectContent>
+                            {requestQuote ? (
+                              // Multi-select for quote requests
+                              <div>
+                                <Label className="mb-2 block">
+                                  Select Contractors for Quote Request
+                                  {selectedContractors.length > 0 && (
+                                    <Badge variant="secondary" className="ml-2">
+                                      {selectedContractors.length} selected
+                                    </Badge>
+                                  )}
+                                </Label>
+                                <div className="border rounded-lg max-h-64 overflow-y-auto">
                                   {filteredContractors.length === 0 ? (
-                                    <SelectItem value="no-contractors" disabled>
+                                    <p className="p-4 text-sm text-gray-500 text-center">
                                       No contractors available for this category
-                                    </SelectItem>
+                                    </p>
                                   ) : (
                                     filteredContractors.map(contractor => (
-                                      <SelectItem key={contractor.id} value={contractor.userId}>
-                                        <div className="flex items-center gap-2">
-                                          <span>{contractor.name}</span>
-                                          <span className="font-semibold text-blue-600">
-                                            {contractor.rating?.toFixed(1) || '-'}
-                                          </span>
-                                          <span className="text-xs text-gray-400">
-                                            ({contractor.totalJobs || 0} jobs)
-                                          </span>
+                                      <div
+                                        key={contractor.id}
+                                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                          selectedContractors.includes(contractor.userId) ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''
+                                        }`}
+                                        onClick={() => toggleContractorSelection(contractor.userId)}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedContractors.includes(contractor.userId)}
+                                          onChange={() => {}}
+                                          className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                        />
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium">{contractor.name}</span>
+                                            <span className="font-semibold text-blue-600">
+                                              ★ {contractor.rating?.toFixed(1) || '-'}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                              ({contractor.totalJobs || 0} jobs)
+                                            </span>
+                                          </div>
+                                          {contractor.categories && contractor.categories.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {contractor.categories.slice(0, 3).map(cat => (
+                                                <Badge 
+                                                  key={cat.id} 
+                                                  variant="outline" 
+                                                  className="text-xs"
+                                                  style={{ borderColor: cat.color, color: cat.color }}
+                                                >
+                                                  {cat.name}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
                                         </div>
-                                      </SelectItem>
+                                      </div>
                                     ))
                                   )}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            {/* Selected Contractor Details */}
-                            {selectedContractor && (
-                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                {(() => {
-                                  const contractor = filteredContractors.find(c => c.userId === selectedContractor)
-                                  if (!contractor) return null
-                                  return (
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-medium">{contractor.name}</span>
-                                        <Tooltip
-                                          title={
+                                </div>
+                                {selectedContractors.length > 0 && (
+                                  <p className="text-xs text-amber-600 mt-2">
+                                    Quote requests will be sent to {selectedContractors.length} contractor(s). You can compare and award the job later.
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              // Single select for direct assignment
+                              <>
+                                <div>
+                                  <Label htmlFor="contractor">
+                                    Select Contractor 
+                                    {selectedTicket?.category && (
+                                      <span className="text-xs text-gray-500 ml-2">
+                                        (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
+                                      </span>
+                                    )}
+                                  </Label>
+                                  <Select value={selectedContractor} onValueChange={setSelectedContractor}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Choose a contractor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {filteredContractors.length === 0 ? (
+                                        <SelectItem value="no-contractors" disabled>
+                                          No contractors available for this category
+                                        </SelectItem>
+                                      ) : (
+                                        filteredContractors.map(contractor => (
+                                          <SelectItem key={contractor.id} value={contractor.userId}>
+                                            <div className="flex items-center gap-2">
+                                              <span>{contractor.name}</span>
+                                              <span className="font-semibold text-blue-600">
+                                                {contractor.rating?.toFixed(1) || '-'}
+                                              </span>
+                                              <span className="text-xs text-gray-400">
+                                                ({contractor.totalJobs || 0} jobs)
+                                              </span>
+                                            </div>
+                                          </SelectItem>
+                                        ))
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Selected Contractor Details */}
+                                {selectedContractor && (
+                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    {(() => {
+                                      const contractor = filteredContractors.find(c => c.userId === selectedContractor)
+                                      if (!contractor) return null
+                                      return (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <span className="font-medium">{contractor.name}</span>
+                                            <Tooltip
+                                              title={
                                             contractor.stats ? (
                                               <Box sx={{ p: 0.5 }}>
                                                 <Box sx={{ fontWeight: 600, mb: 1 }}>Overall Rating</Box>
@@ -1631,6 +2079,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 })()}
                               </div>
                             )}
+                              </>
+                            )}
                           </>
                         )}
                         
@@ -1644,42 +2094,25 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           />
                         </div>
                         
-                        {/* Request Quote Option */}
-                        <div className="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                          <input
-                            type="checkbox"
-                            id="requestQuote"
-                            checked={requestQuote}
-                            onChange={(e) => setRequestQuote(e.target.checked)}
-                            className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-                          />
-                          <Label htmlFor="requestQuote" className="text-sm font-medium text-amber-800 cursor-pointer">
-                            Request Quote/Estimate First
-                          </Label>
-                        </div>
-                        {requestQuote && (
-                          <p className="text-xs text-amber-600 -mt-2">
-                            Contractor will submit a quote for approval before the job is formally assigned.
-                          </p>
+                        {requestQuote ? (
+                          <Button 
+                            onClick={handleRequestQuotesFromMultiple} 
+                            disabled={selectedContractors.length === 0 || loadingContractors}
+                            className="w-full bg-amber-600 hover:bg-amber-700"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Request Quotes from {selectedContractors.length} Contractor{selectedContractors.length !== 1 ? 's' : ''}
+                          </Button>
+                        ) : (
+                          <Button 
+                            onClick={handleAssignContractor} 
+                            disabled={!selectedContractor || loadingContractors}
+                            className="w-full"
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Assign to Contractor
+                          </Button>
                         )}
-                        
-                        <Button 
-                          onClick={handleAssignContractor} 
-                          disabled={!selectedContractor || loadingContractors}
-                          className={`w-full ${requestQuote ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
-                        >
-                          {requestQuote ? (
-                            <>
-                              <FileText className="h-4 w-4 mr-2" />
-                              Request Quote
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Assign to Contractor
-                            </>
-                          )}
-                        </Button>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -1777,92 +2210,163 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   </div>
                 )}
 
-                {/* Awaiting Quote - Waiting for contractor to submit quote */}
-                {selectedTicket.status === 'AWAITING_QUOTE' && (
+                {/* Awaiting Quote / Quote Submitted - Show all quote requests */}
+                {(selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED') && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-amber-800 mb-2 flex items-center">
-                      <FileText className="h-5 w-5 mr-2" />
-                      Awaiting Quote from Contractor
-                    </h4>
-                    <p className="text-sm text-amber-700">
-                      Waiting for {selectedTicket.assignedTo?.name || 'the contractor'} to submit a quote for this job.
-                    </p>
-                    <p className="text-xs text-amber-600 mt-2">
-                      Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-
-                {/* Quote Submitted - Admin needs to approve/reject */}
-                {selectedTicket.status === 'QUOTE_SUBMITTED' && selectedTicket.quoteAmount && (
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-indigo-800 mb-2 flex items-center">
-                      <DollarSign className="h-5 w-5 mr-2" />
-                      Quote Submitted - Review Required
-                    </h4>
-                    <div className="bg-white rounded-lg p-4 border border-indigo-200 mb-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-sm text-gray-600">Quoted Amount:</span>
-                        <span className="text-2xl font-bold text-indigo-800">${selectedTicket.quoteAmount.toFixed(2)}</span>
-                      </div>
-                      {selectedTicket.quoteDescription && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-xs text-gray-500 font-medium mb-1">Description/Breakdown:</p>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTicket.quoteDescription}</p>
-                        </div>
-                      )}
-                      {selectedTicket.quoteFileUrl && (
-                        <div className="mt-3 pt-3 border-t">
-                          <a 
-                            href={selectedTicket.quoteFileUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            View Quote Document
-                          </a>
-                        </div>
-                      )}
-                      <p className="text-xs text-gray-500 mt-3">
-                        Submitted by {selectedTicket.assignedTo?.name} on {selectedTicket.quoteSubmittedAt && new Date(selectedTicket.quoteSubmittedAt).toLocaleString()}
-                      </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-medium text-amber-800 flex items-center">
+                        <FileText className="h-5 w-5 mr-2" />
+                        Quote Requests
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => fetchQuoteRequests(selectedTicket.id)}
+                        disabled={loadingQuoteRequests}
+                      >
+                        <RefreshCw className={`h-4 w-4 ${loadingQuoteRequests ? 'animate-spin' : ''}`} />
+                      </Button>
                     </div>
                     
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="quoteRejectionReason">Rejection Reason (required if rejecting)</Label>
-                        <Textarea
-                          id="quoteRejectionReason"
-                          placeholder="Explain why the quote is being rejected..."
-                          value={quoteRejectionReason}
-                          onChange={(e) => setQuoteRejectionReason(e.target.value)}
-                          rows={2}
-                        />
+                    {loadingQuoteRequests ? (
+                      <div className="text-center py-4">
+                        <RefreshCw className="h-5 w-5 animate-spin mx-auto text-amber-400" />
+                        <p className="text-sm text-amber-600 mt-1">Loading quote requests...</p>
                       </div>
-                      <div className="flex space-x-3">
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleQuoteAction('reject')}
-                          disabled={processingQuote}
-                          className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Reject Quote
-                        </Button>
-                        <Button 
-                          onClick={() => handleQuoteAction('approve')}
-                          disabled={processingQuote}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve Quote
-                        </Button>
+                    ) : quoteRequests.length === 0 ? (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-amber-700">
+                          {selectedTicket.assignedTo 
+                            ? `Waiting for ${selectedTicket.assignedTo.name || 'the contractor'} to submit a quote.`
+                            : 'No quote requests found. Use the multi-select option to request quotes.'}
+                        </p>
+                        <p className="text-xs text-amber-600 mt-2">
+                          Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 text-center">
-                        Note: Approving the quote will formally assign the job to the contractor.
-                      </p>
-                    </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {quoteRequests.map((qr) => (
+                          <div 
+                            key={qr.id} 
+                            className={`bg-white rounded-lg p-4 border ${
+                              qr.isAwarded ? 'border-green-400 bg-green-50' : 
+                              qr.status === 'submitted' ? 'border-indigo-300' : 
+                              qr.status === 'rejected' ? 'border-red-200 bg-red-50' :
+                              'border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
+                                  {(qr.contractor?.name || 'C')[0].toUpperCase()}
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
+                                  <p className="text-xs text-gray-500">{qr.contractor?.email}</p>
+                                </div>
+                              </div>
+                              <Badge variant={
+                                qr.isAwarded ? 'default' : 
+                                qr.status === 'submitted' ? 'secondary' : 
+                                qr.status === 'rejected' ? 'destructive' :
+                                'outline'
+                              } className={qr.isAwarded ? 'bg-green-600' : ''}>
+                                {qr.isAwarded ? '✓ Awarded' : qr.status.toUpperCase()}
+                              </Badge>
+                            </div>
+                            
+                            {qr.status === 'submitted' && (
+                              <>
+                                <div className="flex justify-between items-center mt-3">
+                                  <span className="text-sm text-gray-600">Quoted Amount:</span>
+                                  <span className="text-xl font-bold text-indigo-800">
+                                    ${qr.quoteAmount?.toFixed(2) || 'N/A'}
+                                  </span>
+                                </div>
+                                {qr.estimatedDays && (
+                                  <div className="flex justify-between items-center mt-1">
+                                    <span className="text-xs text-gray-500">Est. completion:</span>
+                                    <span className="text-sm text-gray-700">{qr.estimatedDays} day(s)</span>
+                                  </div>
+                                )}
+                                {qr.quoteDescription && (
+                                  <div className="mt-3 pt-3 border-t">
+                                    <p className="text-xs text-gray-500 font-medium mb-1">Description:</p>
+                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{qr.quoteDescription}</p>
+                                  </div>
+                                )}
+                                {qr.quoteFileUrl && (
+                                  <a 
+                                    href={qr.quoteFileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center mt-2"
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    View Quote Document
+                                  </a>
+                                )}
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Submitted: {qr.submittedAt && new Date(qr.submittedAt).toLocaleString()}
+                                </p>
+                                
+                                {!qr.isAwarded && qr.status === 'submitted' && (
+                                  <div className="flex space-x-2 mt-3">
+                                    <Button 
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleRejectQuote(qr.id)}
+                                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => handleAwardQuote(qr.id)}
+                                      className="flex-1 bg-green-600 hover:bg-green-700"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Award Job
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            
+                            {qr.status === 'pending' && (
+                              <p className="text-sm text-amber-600 mt-2">
+                                <Clock className="h-4 w-4 inline mr-1" />
+                                Awaiting quote submission...
+                              </p>
+                            )}
+                            
+                            {qr.status === 'rejected' && qr.rejectionReason && (
+                              <p className="text-sm text-red-600 mt-2">
+                                Reason: {qr.rejectionReason}
+                              </p>
+                            )}
+                            
+                            {qr.isAwarded && (
+                              <p className="text-sm text-green-600 mt-2 font-medium">
+                                🎉 This contractor was awarded the job
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {/* Summary */}
+                        {quoteRequests.filter(qr => qr.status === 'submitted').length > 1 && !quoteRequests.some(qr => qr.isAwarded) && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                            <p className="text-sm text-blue-800">
+                              <strong>{quoteRequests.filter(qr => qr.status === 'submitted').length}</strong> quotes received. 
+                              Compare and select the best contractor for this job.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -17,8 +17,39 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
     const skip = (page - 1) * limit
 
-    const whereClause = {
+    // Get tickets directly assigned to the contractor
+    const assignedWhereClause = {
       assignedToId: session.user.id,
+    }
+
+    // Get tickets where contractor has a pending/submitted quote request
+    const quoteRequestTickets = await prisma.quoteRequest.findMany({
+      where: {
+        contractorId: session.user.id,
+        status: { in: ['pending', 'submitted'] }
+      },
+      select: {
+        id: true,
+        ticketId: true,
+        status: true,
+        quoteAmount: true,
+        quoteDescription: true,
+        quoteFileUrl: true,
+        estimatedDays: true,
+        notes: true,
+        submittedAt: true,
+        requestedAt: true
+      }
+    })
+    
+    const quoteRequestTicketIds = quoteRequestTickets.map(qr => qr.ticketId)
+
+    // Combined where clause: either assigned directly OR has a quote request
+    const whereClause = {
+      OR: [
+        { assignedToId: session.user.id },
+        { id: { in: quoteRequestTicketIds } }
+      ]
     }
 
     // Run count and data query in parallel
@@ -126,22 +157,26 @@ export async function GET(request: NextRequest) {
     ])
 
     // Transform tickets to match Job interface
-    const jobs = tickets.map(ticket => ({
-      id: ticket.id,
-      ticketNumber: ticket.ticketNumber,
-      title: ticket.title,
-      description: ticket.description,
-      status: ticket.status === 'PROCESSING' ? 'PROCESSING' : ticket.status,
-      priority: ticket.priority,
-      type: ticket.type || 'OTHER',
-      location: ticket.location || ticket.asset?.location || 'Remote',
-      estimatedHours: ticket.estimatedHours || 8,
-      hourlyRate: 75,
-      scheduledDate: ticket.dueDate?.toISOString(),
-      createdAt: ticket.createdAt.toISOString(),
-      // Work description workflow fields
-      workDescriptionRequestedAt: ticket.workDescriptionRequestedAt?.toISOString() || null,
-      workDescription: ticket.workDescription || null,
+    const jobs = tickets.map(ticket => {
+      // Find if there's a quote request for this ticket from this contractor
+      const myQuoteRequest = quoteRequestTickets.find(qr => qr.ticketId === ticket.id)
+      
+      return {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        title: ticket.title,
+        description: ticket.description,
+        status: ticket.status === 'PROCESSING' ? 'PROCESSING' : ticket.status,
+        priority: ticket.priority,
+        type: ticket.type || 'OTHER',
+        location: ticket.location || ticket.asset?.location || 'Remote',
+        estimatedHours: ticket.estimatedHours || 8,
+        hourlyRate: 75,
+        scheduledDate: ticket.dueDate?.toISOString(),
+        createdAt: ticket.createdAt.toISOString(),
+        // Work description workflow fields
+        workDescriptionRequestedAt: ticket.workDescriptionRequestedAt?.toISOString() || null,
+        workDescription: ticket.workDescription || null,
       workDescriptionSubmittedAt: ticket.workDescriptionSubmittedAt?.toISOString() || null,
       workDescriptionApproved: ticket.workDescriptionApproved || false,
       workDescriptionApprovedAt: ticket.workDescriptionApprovedAt?.toISOString() || null,
@@ -210,8 +245,20 @@ export async function GET(request: NextRequest) {
         amount: ticket.invoice.amount,
         status: ticket.invoice.status,
         invoiceFileUrl: ticket.invoice.invoiceFileUrl
+      } : null,
+      // Quote request info for multi-contractor bidding
+      myQuoteRequest: myQuoteRequest ? {
+        id: myQuoteRequest.id,
+        status: myQuoteRequest.status,
+        quoteAmount: myQuoteRequest.quoteAmount,
+        quoteDescription: myQuoteRequest.quoteDescription,
+        quoteFileUrl: myQuoteRequest.quoteFileUrl,
+        estimatedDays: myQuoteRequest.estimatedDays,
+        notes: myQuoteRequest.notes,
+        submittedAt: myQuoteRequest.submittedAt?.toISOString() || null,
+        requestedAt: myQuoteRequest.requestedAt?.toISOString() || null
       } : null
-    }))
+    }})
 
     return NextResponse.json({
       jobs,

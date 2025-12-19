@@ -126,6 +126,7 @@ export async function PATCH(
     let type: string | undefined
     let categoryId: string | undefined
     let location: string | undefined
+    let assetId: string | undefined
     let deleteAttachments: string[] = []
     let files: File[] = []
     
@@ -138,6 +139,7 @@ export async function PATCH(
       type = formData.get('type') as string | undefined
       categoryId = formData.get('categoryId') as string | undefined
       location = formData.get('location') as string | undefined
+      assetId = formData.get('assetId') as string | undefined
       
       const deleteAttachmentsJson = formData.get('deleteAttachments') as string | undefined
       if (deleteAttachmentsJson) {
@@ -159,6 +161,7 @@ export async function PATCH(
       type = body.type
       categoryId = body.categoryId
       location = body.location
+      assetId = body.assetId
     }
 
     // First, fetch the ticket to check permissions
@@ -261,6 +264,8 @@ export async function PATCH(
         ...(type && { type }),
         ...(categoryId && { categoryId }),
         ...(location !== undefined && location !== null && { location: location.trim() }),
+        // Handle assetId - can be empty string to clear, or a valid ID to set
+        ...(assetId !== undefined && { assetId: assetId || null }),
         updatedAt: new Date()
       },
       include: {

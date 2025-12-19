@@ -1133,7 +1133,8 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
   
   // Update branchId when session loads
   useEffect(() => {
-    if (session?.user?.branchId && !formData.branchId) {
+    // Always lock to user's assigned branch if they have one
+    if (session?.user?.branchId) {
       setFormData(prev => ({ ...prev, branchId: session.user.branchId! }))
     }
   }, [session])
@@ -1300,22 +1301,36 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
           </div>
           <div>
             <Label htmlFor="branchId">Branch / Site *</Label>
-            <Select value={formData.branchId} onValueChange={(value) => setFormData({...formData, branchId: value})}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select branch/site" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.length === 0 ? (
-                  <SelectItem value="__none__" disabled>No branches available</SelectItem>
-                ) : (
-                  branches.map(branch => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name} {branch.isHeadOffice ? '(Head Office)' : ''}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            {session?.user?.branchId ? (
+              // User has an assigned branch - lock to that branch
+              <div className="flex items-center gap-2">
+                <Input
+                  id="branchId"
+                  value={branches.find(b => b.id === session.user.branchId)?.name || 'Your Assigned Branch'}
+                  disabled
+                  className="bg-gray-100"
+                />
+                <span className="text-xs text-gray-500">🔒 Locked to your site</span>
+              </div>
+            ) : (
+              // Fallback for admins without specific branch assignment
+              <Select value={formData.branchId} onValueChange={(value) => setFormData({...formData, branchId: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select branch/site" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.length === 0 ? (
+                    <SelectItem value="__none__" disabled>No branches available</SelectItem>
+                  ) : (
+                    branches.map(branch => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name} {branch.isHeadOffice ? '(Head Office)' : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 

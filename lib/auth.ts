@@ -38,6 +38,27 @@ export const authOptions: AuthOptions = {
           return null
         }
 
+        // Check user status - only ACTIVE users can log in
+        // SUPER_ADMIN is exempt from status checks
+        if (user.role !== 'SUPER_ADMIN') {
+          switch (user.status) {
+            case 'PENDING_APPROVAL':
+              throw new Error('PENDING_APPROVAL: Your account is pending administrator approval.')
+            case 'APPROVED_EMAIL_PENDING':
+              throw new Error('EMAIL_PENDING: Please check your email and activate your account.')
+            case 'SUSPENDED':
+              throw new Error('SUSPENDED: Your account has been suspended. Contact your administrator.')
+            case 'DEACTIVATED':
+              throw new Error('DEACTIVATED: Your account has been deactivated.')
+            case 'ACTIVE':
+              // Continue with login
+              break
+            default:
+              // For backwards compatibility with existing users without status
+              break
+          }
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
@@ -46,13 +67,6 @@ export const authOptions: AuthOptions = {
         if (!isPasswordValid) {
           return null
         }
-
-        // Check if email is verified (skip for SUPER_ADMIN and existing unverified users)
-        // We allow login but will show a warning to verify email
-        // For stricter enforcement, uncomment the following:
-        // if (!user.emailVerified && user.role !== 'SUPER_ADMIN') {
-        //   throw new Error('Please verify your email before logging in')
-        // }
 
         // Get user's primary branch
         const primaryBranch = user.branches?.[0]?.branch
@@ -63,6 +77,7 @@ export const authOptions: AuthOptions = {
           name: user.name,
           role: user.role,
           tenantId: user.tenantId,
+          tenantName: user.tenant?.name || null,
           image: user.image,
           emailVerified: user.emailVerified,
           branchId: primaryBranch?.id || null,
@@ -79,6 +94,7 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.role = user.role
         token.tenantId = user.tenantId
+        token.tenantName = user.tenantName || null
         token.branchId = user.branchId || null
         token.branchName = user.branchName || null
       }
@@ -98,6 +114,7 @@ export const authOptions: AuthOptions = {
         if (dbUser) {
           token.role = dbUser.role
           token.tenantId = dbUser.tenantId
+          token.tenantName = dbUser.tenant?.name || null
           token.name = dbUser.name
           const primaryBranch = dbUser.branches?.[0]?.branch
           token.branchId = primaryBranch?.id || null
@@ -112,6 +129,7 @@ export const authOptions: AuthOptions = {
         session.user.id = token.sub!
         session.user.role = token.role as any
         session.user.tenantId = token.tenantId as string | null
+        session.user.tenantName = token.tenantName as string | null
         session.user.branchId = token.branchId as string | null
         session.user.branchName = token.branchName as string | null
       }

@@ -1,6 +1,22 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Create transporter using SMTP
+const createTransporter = () => {
+  // Check if SMTP is configured
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return null
+  }
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+}
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'TickTrack Pro <noreply@ticktrackpro.com>'
 
@@ -26,12 +42,91 @@ const getStars = (rating: number): string => {
 
 // Check if email is configured
 const isEmailConfigured = (): boolean => {
-  return !!process.env.RESEND_API_KEY
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+}
+
+// Exported interface for sending emails
+interface SendEmailOptions {
+  to: string
+  subject: string
+  html: string
+  text?: string
+}
+
+// Exported function for sending emails with full options
+export async function sendMailWithNodemailer(options: SendEmailOptions): Promise<void> {
+  const transporter = createTransporter()
+  
+  if (!transporter) {
+    console.log('📧 Email not configured (SMTP settings missing)')
+    console.log(`   Would send to: ${options.to}`)
+    console.log(`   Subject: ${options.subject}`)
+    return
+  }
+
+  try {
+    console.log(`📧 Sending email to ${options.to}...`)
+    console.log(`   Subject: ${options.subject}`)
+    console.log(`   From: ${FROM_EMAIL}`)
+    
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    })
+    console.log(`✅ Email sent successfully to ${options.to}`)
+    console.log(`   Message ID: ${info.messageId}`)
+  } catch (error: any) {
+    console.error(`❌ Failed to send email to ${options.to}`)
+    console.error(`   Error: ${error.message}`)
+    console.error(`   Code: ${error.code}`)
+    if (error.response) {
+      console.error(`   Response: ${error.response}`)
+    }
+    throw error
+  }
+}
+
+// Core email sending function (internal use)
+async function sendEmailInternal(to: string, subject: string, html: string): Promise<void> {
+  const transporter = createTransporter()
+  
+  if (!transporter) {
+    console.log('📧 Email not configured (SMTP settings missing)')
+    console.log(`   Would send to: ${to}`)
+    console.log(`   Subject: ${subject}`)
+    return
+  }
+
+  try {
+    console.log(`📧 Sending email to ${to}...`)
+    console.log(`   Subject: ${subject}`)
+    console.log(`   From: ${FROM_EMAIL}`)
+    
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to,
+      subject,
+      html,
+    })
+    console.log(`✅ Email sent successfully to ${to}`)
+    console.log(`   Message ID: ${info.messageId}`)
+  } catch (error: any) {
+    console.error(`❌ Failed to send email to ${to}`)
+    console.error(`   Error: ${error.message}`)
+    console.error(`   Code: ${error.code}`)
+    if (error.response) {
+      console.error(`   Response: ${error.response}`)
+    }
+    throw error
+  }
 }
 
 export async function sendRatingEmailToContractor(data: RatingEmailData): Promise<void> {
   if (!isEmailConfigured()) {
-    console.log('Email not configured (RESEND_API_KEY missing), skipping rating email notification')
+    console.log('Email not configured, skipping rating email notification')
     console.log('Rating data that would be sent:', data)
     return
   }
@@ -158,24 +253,11 @@ export async function sendRatingEmailToContractor(data: RatingEmailData): Promis
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: data.contractorEmail,
-      subject: `Job Rating Received - Ticket #${data.ticketNumber} (${data.overallRating}/5 Stars)`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send rating email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Rating email sent to ${data.contractorEmail}`)
-  } catch (error) {
-    console.error('Error sending rating email:', error)
-    throw error
-  }
+  await sendEmailInternal(
+    data.contractorEmail,
+    `Job Rating Received - Ticket #${data.ticketNumber} (${data.overallRating}/5 Stars)`,
+    htmlContent
+  )
 }
 
 // Send email verification email
@@ -185,8 +267,8 @@ export async function sendVerificationEmail(
   verificationLink: string
 ): Promise<void> {
   if (!isEmailConfigured()) {
-    console.log('Email not configured (RESEND_API_KEY missing), skipping verification email')
-    console.log('Verification link that would be sent:', verificationLink)
+    console.log('Email not configured, skipping verification email')
+    console.log('Verification link:', verificationLink)
     return
   }
 
@@ -200,7 +282,6 @@ export async function sendVerificationEmail(
         .header { background: #1a365d; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .button { display: inline-block; background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-        .button:hover { background: #2563eb; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; }
         .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 20px; font-size: 14px; }
       </style>
@@ -240,49 +321,19 @@ export async function sendVerificationEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: 'Verify your email - TickTrack Pro',
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send verification email:', error)
-      throw new Error(`Failed to send verification email: ${error.message}`)
-    }
-    
-    console.log('Verification email sent to:', email)
-  } catch (error) {
-    console.error('Error sending verification email:', error)
-    throw error
-  }
+  await sendEmailInternal(email, 'Verify your email - TickTrack Pro', htmlContent)
 }
 
 // Generic email sender for other notifications
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   if (!isEmailConfigured()) {
-    console.log('Email not configured (RESEND_API_KEY missing), skipping email notification')
+    console.log('Email not configured, skipping email notification')
+    console.log(`   To: ${to}`)
+    console.log(`   Subject: ${subject}`)
     return
   }
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to,
-      subject,
-      html
-    })
-
-    if (error) {
-      console.error('Failed to send email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-  } catch (error) {
-    console.error('Error sending email:', error)
-    throw error
-  }
+  await sendEmail(to, subject, html)
 }
 
 // Send contractor invitation email
@@ -293,9 +344,14 @@ export async function sendContractorInvitationEmail(
   tenantName: string,
   expiresAt: Date
 ): Promise<void> {
+  // Always log the link for development
+  console.log('📧 CONTRACTOR INVITATION LINK:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Company: ${companyName}`)
+  console.log(`   Link: ${registrationLink}`)
+
   if (!isEmailConfigured()) {
-    console.log('Email not configured (RESEND_API_KEY missing), skipping contractor invitation email')
-    console.log(`Would send invitation to ${email} with link: ${registrationLink}`)
+    console.log('   ⚠️ Email not configured - use the link above')
     return
   }
 
@@ -315,119 +371,46 @@ export async function sendContractorInvitationEmail(
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .header h1 { margin: 0; font-size: 28px; }
-        .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
         .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
         .invite-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #3b82f6; text-align: center; }
-        .invite-box h2 { color: #1a365d; margin: 0 0 10px 0; font-size: 20px; }
-        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 15px 0; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); }
-        .button:hover { background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); }
-        .steps { background: #f8fafc; padding: 25px; border-radius: 8px; margin: 25px 0; }
-        .step { display: flex; align-items: flex-start; margin: 15px 0; }
-        .step-number { background: #3b82f6; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0; margin-right: 15px; }
-        .step-content { flex: 1; }
-        .step-content strong { color: #1a365d; }
-        .expiry-notice { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; font-size: 14px; border-radius: 0 8px 8px 0; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 15px 0; }
         .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
-        .link-text { word-break: break-all; font-size: 12px; color: #64748b; margin-top: 10px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
           <h1>🎉 You're Invited!</h1>
-          <p>Join ${tenantName} as a Service Contractor</p>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Join ${tenantName} as a Service Contractor</p>
         </div>
         
         <div class="content">
           <p>Hello <strong>${companyName}</strong>,</p>
-          <p>You have been invited to register as a contractor on <strong>${tenantName}'s</strong> TickTrack Pro platform. This will allow you to receive and manage service tickets, submit invoices, and grow your business with us.</p>
+          <p>You have been invited to register as a contractor on <strong>${tenantName}'s</strong> TickTrack Pro platform.</p>
           
           <div class="invite-box">
-            <h2>Complete Your Registration</h2>
-            <p style="color: #64748b; margin: 0 0 15px 0;">Click the button below to start your KYC registration</p>
-            <a href="${registrationLink}" class="button">Register Now →</a>
-            <p class="link-text">Or copy this link: ${registrationLink}</p>
+            <h2 style="color: #1a365d; margin: 0 0 10px 0;">Complete Your Registration</h2>
+            <a href="${registrationLink}" class="button" style="color: white;">Register Now →</a>
+            <p style="font-size: 12px; color: #64748b; margin-top: 10px;">Link expires: ${expiryDate}</p>
           </div>
           
-          <div class="steps">
-            <h3 style="margin: 0 0 15px 0; color: #1a365d;">📋 Registration Steps</h3>
-            <div class="step">
-              <div class="step-number">1</div>
-              <div class="step-content">
-                <strong>Company Details</strong><br>
-                <span style="color: #64748b; font-size: 14px;">Enter your company information and registration details</span>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">2</div>
-              <div class="step-content">
-                <strong>Contact Information</strong><br>
-                <span style="color: #64748b; font-size: 14px;">Provide your contact details and representatives</span>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">3</div>
-              <div class="step-content">
-                <strong>Banking & Tax Details</strong><br>
-                <span style="color: #64748b; font-size: 14px;">Add your banking information for payments</span>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">4</div>
-              <div class="step-content">
-                <strong>Upload Documents</strong><br>
-                <span style="color: #64748b; font-size: 14px;">Submit required certificates and compliance documents</span>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-number">5</div>
-              <div class="step-content">
-                <strong>Select Service Categories</strong><br>
-                <span style="color: #64748b; font-size: 14px;">Choose the categories of work you can provide</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="expiry-notice">
-            <strong>⏰ Important:</strong> This invitation link will expire on <strong>${expiryDate}</strong>. Please complete your registration before this date.
-          </div>
-          
-          <p>If you have any questions about the registration process, please contact your administrator at ${tenantName}.</p>
-          
-          <p style="margin-top: 25px;">We look forward to working with you!</p>
+          <p>We look forward to working with you!</p>
           <p><strong>The ${tenantName} Team</strong></p>
         </div>
         
         <div class="footer">
-          <p>This invitation was sent via TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
-          <p style="margin-top: 15px; font-size: 11px; color: #94a3b8;">
-            If you received this email by mistake, please ignore it. The registration link will not work without proper authorization.
-          </p>
         </div>
       </div>
     </body>
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `You're Invited to Join ${tenantName} as a Contractor - TickTrack Pro`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send contractor invitation email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Contractor invitation email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending contractor invitation email:', error)
-    throw error
-  }
+  await sendEmail(
+    email,
+    `You're Invited to Join ${tenantName} as a Contractor - TickTrack Pro`,
+    htmlContent
+  )
 }
 
 // Send welcome email with login credentials
@@ -438,9 +421,12 @@ export async function sendWelcomeEmail(
   tenantName: string,
   branches: string[]
 ): Promise<void> {
+  console.log('📧 WELCOME EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Password: ${password}`)
+
   if (!isEmailConfigured()) {
-    console.log('Email not configured, skipping welcome email')
-    console.log(`Would send welcome email to ${email} with password: ${password}`)
+    console.log('   ⚠️ Email not configured')
     return
   }
 
@@ -457,11 +443,9 @@ export async function sendWelcomeEmail(
         .header { background: #1a365d; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .credentials { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 2px solid #3b82f6; }
-        .credential-item { margin: 10px 0; }
         .label { font-weight: bold; color: #64748b; font-size: 12px; text-transform: uppercase; }
         .value { font-size: 16px; margin-top: 5px; padding: 10px; background: #f1f5f9; border-radius: 4px; font-family: monospace; }
         .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-        .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 20px; font-size: 14px; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
       </style>
     </head>
@@ -474,36 +458,30 @@ export async function sendWelcomeEmail(
         
         <div class="content">
           <p>Hello ${name},</p>
-          <p>Your account has been created on TickTrack Pro. You can now log in and start using the system.</p>
+          <p>Your account has been created on TickTrack Pro.</p>
           
           <div class="credentials">
             <h3 style="margin-top: 0; color: #1a365d;">Your Login Credentials</h3>
-            <div class="credential-item">
+            <div style="margin: 10px 0;">
               <div class="label">Email Address</div>
               <div class="value">${email}</div>
             </div>
-            <div class="credential-item">
+            <div style="margin: 10px 0;">
               <div class="label">Password</div>
               <div class="value">${password}</div>
             </div>
-            <div class="credential-item">
+            <div style="margin: 10px 0;">
               <div class="label">Assigned Branch(es)</div>
               <div class="value">${branchList}</div>
             </div>
           </div>
           
           <div style="text-align: center;">
-            <a href="${appUrl}/auth/login" class="button">Login to TickTrack Pro</a>
-          </div>
-          
-          <div class="warning">
-            <strong>⚠️ Security Notice:</strong> For your security, please change your password after your first login. 
-            Keep your login credentials confidential and do not share them with anyone.
+            <a href="${appUrl}/auth/login" class="button" style="color: white;">Login to TickTrack Pro</a>
           </div>
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -511,24 +489,7 @@ export async function sendWelcomeEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Welcome to TickTrack Pro - Your Login Credentials`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send welcome email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Welcome email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending welcome email:', error)
-    throw error
-  }
+  await sendEmail(email, `Welcome to TickTrack Pro - Your Login Credentials`, htmlContent)
 }
 
 // Send password reset email
@@ -538,9 +499,12 @@ export async function sendPasswordResetEmail(
   newPassword: string,
   resetBy: string
 ): Promise<void> {
+  console.log('📧 PASSWORD RESET EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   New Password: ${newPassword}`)
+
   if (!isEmailConfigured()) {
-    console.log('Email not configured, skipping password reset email')
-    console.log(`Would send password reset email to ${email} with new password: ${newPassword}`)
+    console.log('   ⚠️ Email not configured')
     return
   }
 
@@ -556,11 +520,9 @@ export async function sendPasswordResetEmail(
         .header { background: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .credentials { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 2px solid #dc2626; }
-        .credential-item { margin: 10px 0; }
         .label { font-weight: bold; color: #64748b; font-size: 12px; text-transform: uppercase; }
         .value { font-size: 16px; margin-top: 5px; padding: 10px; background: #f1f5f9; border-radius: 4px; font-family: monospace; }
         .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
-        .warning { background: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin-top: 20px; font-size: 14px; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
       </style>
     </head>
@@ -568,37 +530,30 @@ export async function sendPasswordResetEmail(
       <div class="container">
         <div class="header">
           <h1 style="margin: 0;">🔒 Password Reset</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Your password has been reset</p>
         </div>
         
         <div class="content">
           <p>Hello ${name},</p>
-          <p>Your password has been reset by an administrator (${resetBy}). Please use the new password below to log in.</p>
+          <p>Your password has been reset by ${resetBy}.</p>
           
           <div class="credentials">
             <h3 style="margin-top: 0; color: #dc2626;">Your New Password</h3>
-            <div class="credential-item">
+            <div style="margin: 10px 0;">
               <div class="label">Email Address</div>
               <div class="value">${email}</div>
             </div>
-            <div class="credential-item">
+            <div style="margin: 10px 0;">
               <div class="label">New Password</div>
               <div class="value">${newPassword}</div>
             </div>
           </div>
           
           <div style="text-align: center;">
-            <a href="${appUrl}/auth/login" class="button">Login to TickTrack Pro</a>
-          </div>
-          
-          <div class="warning">
-            <strong>⚠️ Important:</strong> For your security, please change your password immediately after logging in.
-            If you did not request this password reset, please contact your administrator immediately.
+            <a href="${appUrl}/auth/login" class="button" style="color: white;">Login to TickTrack Pro</a>
           </div>
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -606,24 +561,7 @@ export async function sendPasswordResetEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Password Reset - TickTrack Pro`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send password reset email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Password reset email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending password reset email:', error)
-    throw error
-  }
+  await sendEmail(email, `Password Reset - TickTrack Pro`, htmlContent)
 }
 
 // Send contractor password setup email
@@ -633,9 +571,12 @@ export async function sendContractorPasswordSetupEmail(
   setupLink: string,
   tenantName: string
 ): Promise<void> {
+  console.log('📧 CONTRACTOR PASSWORD SETUP EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Link: ${setupLink}`)
+
   if (!isEmailConfigured()) {
-    console.log('Email not configured, skipping contractor password setup email')
-    console.log(`Would send password setup email to ${email} with link: ${setupLink}`)
+    console.log('   ⚠️ Email not configured - use the link above')
     return
   }
 
@@ -644,48 +585,36 @@ export async function sendContractorPasswordSetupEmail(
     <html>
     <head>
       <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
-        .header h1 { margin: 0; font-size: 28px; }
-        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
-        .setup-box { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #10b981; text-align: center; }
-        .button { display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 15px 0; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }
-        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
+        .header { background: #10b981; color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; }
+        .setup-box { background: #ecfdf5; padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #10b981; text-align: center; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>✅ KYC Approved!</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Welcome to ${tenantName}</p>
+          <h1 style="margin: 0;">✅ KYC Approved!</h1>
+          <p style="margin: 10px 0 0 0;">Welcome to ${tenantName}</p>
         </div>
         
         <div class="content">
           <p>Hello <strong>${name}</strong>,</p>
-          <p>Great news! Your contractor KYC registration has been <strong style="color: #10b981;">approved</strong>. You're now ready to set up your account and start receiving service tickets.</p>
+          <p>Your contractor KYC registration has been <strong style="color: #10b981;">approved</strong>!</p>
           
           <div class="setup-box">
             <h2 style="color: #059669; margin: 0 0 10px 0;">Set Up Your Password</h2>
-            <p style="color: #64748b; margin: 0 0 15px 0;">Click the button below to create your login password</p>
-            <a href="${setupLink}" class="button">Create Password →</a>
+            <a href="${setupLink}" class="button" style="color: white;">Create Password →</a>
           </div>
           
-          <p>Once you set up your password, you'll be able to:</p>
-          <ul style="color: #64748b;">
-            <li>View and accept assigned tickets</li>
-            <li>Communicate with administrators</li>
-            <li>Submit invoices for completed work</li>
-            <li>Track your performance ratings</li>
-            <li>Manage your service category availability</li>
-          </ul>
-          
-          <p style="margin-top: 25px;">Welcome aboard!</p>
+          <p>Welcome aboard!</p>
           <p><strong>The ${tenantName} Team</strong></p>
         </div>
         
         <div class="footer">
-          <p>This email was sent via TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -693,24 +622,7 @@ export async function sendContractorPasswordSetupEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `🎉 KYC Approved - Set Up Your Password - ${tenantName}`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send contractor password setup email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Contractor password setup email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending contractor password setup email:', error)
-    throw error
-  }
+  await sendEmail(email, `🎉 KYC Approved - Set Up Your Password - ${tenantName}`, htmlContent)
 }
 
 // Send ticket notification email
@@ -758,7 +670,7 @@ export async function sendTicketNotificationEmail(
       <div class="container">
         <div class="header">
           <h1 style="margin: 0;">Ticket Update</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Ticket #${ticketNumber}</p>
+          <p style="margin: 10px 0 0 0;">Ticket #${ticketNumber}</p>
         </div>
         
         <div class="content">
@@ -774,13 +686,12 @@ export async function sendTicketNotificationEmail(
           
           ${actionUrl ? `
           <div style="text-align: center;">
-            <a href="${actionUrl}" class="button">View Ticket</a>
+            <a href="${actionUrl}" class="button" style="color: white;">View Ticket</a>
           </div>
           ` : ''}
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -788,24 +699,7 @@ export async function sendTicketNotificationEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `Ticket #${ticketNumber} - ${status.replace('_', ' ')} - ${ticketTitle}`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send ticket notification email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Ticket notification email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending ticket notification email:', error)
-    throw error
-  }
+  await sendEmail(email, `Ticket #${ticketNumber} - ${status.replace('_', ' ')} - ${ticketTitle}`, htmlContent)
 }
 
 // Send email to admin(s) when a new ticket is created
@@ -850,12 +744,7 @@ export async function sendNewTicketEmailToAdmin(
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .ticket-info { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #e2e8f0; }
         .priority-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; color: white; background: ${priorityColor}; }
-        .type-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; color: #1a365d; background: #e2e8f0; margin-left: 8px; }
-        .detail-row { padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-        .detail-label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; }
-        .detail-value { font-size: 16px; margin-top: 4px; }
         .button { display: inline-block; background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold; }
-        .deadline { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 15px; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
       </style>
     </head>
@@ -863,7 +752,7 @@ export async function sendNewTicketEmailToAdmin(
       <div class="container">
         <div class="header">
           <h1 style="margin: 0;">🎫 New Ticket Created</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Ticket #${data.ticketNumber}</p>
+          <p style="margin: 10px 0 0 0;">Ticket #${data.ticketNumber}</p>
         </div>
         
         <div class="content">
@@ -873,31 +762,12 @@ export async function sendNewTicketEmailToAdmin(
           <div class="ticket-info">
             <div style="margin-bottom: 15px;">
               <span class="priority-badge">${data.priority}</span>
-              <span class="type-badge">${data.type}</span>
             </div>
             
             <h2 style="margin: 0 0 15px 0; color: #1a365d;">${data.ticketTitle}</h2>
-            
-            <div class="detail-row">
-              <div class="detail-label">Description</div>
-              <div class="detail-value">${data.ticketDescription.substring(0, 200)}${data.ticketDescription.length > 200 ? '...' : ''}</div>
-            </div>
-            
-            <div class="detail-row">
-              <div class="detail-label">Branch</div>
-              <div class="detail-value">${data.branchName}</div>
-            </div>
-            
-            <div class="detail-row">
-              <div class="detail-label">Raised By</div>
-              <div class="detail-value">${data.userName} (${data.userEmail})</div>
-            </div>
-            
-            ${data.responseDeadline ? `
-            <div class="deadline">
-              <strong>⏰ Response Deadline:</strong> ${data.responseDeadline.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-            </div>
-            ` : ''}
+            <p style="color: #64748b;">${data.ticketDescription.substring(0, 200)}${data.ticketDescription.length > 200 ? '...' : ''}</p>
+            <p><strong>Branch:</strong> ${data.branchName}</p>
+            <p><strong>Raised By:</strong> ${data.userName} (${data.userEmail})</p>
           </div>
           
           <div style="text-align: center;">
@@ -906,7 +776,6 @@ export async function sendNewTicketEmailToAdmin(
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -914,24 +783,7 @@ export async function sendNewTicketEmailToAdmin(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: adminEmail,
-      subject: `🎫 New ${data.priority} Ticket #${data.ticketNumber} - ${data.ticketTitle}`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send new ticket email to admin:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`New ticket email sent to admin ${adminEmail}`)
-  } catch (error) {
-    console.error('Error sending new ticket email to admin:', error)
-    throw error
-  }
+  await sendEmail(adminEmail, `🎫 New ${data.priority} Ticket #${data.ticketNumber} - ${data.ticketTitle}`, htmlContent)
 }
 
 // Send email to contractor when assigned a job
@@ -977,13 +829,8 @@ export async function sendJobAssignedEmailToContractor(
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .job-info { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #e2e8f0; }
         .priority-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; color: white; background: ${priorityColor}; }
-        .detail-row { padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-        .detail-label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; }
-        .detail-value { font-size: 16px; margin-top: 4px; }
         .contact-box { background: #ecfdf5; border: 1px solid #10b981; padding: 15px; border-radius: 8px; margin: 15px 0; }
         .button { display: inline-block; background: #0891b2; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 10px 5px; font-weight: bold; }
-        .button-secondary { background: #6b7280; }
-        .deadline { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 15px; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
       </style>
     </head>
@@ -991,12 +838,12 @@ export async function sendJobAssignedEmailToContractor(
       <div class="container">
         <div class="header">
           <h1 style="margin: 0;">🔧 New Job Assigned</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Ticket #${data.ticketNumber}</p>
+          <p style="margin: 10px 0 0 0;">Ticket #${data.ticketNumber}</p>
         </div>
         
         <div class="content">
           <p>Hello ${data.contractorName},</p>
-          <p>You have been assigned a new job from <strong>${data.companyName}</strong>. Please review and accept or reject.</p>
+          <p>You have been assigned a new job from <strong>${data.companyName}</strong>.</p>
           
           <div class="job-info">
             <div style="margin-bottom: 15px;">
@@ -1004,46 +851,21 @@ export async function sendJobAssignedEmailToContractor(
             </div>
             
             <h2 style="margin: 0 0 15px 0; color: #0891b2;">${data.ticketTitle}</h2>
-            
-            <div class="detail-row">
-              <div class="detail-label">Description</div>
-              <div class="detail-value">${data.ticketDescription.substring(0, 300)}${data.ticketDescription.length > 300 ? '...' : ''}</div>
-            </div>
-            
-            <div class="detail-row">
-              <div class="detail-label">Type</div>
-              <div class="detail-value">${data.type}</div>
-            </div>
-            
-            <div class="detail-row">
-              <div class="detail-label">Location</div>
-              <div class="detail-value">${data.location}</div>
-            </div>
+            <p style="color: #64748b;">${data.ticketDescription.substring(0, 300)}${data.ticketDescription.length > 300 ? '...' : ''}</p>
+            <p><strong>Location:</strong> ${data.location}</p>
             
             <div class="contact-box">
-              <div class="detail-label">📞 Contact Person</div>
-              <div class="detail-value">${data.userName}</div>
-              <div style="font-size: 18px; font-weight: bold; color: #10b981; margin-top: 5px;">${data.userPhone}</div>
+              <p style="margin: 0;"><strong>📞 Contact Person:</strong></p>
+              <p style="margin: 5px 0 0 0;">${data.userName} - ${data.userPhone}</p>
             </div>
-            
-            ${data.resolutionDeadline ? `
-            <div class="deadline">
-              <strong>⏰ Resolution Deadline:</strong> ${data.resolutionDeadline.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-            </div>
-            ` : ''}
           </div>
           
           <div style="text-align: center;">
             <a href="${appUrl}/contractor" class="button" style="color: white;">Accept / Reject Job</a>
           </div>
-          
-          <p style="text-align: center; color: #64748b; margin-top: 20px;">
-            Please respond as soon as possible to confirm your availability.
-          </p>
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -1051,24 +873,7 @@ export async function sendJobAssignedEmailToContractor(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: contractorEmail,
-      subject: `🔧 Job Assigned - Ticket #${data.ticketNumber} - ${data.priority} Priority`,
-      html: htmlContent
-    })
-
-    if (error) {
-      console.error('Failed to send job assigned email to contractor:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
-
-    console.log(`Job assigned email sent to contractor ${contractorEmail}`)
-  } catch (error) {
-    console.error('Error sending job assigned email to contractor:', error)
-    throw error
-  }
+  await sendEmail(contractorEmail, `🔧 Job Assigned - Ticket #${data.ticketNumber} - ${data.priority} Priority`, htmlContent)
 }
 
 // Send email when job is closed/completed
@@ -1114,9 +919,6 @@ export async function sendJobClosedEmail(
         .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
         .job-info { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #e2e8f0; }
         .completed-badge { display: inline-block; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: bold; color: white; background: #10b981; }
-        .detail-row { padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-        .detail-label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; }
-        .detail-value { font-size: 16px; margin-top: 4px; }
         .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
         .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
       </style>
@@ -1125,12 +927,11 @@ export async function sendJobClosedEmail(
       <div class="container">
         <div class="header">
           <h1 style="margin: 0;">✅ Job Completed & Closed</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Ticket #${data.ticketNumber}</p>
+          <p style="margin: 10px 0 0 0;">Ticket #${data.ticketNumber}</p>
         </div>
         
         <div class="content">
           <p>Hello ${data.recipientName},</p>
-          <p>${isContractor ? 'The following job you completed has been closed.' : 'The following ticket has been completed and closed.'}</p>
           
           <div class="job-info">
             <div style="margin-bottom: 15px; text-align: center;">
@@ -1138,16 +939,8 @@ export async function sendJobClosedEmail(
             </div>
             
             <h2 style="margin: 0 0 15px 0; color: #1a365d; text-align: center;">${data.ticketTitle}</h2>
-            
-            <div class="detail-row">
-              <div class="detail-label">Contractor</div>
-              <div class="detail-value">${data.contractorName}</div>
-            </div>
-            
-            <div class="detail-row">
-              <div class="detail-label">Completed At</div>
-              <div class="detail-value">${data.completedAt.toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })}</div>
-            </div>
+            <p><strong>Contractor:</strong> ${data.contractorName}</p>
+            <p><strong>Completed At:</strong> ${data.completedAt.toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })}</p>
             
             ${ratingHtml}
           </div>
@@ -1158,7 +951,6 @@ export async function sendJobClosedEmail(
         </div>
         
         <div class="footer">
-          <p>This is an automated message from TickTrack Pro</p>
           <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
         </div>
       </div>
@@ -1166,22 +958,82 @@ export async function sendJobClosedEmail(
     </html>
   `
 
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `✅ Job Closed - Ticket #${data.ticketNumber}${data.rating ? ` - ${data.rating}/5 Stars` : ''}`,
-      html: htmlContent
-    })
+  await sendEmail(email, `✅ Job Closed - Ticket #${data.ticketNumber}${data.rating ? ` - ${data.rating}/5 Stars` : ''}`, htmlContent)
+}
 
-    if (error) {
-      console.error('Failed to send job closed email:', error)
-      throw new Error(`Failed to send email: ${error.message}`)
-    }
+// Send user invitation email
+export async function sendUserInvitationEmail(
+  email: string,
+  name: string,
+  inviteLink: string,
+  tenantName: string,
+  expiresAt: Date
+): Promise<void> {
+  // Always log the link for development
+  console.log('📧 USER INVITATION LINK:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Name: ${name}`)
+  console.log(`   Link: ${inviteLink}`)
 
-    console.log(`Job closed email sent to ${email}`)
-  } catch (error) {
-    console.error('Error sending job closed email:', error)
-    throw error
+  if (!isEmailConfigured()) {
+    console.log('   ⚠️ Email not configured - use the link above')
+    return
   }
+
+  const expiryDate = expiresAt.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
+        .invite-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #3b82f6; text-align: center; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 15px 0; }
+        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🎉 You're Invited!</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Join ${tenantName} on TickTrack Pro</p>
+        </div>
+        
+        <div class="content">
+          <p>Hello${name ? ` <strong>${name}</strong>` : ''},</p>
+          <p>You have been invited to join <strong>${tenantName}</strong> on TickTrack Pro.</p>
+          
+          <div class="invite-box">
+            <h2 style="color: #1a365d; margin: 0 0 10px 0;">Complete Your Registration</h2>
+            <a href="${inviteLink}" class="button" style="color: white;">Accept Invitation →</a>
+            <p style="font-size: 12px; color: #64748b; margin-top: 10px;">Link expires: ${expiryDate}</p>
+          </div>
+          
+          <p>We look forward to having you on board!</p>
+          <p><strong>The ${tenantName} Team</strong></p>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail(
+    email,
+    `You're Invited to Join ${tenantName} - TickTrack Pro`,
+    htmlContent
+  )
 }
