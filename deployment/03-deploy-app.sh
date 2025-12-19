@@ -24,14 +24,14 @@ DATABASE_URL="postgresql://ticktrack:YOUR_PASSWORD@localhost:5432/ticktrack_prod
 
 # NextAuth
 NEXTAUTH_SECRET="generate-a-32-char-random-string-here"
-NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_URL="https://tick-trackpro.com"
 
 # Email (Brevo/Sendinblue)
 SMTP_HOST="smtp-relay.brevo.com"
 SMTP_PORT="587"
 SMTP_USER="your-brevo-smtp-login"
 SMTP_PASS="your-brevo-smtp-password"
-EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM="noreply@tick-trackpro.com"
 
 # SMS (Africa's Talking)
 AT_API_KEY="your-africastalking-api-key"

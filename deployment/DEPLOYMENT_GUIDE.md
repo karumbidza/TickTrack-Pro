@@ -117,14 +117,14 @@ DATABASE_URL="postgresql://ticktrack:YourSecurePassword123!@localhost:5432/tickt
 
 # NextAuth
 NEXTAUTH_SECRET="your-32-character-secret-string-here"
-NEXTAUTH_URL="https://yourdomain.com"
+NEXTAUTH_URL="https://tick-trackpro.com"
 
 # Email (Brevo)
 SMTP_HOST="smtp-relay.brevo.com"
 SMTP_PORT="587"
 SMTP_USER="your-brevo-login"
 SMTP_PASS="your-brevo-password"
-EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM="noreply@tick-trackpro.com"
 
 # SMS (Africa's Talking) - Optional
 AT_API_KEY="your-api-key"
@@ -175,7 +175,7 @@ Add this config (replace yourdomain.com):
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name tick-trackpro.com www.tick-trackpro.com;
 
     location / {
         proxy_pass http://localhost:3000;
@@ -219,7 +219,7 @@ Wait 5-30 minutes for DNS propagation.
 ## STEP 10: Setup SSL (HTTPS)
 
 ```bash
-certbot --nginx -d yourdomain.com -d www.yourdomain.com
+certbot --nginx -d tick-trackpro.com -d www.tick-trackpro.com
 ```
 
 Follow prompts:
@@ -297,7 +297,7 @@ pm2 start npm --name "ticktrack-pro" -- start
 ## Present to Client
 
 Your app will be live at:
-- **Production**: https://yourdomain.com
+- **Production**: https://tick-trackpro.com
 - **Admin Login**: admin@democompany.com / demo123
 - **Contractor Login**: contractor1@freelance.com / contractor123
 
