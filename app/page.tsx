@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth/next'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,8 +15,15 @@ import {
   Shield
 } from 'lucide-react'
 import { LandingNavbar } from '@/components/layout/landing-navbar'
+import { authOptions } from '@/lib/auth'
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Redirect authenticated users to dashboard
+  const session = await getServerSession(authOptions)
+  if (session?.user) {
+    redirect('/dashboard')
+  }
+
   return (
     <div className="min-h-screen">
       <LandingNavbar />
