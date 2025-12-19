@@ -297,6 +297,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         name: true,
+        email: true,
         phone: true,
         role: true
       }
