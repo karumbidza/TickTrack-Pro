@@ -122,12 +122,15 @@ interface Job {
       id: string
       ticketNumber?: string
       title: string
+      description?: string
       status: string
       type: string
+      priority?: string
       createdAt: string
       completedAt?: string
       cost?: number
       contractorName?: string
+      workDescription?: string
     }[]
   }
   attachments?: {
