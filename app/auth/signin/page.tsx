@@ -293,24 +293,6 @@ function SignInForm() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Demo Credentials */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-sm">Demo Accounts</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-xs">
-            <div>
-              <strong>Super Admin:</strong> admin@ticktrackpro.com / admin123
-            </div>
-            <div>
-              <strong>Company Admin:</strong> admin@democompany.com / demo123
-            </div>
-            <div>
-              <strong>End User:</strong> user@democompany.com / user123
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
