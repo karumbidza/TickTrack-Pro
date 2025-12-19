@@ -894,13 +894,14 @@ export function ContractorDashboard() {
           resolutionDeadline: params.row.resolutionDeadline,
         })
         const showResolution = !['OPEN', 'PROCESSING', 'ASSIGNED'].includes(params.row.status)
+        const statusToUse = showResolution ? slaInfo.resolutionStatus : slaInfo.responseStatus
         return (
           <Tooltip title={`Response: ${slaInfo.responseStatus} | Resolution: ${slaInfo.resolutionStatus}`}>
             <Chip
               icon={<Timer className="h-3 w-3" />}
               label={showResolution ? slaInfo.formattedResolutionRemaining : slaInfo.formattedResponseRemaining}
               size="small"
-              color={getSLAChipColor(slaInfo.overallStatus)}
+              color={getSLAChipColor(statusToUse)}
               sx={{ fontWeight: 500, fontSize: '0.65rem' }}
             />
           </Tooltip>
