@@ -376,7 +376,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     return
   }
 
-  await sendEmail(to, subject, html)
+  await sendEmailInternal(to, subject, html)
 }
 
 // Send contractor invitation email
