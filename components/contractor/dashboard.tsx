@@ -2079,7 +2079,7 @@ export function ContractorDashboard() {
               </Button>
               <Button 
                 onClick={handleAcceptJob}
-                disabled={actionLoading || (selectedJob?.resolutionDeadline && !deadlineConfirmed)}
+                disabled={actionLoading || Boolean(selectedJob?.resolutionDeadline && !deadlineConfirmed)}
                 className="bg-green-600 hover:bg-green-700"
                 title={!deadlineConfirmed && selectedJob?.resolutionDeadline ? 'Please confirm you can meet the deadline' : ''}
               >
