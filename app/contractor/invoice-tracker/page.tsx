@@ -5,50 +5,36 @@ import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { 
   Loader2, 
   FileText, 
-  Upload, 
   DollarSign, 
   CheckCircle, 
   Clock,
   AlertCircle,
   Eye,
   Download,
-  Receipt,
   CreditCard,
-  TrendingUp,
   Calendar,
   X,
-  Bell,
   Send,
   RefreshCw
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface CompletedTicket {
+interface PaymentBatch {
   id: string
-  ticketNumber: string
-  title: string
-  description: string
-  type: string
-  priority: string
-  location?: string
-  completedAt: string
-  actualHours?: number
-  tenant: {
-    name: string
-  }
-  user: {
-    name: string
-    email: string
-  }
-  invoice?: Invoice
+  batchNumber: string
+  totalAmount: number
+  popFileUrl: string
+  popReference?: string
+  paymentDate: string
+  notes?: string
+  invoices: Invoice[]
 }
 
 interface Invoice {
@@ -93,8 +79,10 @@ interface InvoiceStats {
 export default function InvoiceTrackerPage() {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
-  const [completedTickets, setCompletedTickets] = useState<CompletedTicket[]>([])
+  const [paymentBatches, setPaymentBatches] = useState<PaymentBatch[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [selectedBatch, setSelectedBatch] = useState<PaymentBatch | null>(null)
+  const [showBatchDetails, setShowBatchDetails] = useState(false)
   const [stats, setStats] = useState<InvoiceStats>({
     totalInvoices: 0,
     pendingInvoices: 0,
@@ -103,19 +91,6 @@ export default function InvoiceTrackerPage() {
     totalEarnings: 0,
     pendingAmount: 0
   })
-  
-  // Create invoice state
-  const [selectedTicket, setSelectedTicket] = useState<CompletedTicket | null>(null)
-  const [showCreateInvoiceDialog, setShowCreateInvoiceDialog] = useState(false)
-  const [invoiceForm, setInvoiceForm] = useState({
-    invoiceNumber: '',
-    amount: '',
-    hoursWorked: '',
-    hourlyRate: '',
-    workDescription: '',
-    file: null as File | null
-  })
-  const [submitting, setSubmitting] = useState(false)
   
   // View invoice state
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
@@ -132,89 +107,26 @@ export default function InvoiceTrackerPage() {
 
   const fetchData = async () => {
     try {
-      const [ticketsRes, invoicesRes] = await Promise.all([
-        fetch('/api/contractor/invoice-tracker/completed-tickets'),
-        fetch('/api/contractor/invoice-tracker/invoices')
+      const [invoicesRes, batchesRes] = await Promise.all([
+        fetch('/api/contractor/invoice-tracker/invoices'),
+        fetch('/api/contractor/invoice-tracker/payment-batches')
       ])
-
-      if (ticketsRes.ok) {
-        const ticketsData = await ticketsRes.json()
-        setCompletedTickets(ticketsData.tickets || [])
-      }
 
       if (invoicesRes.ok) {
         const invoicesData = await invoicesRes.json()
         setInvoices(invoicesData.invoices || [])
         setStats(invoicesData.stats || stats)
       }
+
+      if (batchesRes.ok) {
+        const batchesData = await batchesRes.json()
+        setPaymentBatches(batchesData.batches || [])
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
       toast.error('Failed to load invoice tracker data')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const generateInvoiceNumber = () => {
-    const prefix = 'INV'
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-    return `${prefix}-${date}-${random}`
-  }
-
-  const handleCreateInvoice = (ticket: CompletedTicket) => {
-    setSelectedTicket(ticket)
-    setInvoiceForm({
-      invoiceNumber: generateInvoiceNumber(),
-      amount: '',
-      hoursWorked: ticket.actualHours?.toString() || '',
-      hourlyRate: '',
-      workDescription: '',
-      file: null
-    })
-    setShowCreateInvoiceDialog(true)
-  }
-
-  const handleSubmitInvoice = async () => {
-    if (!selectedTicket) return
-    
-    if (!invoiceForm.amount || !invoiceForm.workDescription) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
-    setSubmitting(true)
-    try {
-      const formData = new FormData()
-      formData.append('ticketId', selectedTicket.id)
-      formData.append('invoiceNumber', invoiceForm.invoiceNumber)
-      formData.append('amount', invoiceForm.amount)
-      formData.append('hoursWorked', invoiceForm.hoursWorked || '')
-      formData.append('hourlyRate', invoiceForm.hourlyRate || '')
-      formData.append('workDescription', invoiceForm.workDescription)
-      
-      if (invoiceForm.file) {
-        formData.append('invoiceFile', invoiceForm.file)
-      }
-
-      const response = await fetch('/api/contractor/invoice-tracker/invoices', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (response.ok) {
-        toast.success('Invoice submitted successfully!')
-        setShowCreateInvoiceDialog(false)
-        fetchData()
-      } else {
-        const error = await response.json()
-        toast.error(error.message || 'Failed to submit invoice')
-      }
-    } catch (error) {
-      console.error('Submit error:', error)
-      toast.error('Failed to submit invoice')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -345,9 +257,8 @@ export default function InvoiceTrackerPage() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="invoices" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="invoices">My Invoices</TabsTrigger>
-          <TabsTrigger value="completed">Completed Jobs</TabsTrigger>
           <TabsTrigger value="payments">Payment History</TabsTrigger>
         </TabsList>
 
@@ -452,82 +363,71 @@ export default function InvoiceTrackerPage() {
           </Card>
         </TabsContent>
 
-        {/* Completed Jobs Tab */}
-        <TabsContent value="completed">
+        {/* Payment History Tab */}
+        <TabsContent value="payments">
           <Card>
             <CardHeader>
-              <CardTitle>Completed Jobs</CardTitle>
-              <CardDescription>Jobs ready for invoicing</CardDescription>
+              <CardTitle>Payment History</CardTitle>
+              <CardDescription>Track all payments received from admin</CardDescription>
             </CardHeader>
             <CardContent>
-              {completedTickets.length === 0 ? (
+              {paymentBatches.length === 0 ? (
                 <div className="text-center py-12">
-                  <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No completed jobs</h3>
+                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No payments yet</h3>
                   <p className="text-gray-600">
-                    Completed jobs that haven't been invoiced will appear here
+                    Payment batches will appear here once admin processes payments
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {completedTickets.map((ticket) => (
+                  {paymentBatches.map((batch) => (
                     <div 
-                      key={ticket.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      key={batch.id}
+                      className="border rounded-lg p-4 bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                      onClick={() => {
+                        setSelectedBatch(batch)
+                        setShowBatchDetails(true)
+                      }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <span className="font-mono font-medium">{ticket.ticketNumber}</span>
-                            <Badge variant="secondary">{ticket.type}</Badge>
-                            {ticket.invoice && (
-                              <Badge className="bg-blue-100 text-blue-800">
-                                Invoiced
-                              </Badge>
-                            )}
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="font-mono font-bold text-lg">{batch.batchNumber}</span>
+                            <Badge className="bg-green-100 text-green-800">
+                              {batch.invoices.length} Invoice{batch.invoices.length !== 1 ? 's' : ''}
+                            </Badge>
                           </div>
-                          <h4 className="font-medium text-gray-900 mb-1">{ticket.title}</h4>
-                          <p className="text-gray-600 text-sm line-clamp-1">{ticket.description}</p>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span>{ticket.tenant.name}</span>
-                            <span>•</span>
-                            <span>Completed {new Date(ticket.completedAt).toLocaleDateString()}</span>
-                            {ticket.actualHours && (
-                              <>
-                                <span>•</span>
-                                <span>{ticket.actualHours} hours</span>
-                              </>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {new Date(batch.paymentDate).toLocaleDateString()}
+                            </span>
+                            {batch.popReference && (
+                              <span>Ref: {batch.popReference}</span>
                             )}
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2">
-                          {ticket.invoice ? (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                const invoice = invoices.find(i => i.id === ticket.invoice?.id)
-                                if (invoice) {
-                                  setSelectedInvoice(invoice)
-                                  setShowInvoiceDetails(true)
-                                }
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View Invoice
-                            </Button>
-                          ) : (
-                            <Button 
-                              size="sm"
-                              className="bg-blue-600 hover:bg-blue-700"
-                              onClick={() => handleCreateInvoice(ticket)}
-                            >
-                              <Receipt className="h-4 w-4 mr-1" />
-                              Create Invoice
-                            </Button>
-                          )}
+                        <div className="text-right mr-4">
+                          <p className="text-2xl font-bold text-green-700">
+                            ${batch.totalAmount.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">Click to view details</p>
                         </div>
+
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(batch.popFileUrl, '_blank')
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          POP
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -536,190 +436,94 @@ export default function InvoiceTrackerPage() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Payment History Tab */}
-        <TabsContent value="payments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-              <CardDescription>Track all your received payments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {invoices.filter(i => i.status === 'PAID').length === 0 ? (
-                <div className="text-center py-12">
-                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No payments yet</h3>
-                  <p className="text-gray-600">
-                    Your payment history will appear here once invoices are paid
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {invoices
-                    .filter(i => i.status === 'PAID')
-                    .map((invoice) => (
-                      <div 
-                        key={invoice.id}
-                        className="border rounded-lg p-4 bg-green-50 border-green-200"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                              <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
-                            </div>
-                            <p className="text-gray-700 mb-1">
-                              {invoice.ticket.ticketNumber} - {invoice.ticket.title}
-                            </p>
-                            <p className="text-gray-500 text-sm">
-                              Paid on {invoice.paidDate && new Date(invoice.paidDate).toLocaleDateString()}
-                            </p>
-                          </div>
-                          
-                          <div className="text-right mr-4">
-                            <p className="text-xl font-bold text-green-700">
-                              ${invoice.paidAmount.toLocaleString()}
-                            </p>
-                          </div>
-
-                          {invoice.proofOfPaymentUrl && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              asChild
-                            >
-                              <a href={invoice.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
-                                <Download className="h-4 w-4 mr-1" />
-                                Download POP
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
-      {/* Create Invoice Dialog */}
-      <Dialog open={showCreateInvoiceDialog} onOpenChange={setShowCreateInvoiceDialog}>
-        <DialogContent className="max-w-lg">
+      {/* Payment Batch Details Dialog */}
+      <Dialog open={showBatchDetails} onOpenChange={setShowBatchDetails}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create Invoice</DialogTitle>
+            <DialogTitle>Payment Details</DialogTitle>
             <DialogDescription>
-              Submit an invoice for {selectedTicket?.ticketNumber}
+              Batch {selectedBatch?.batchNumber}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {/* Ticket Info */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium mb-2">{selectedTicket?.title}</h4>
-              <p className="text-sm text-gray-600">{selectedTicket?.tenant.name}</p>
-            </div>
-
-            {/* Invoice Number */}
-            <div>
-              <Label>Invoice Number</Label>
-              <Input 
-                value={invoiceForm.invoiceNumber}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, invoiceNumber: e.target.value })}
-                placeholder="INV-20231207-001"
-              />
-            </div>
-
-            {/* Hours and Rate */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Hours Worked</Label>
-                <Input 
-                  type="number"
-                  step="0.5"
-                  value={invoiceForm.hoursWorked}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, hoursWorked: e.target.value })}
-                  placeholder="8"
-                />
+          {selectedBatch && (
+            <div className="space-y-6">
+              {/* Batch Header */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-700">Total Payment</p>
+                    <p className="text-3xl font-bold text-green-800">
+                      ${selectedBatch.totalAmount.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Payment Date</p>
+                    <p className="font-medium">
+                      {new Date(selectedBatch.paymentDate).toLocaleDateString()}
+                    </p>
+                    {selectedBatch.popReference && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ref: {selectedBatch.popReference}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Notes */}
+              {selectedBatch.notes && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Notes</p>
+                  <p className="text-gray-800">{selectedBatch.notes}</p>
+                </div>
+              )}
+
+              {/* Invoices in this batch */}
               <div>
-                <Label>Hourly Rate ($)</Label>
-                <Input 
-                  type="number"
-                  value={invoiceForm.hourlyRate}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, hourlyRate: e.target.value })}
-                  placeholder="50"
-                />
+                <h4 className="font-medium mb-3">
+                  Invoices in this Payment ({selectedBatch.invoices.length})
+                </h4>
+                <div className="space-y-3">
+                  {selectedBatch.invoices.map((invoice) => (
+                    <div 
+                      key={invoice.id}
+                      className="border rounded-lg p-3 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {invoice.ticket.ticketNumber} - {invoice.ticket.title}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {invoice.ticket.tenant.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-700">
+                            ${invoice.amount.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Download POP */}
+              <div className="flex justify-end">
+                <Button asChild>
+                  <a href={selectedBatch.popFileUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Proof of Payment
+                  </a>
+                </Button>
               </div>
             </div>
-
-            {/* Amount */}
-            <div>
-              <Label>Total Amount ($) *</Label>
-              <Input 
-                type="number"
-                value={invoiceForm.amount}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                placeholder="400.00"
-              />
-              {invoiceForm.hoursWorked && invoiceForm.hourlyRate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Calculated: ${(parseFloat(invoiceForm.hoursWorked) * parseFloat(invoiceForm.hourlyRate)).toFixed(2)}
-                </p>
-              )}
-            </div>
-
-            {/* Work Description */}
-            <div>
-              <Label>Work Description *</Label>
-              <Textarea 
-                value={invoiceForm.workDescription}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, workDescription: e.target.value })}
-                placeholder="Detailed description of work completed..."
-                rows={4}
-              />
-            </div>
-
-            {/* File Upload */}
-            <div>
-              <Label>Invoice Document (Optional)</Label>
-              <Input 
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setInvoiceForm({ 
-                  ...invoiceForm, 
-                  file: e.target.files?.[0] || null 
-                })}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Upload your fiscalized invoice (PDF, JPG, PNG)
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateInvoiceDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmitInvoice}
-              disabled={submitting}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Submit Invoice
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 
