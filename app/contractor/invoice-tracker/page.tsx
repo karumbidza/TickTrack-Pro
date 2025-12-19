@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -77,7 +78,8 @@ interface InvoiceStats {
 }
 
 export default function InvoiceTrackerPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [paymentBatches, setPaymentBatches] = useState<PaymentBatch[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -101,9 +103,18 @@ export default function InvoiceTrackerPage() {
   const [clarificationResponse, setClarificationResponse] = useState('')
   const [respondingToClarification, setRespondingToClarification] = useState(false)
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin')
+    }
+  }, [status, router])
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchData()
+    }
+  }, [status])
 
   const fetchData = async () => {
     try {
@@ -181,6 +192,15 @@ export default function InvoiceTrackerPage() {
   }
 
   if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  // Don't render content if not authenticated
+  if (status !== 'authenticated') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
