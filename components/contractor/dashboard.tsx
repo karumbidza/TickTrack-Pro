@@ -2281,7 +2281,7 @@ export function ContractorDashboard() {
               </Button>
               <Button 
                 onClick={handleInvoiceUpload}
-                disabled={
+                disabled={Boolean(
                   uploadingInvoice || 
                   !invoiceForm.invoiceNumber || 
                   !invoiceForm.amount || 
@@ -2292,7 +2292,7 @@ export function ContractorDashboard() {
                     (selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
                     parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) &&
                     !invoiceForm.variationDescription.trim())
-                }
+                )}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {uploadingInvoice ? 'Uploading...' : 'Submit Invoice'}
