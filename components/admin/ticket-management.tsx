@@ -107,6 +107,7 @@ interface TicketDetails {
   assignedAt?: string
   contractorAcceptedAt?: string
   onSiteAt?: string
+  completedAt?: string
   responseDeadline?: string
   resolutionDeadline?: string
   user: {
