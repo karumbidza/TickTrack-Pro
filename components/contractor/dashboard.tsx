@@ -702,13 +702,13 @@ export function ContractorDashboard() {
     }
   }
 
-  const getStatusChipColor = (status: string): 'primary' | 'secondary' | 'success' | 'yellow' | 'error' | 'info' | 'default' => {
+  const getStatusChipColor = (status: string): 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default' => {
     switch (status) {
-      case 'PROCESSING': case 'PENDING': return 'yellow'
+      case 'PROCESSING': case 'PENDING': return 'warning'
       case 'ACCEPTED': return 'info'
-      case 'IN_PROGRESS': return 'yellow'
+      case 'IN_PROGRESS': return 'warning'
       case 'ON_SITE': return 'secondary'
-      case 'AWAITING_DESCRIPTION': return 'yellow'
+      case 'AWAITING_DESCRIPTION': return 'warning'
       case 'AWAITING_WORK_APPROVAL': return 'info'
       case 'COMPLETED': return 'success'
       case 'CLOSED': return 'default'
@@ -716,10 +716,10 @@ export function ContractorDashboard() {
     }
   }
 
-  const getPriorityChipColor = (priority: string): 'success' | 'yellow' | 'error' | 'default' => {
+  const getPriorityChipColor = (priority: string): 'success' | 'warning' | 'error' | 'default' => {
     switch (priority) {
       case 'LOW': return 'success'
-      case 'MEDIUM': return 'yellow'
+      case 'MEDIUM': return 'warning'
       case 'HIGH': return 'error'
       case 'CRITICAL': case 'URGENT': return 'error'
       default: return 'default'
@@ -835,11 +835,11 @@ export function ContractorDashboard() {
         if (params.row.myQuoteRequest) {
           const quoteStatus = params.row.myQuoteRequest.status
           let label = ''
-          let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'yellow' = 'default'
+          let color: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' = 'default'
           
           if (quoteStatus === 'pending') {
             label = 'QUOTE PENDING'
-            color = 'yellow'
+            color = 'warning'
           } else if (quoteStatus === 'submitted') {
             label = 'QUOTE SENT'
             color = 'info'
