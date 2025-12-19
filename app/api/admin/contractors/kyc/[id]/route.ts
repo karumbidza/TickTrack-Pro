@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
+import { sendContractorPasswordSetupEmail } from '@/lib/email'
 
 // GET - Get single KYC application details
 export async function GET(
@@ -75,6 +76,9 @@ export async function PATCH(
       where: {
         id: params.id,
         tenantId: session.user.tenantId
+      },
+      include: {
+        tenant: true
       }
     })
 
@@ -104,15 +108,26 @@ export async function PATCH(
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       const passwordSetupLink = `${appUrl}/contractor-setup/${passwordSetupToken}`
 
-      // TODO: Send email with password setup link
-      logger.info('KYC Approved:', {
-        company: kyc.companyName,
-        email: kyc.companyEmail,
-        passwordSetupLink
-      })
+      // Send email with password setup link
+      try {
+        await sendContractorPasswordSetupEmail(
+          kyc.companyEmail,
+          kyc.contactPerson || kyc.companyName,
+          passwordSetupLink,
+          kyc.tenant?.name || 'TickTrack Pro'
+        )
+        logger.info('KYC Approved - Email sent:', {
+          company: kyc.companyName,
+          email: kyc.companyEmail,
+          passwordSetupLink
+        })
+      } catch (emailError) {
+        logger.error('Failed to send KYC approval email:', emailError)
+        // Continue even if email fails - the link is still returned
+      }
 
       return NextResponse.json({
-        message: 'KYC approved successfully. Password setup email will be sent.',
+        message: 'KYC approved successfully. Password setup email has been sent.',
         kyc: updatedKyc,
         passwordSetupLink
       })
