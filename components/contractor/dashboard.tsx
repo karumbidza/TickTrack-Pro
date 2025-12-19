@@ -127,6 +127,7 @@ interface Job {
       createdAt: string
       completedAt?: string
       cost?: number
+      contractorName?: string
     }[]
   }
   attachments?: {
