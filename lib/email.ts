@@ -134,6 +134,12 @@ export async function sendMailWithNodemailer(options: SendEmailOptions): Promise
 
 // Core email sending function (internal use)
 async function sendEmailInternal(to: string, subject: string, html: string): Promise<void> {
+  // Try Resend first if configured (works on DigitalOcean where SMTP is blocked)
+  if (process.env.RESEND_API_KEY) {
+    const sent = await sendWithResend({ to, subject, html })
+    if (sent) return
+  }
+
   const transporter = createTransporter()
   
   if (!transporter) {
