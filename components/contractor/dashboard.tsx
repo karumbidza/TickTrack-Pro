@@ -1327,20 +1327,20 @@ export function ContractorDashboard() {
                     resolutionDeadline: selectedJob.resolutionDeadline,
                   })
                   const isCompleted = ['COMPLETED', 'CLOSED', 'RESOLVED'].includes(selectedJob.status)
-                  const currentStatus = isCompleted ? 'on-track' : slaInfo.resolutionStatus
+                  const currentStatus = slaInfo.resolutionStatus
                   
                   return (
                     <div className={`p-4 rounded-lg border-2 ${
                       isCompleted ? 'bg-gray-50 border-gray-200' :
-                      currentStatus === 'overdue' ? 'bg-red-50 border-red-300' :
-                      currentStatus === 'warning' ? 'bg-yellow-50 border-yellow-300' :
+                      currentStatus === 'red' ? 'bg-red-50 border-red-300' :
+                      currentStatus === 'yellow' ? 'bg-yellow-50 border-yellow-300' :
                       'bg-green-50 border-green-300'
                     }`}>
                       <div className="flex items-center gap-2 mb-3">
                         <Timer className={`h-5 w-5 ${
                           isCompleted ? 'text-gray-500' :
-                          currentStatus === 'overdue' ? 'text-red-600' :
-                          currentStatus === 'warning' ? 'text-yellow-600' :
+                          currentStatus === 'red' ? 'text-red-600' :
+                          currentStatus === 'yellow' ? 'text-yellow-600' :
                           'text-green-600'
                         }`} />
                         <h4 className="text-sm font-semibold text-gray-900">SLA Status</h4>
@@ -1392,7 +1392,7 @@ export function ContractorDashboard() {
                         </div>
                       </div>
                       
-                      {!isCompleted && currentStatus === 'overdue' && (
+                      {!isCompleted && currentStatus === 'red' && (
                         <div className="mt-3 p-2 bg-red-100 rounded text-red-700 text-sm flex items-center gap-2">
                           <AlertCircle className="h-4 w-4" />
                           <span className="font-medium">SLA breached! Immediate action required.</span>
