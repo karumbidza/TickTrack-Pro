@@ -15,7 +15,44 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 10000, // 10 seconds
+    socketTimeout: 10000,
   })
+}
+
+// Resend API fallback for when SMTP is blocked
+const sendWithResend = async (options: SendEmailOptions): Promise<boolean> => {
+  const resendApiKey = process.env.RESEND_API_KEY
+  if (!resendApiKey) return false
+  
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM || 'TickTrack Pro <noreply@tick-trackpro.com>',
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      }),
+    })
+    
+    if (response.ok) {
+      console.log(`✅ Email sent via Resend to ${options.to}`)
+      return true
+    } else {
+      const error = await response.text()
+      console.error('Resend API error:', error)
+      return false
+    }
+  } catch (error) {
+    console.error('Resend API failed:', error)
+    return false
+  }
 }
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'TickTrack Pro <noreply@ticktrackpro.com>'
@@ -40,9 +77,9 @@ const getStars = (rating: number): string => {
   return filled + empty
 }
 
-// Check if email is configured
+// Check if email is configured (either SMTP or Resend)
 const isEmailConfigured = (): boolean => {
-  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) || !!process.env.RESEND_API_KEY
 }
 
 // Exported interface for sending emails
@@ -55,6 +92,12 @@ interface SendEmailOptions {
 
 // Exported function for sending emails with full options
 export async function sendMailWithNodemailer(options: SendEmailOptions): Promise<void> {
+  // Try Resend first if configured (works on DigitalOcean where SMTP is blocked)
+  if (process.env.RESEND_API_KEY) {
+    const sent = await sendWithResend(options)
+    if (sent) return
+  }
+  
   const transporter = createTransporter()
   
   if (!transporter) {
