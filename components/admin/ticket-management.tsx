@@ -256,11 +256,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [selectedAssetId, setSelectedAssetId] = useState<string>('')
   const [assetUpdateLoading, setAssetUpdateLoading] = useState(false)
 
-  // Auto-refresh state
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [refreshInterval, setRefreshInterval] = useState(30) // seconds
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // Auto-refresh interval (30 seconds - background feature)
+  const [refreshInterval] = useState(30)
 
   const statusOptions = [
     'OPEN', 'AWAITING_QUOTE', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
@@ -283,31 +280,25 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     fetchBranches()
   }, [user])
 
-  // Auto-refresh effect
+  // Auto-refresh effect (background)
   useEffect(() => {
-    if (!autoRefresh) return
-    
     const interval = setInterval(async () => {
       // Don't refresh if a modal is open
       if (showTicketModal || showAssignDialog || showRatingModal) return
       
-      setIsRefreshing(true)
       try {
         const response = await fetch('/api/admin/tickets')
         if (response.ok) {
           const data = await response.json()
           setTickets(data.tickets || [])
-          setLastRefresh(new Date())
         }
       } catch (error) {
         console.error('Auto-refresh failed:', error)
-      } finally {
-        setIsRefreshing(false)
       }
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [autoRefresh, refreshInterval, showTicketModal, showAssignDialog, showRatingModal])
+  }, [refreshInterval, showTicketModal, showAssignDialog, showRatingModal])
 
   useEffect(() => {
     filterTickets()
@@ -1378,51 +1369,12 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             <p className="text-sm sm:text-base text-gray-600">Review, assign, and manage company tickets</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Auto-refresh indicator */}
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-              {isRefreshing && (
-                <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
-              )}
-              {autoRefresh && !isRefreshing && (
-                <span>Updated {lastRefresh.toLocaleTimeString()}</span>
-              )}
-            </div>
-            
-            {/* Auto-refresh toggle */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
-              <span className="text-xs font-medium text-gray-600 hidden sm:inline">Auto</span>
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  autoRefresh ? 'bg-green-500' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    autoRefresh ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-              {autoRefresh && (
-                <span className="text-xs text-green-600 font-medium">
-                  {refreshInterval}s
-                </span>
-              )}
-            </div>
-            
             <Button 
-              onClick={() => {
-                setIsRefreshing(true)
-                fetchTickets().finally(() => {
-                  setIsRefreshing(false)
-                  setLastRefresh(new Date())
-                })
-              }} 
+              onClick={fetchTickets} 
               variant="outline"
               size="sm"
-              disabled={isRefreshing}
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>

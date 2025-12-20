@@ -172,11 +172,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [dateFilter, setDateFilter] = useState('all')
   const [assignedFilter, setAssignedFilter] = useState('all')
 
-  // Auto-refresh state
-  const [autoRefresh, setAutoRefresh] = useState(true)
-  const [refreshInterval] = useState(30) // seconds
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // Auto-refresh interval (30 seconds)
+  const [refreshInterval] = useState(30)
 
   useEffect(() => {
     fetchUserTickets()
@@ -846,38 +843,6 @@ export function UserDashboard({ user }: UserDashboardProps) {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Auto-refresh indicator */}
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-              {isRefreshing && (
-                <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
-              )}
-              {autoRefresh && !isRefreshing && (
-                <span>Updated {lastRefresh.toLocaleTimeString()}</span>
-              )}
-            </div>
-            
-            {/* Auto-refresh toggle */}
-            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-gray-100 rounded-lg">
-              <span className="text-xs font-medium text-gray-600 hidden sm:inline">Live</span>
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`relative w-9 sm:w-10 h-5 rounded-full transition-colors ${
-                  autoRefresh ? 'bg-green-500' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    autoRefresh ? 'translate-x-4 sm:translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-              {autoRefresh && (
-                <span className="text-xs text-green-600 font-medium hidden sm:inline">
-                  {refreshInterval}s
-                </span>
-              )}
-            </div>
-            
             {activeTab === 'tickets' && user.role === 'END_USER' ? (
               <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
             ) : activeTab === 'assets' && user.role === 'END_USER' ? (
