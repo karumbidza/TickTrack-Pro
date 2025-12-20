@@ -14,14 +14,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get all invoices for this contractor
+    // Get all invoices for this contractor (only active ones by default)
     const invoices = await prisma.invoice.findMany({
       where: {
-        contractorId: session.user.id
+        contractorId: session.user.id,
+        isActive: true  // Only show active invoices
       },
       include: {
         ticket: {
           select: {
+            id: true,
             ticketNumber: true,
             title: true,
             tenant: {

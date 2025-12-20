@@ -11,10 +11,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const showHistory = searchParams.get('showHistory') === 'true'
+
     // For tenant admins, only show invoices from their tenant
-    const whereCondition = session.user.role === 'TENANT_ADMIN' 
+    // By default, only show active invoices (not superseded revisions)
+    const whereCondition: Record<string, unknown> = session.user.role === 'TENANT_ADMIN' 
       ? { tenantId: session.user.tenantId }
       : {} // Super admin can see all
+    
+    // Only show active invoices unless history is requested
+    if (!showHistory) {
+      whereCondition.isActive = true
+    }
 
     const invoices = await prisma.invoice.findMany({
       where: whereCondition,

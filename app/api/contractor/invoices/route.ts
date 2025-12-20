@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
       description,
       notes,
       workDescription,
-      variationDescription
+      variationDescription,
+      revisionNotes  // New field for resubmissions
     } = body
 
     // Validate required fields (simplified - only invoice number, amount, and file required)
@@ -117,19 +118,44 @@ export async function POST(request: NextRequest) {
     // Get the quoted amount if available
     const quotedAmount = ticket.quoteRequests?.[0]?.quoteAmount || ticket.quoteAmount || null
 
-    // Check if invoice already exists for this ticket
-    const existingInvoice = await prisma.invoice.findFirst({
+    // Check if an active invoice already exists for this ticket
+    const existingActiveInvoice = await prisma.invoice.findFirst({
       where: {
         ticketId: ticketId,
-        contractorId: session.user.id
+        contractorId: session.user.id,
+        isActive: true
       }
     })
 
-    if (existingInvoice) {
+    // If there's an active invoice that isn't rejected, don't allow new submission
+    if (existingActiveInvoice && existingActiveInvoice.status !== 'REJECTED') {
       return NextResponse.json(
-        { message: 'Invoice already exists for this ticket' },
+        { message: 'An active invoice already exists for this ticket. Only rejected invoices can be revised.' },
         { status: 400 }
       )
+    }
+
+    // If this is a resubmission (replacing a rejected invoice)
+    let revisionNumber = 1
+    let previousInvoiceId = null
+    
+    if (existingActiveInvoice && existingActiveInvoice.status === 'REJECTED') {
+      // Require revision notes for resubmissions
+      if (!revisionNotes || revisionNotes.trim().length < 10) {
+        return NextResponse.json(
+          { message: 'Please provide revision notes explaining what changes were made (minimum 10 characters)' },
+          { status: 400 }
+        )
+      }
+      
+      // Deactivate the rejected invoice (keep as historical record)
+      await prisma.invoice.update({
+        where: { id: existingActiveInvoice.id },
+        data: { isActive: false }
+      })
+      
+      revisionNumber = (existingActiveInvoice.revisionNumber || 1) + 1
+      previousInvoiceId = existingActiveInvoice.id
     }
 
     // Create the invoice
@@ -150,7 +176,11 @@ export async function POST(request: NextRequest) {
         paidAmount: 0,
         contractorId: session.user.id,
         ticketId: ticketId,
-        tenantId: ticket.tenantId
+        tenantId: ticket.tenantId,
+        isActive: true,
+        revisionNumber,
+        previousInvoiceId,
+        revisionNotes: revisionNotes || null
       },
       include: {
         ticket: {

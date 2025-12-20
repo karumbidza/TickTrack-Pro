@@ -23,9 +23,12 @@ import {
   Calendar,
   X,
   Send,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  RotateCcw
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Input } from '@/components/ui/input'
 
 interface PaymentBatch {
   id: string
@@ -55,9 +58,13 @@ interface Invoice {
   rejectionReason?: string
   clarificationRequest?: string
   clarificationResponse?: string
+  isActive?: boolean
+  revisionNumber?: number
+  revisionNotes?: string
   createdAt: string
   updatedAt: string
   ticket: {
+    id: string
     ticketNumber: string
     title: string
     tenant: {
@@ -102,6 +109,18 @@ export default function InvoiceTrackerPage() {
   const [showClarificationDialog, setShowClarificationDialog] = useState(false)
   const [clarificationResponse, setClarificationResponse] = useState('')
   const [respondingToClarification, setRespondingToClarification] = useState(false)
+  
+  // Resubmit invoice state
+  const [showResubmitDialog, setShowResubmitDialog] = useState(false)
+  const [resubmitData, setResubmitData] = useState({
+    invoiceNumber: '',
+    amount: '',
+    hoursWorked: '',
+    workDescription: '',
+    revisionNotes: ''
+  })
+  const [resubmitFile, setResubmitFile] = useState<File | null>(null)
+  const [isResubmitting, setIsResubmitting] = useState(false)
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -169,6 +188,97 @@ export default function InvoiceTrackerPage() {
       toast.error('Failed to send clarification response')
     } finally {
       setRespondingToClarification(false)
+    }
+  }
+
+  // Handle opening resubmit dialog
+  const handleOpenResubmit = (invoice: Invoice) => {
+    setSelectedInvoice(invoice)
+    setResubmitData({
+      invoiceNumber: '',
+      amount: invoice.amount.toString(),
+      hoursWorked: invoice.hoursWorked?.toString() || '',
+      workDescription: invoice.workDescription || '',
+      revisionNotes: ''
+    })
+    setResubmitFile(null)
+    setShowInvoiceDetails(false)
+    setShowResubmitDialog(true)
+  }
+
+  // Handle resubmitting invoice
+  const handleResubmitInvoice = async () => {
+    if (!selectedInvoice) return
+    
+    if (!resubmitData.invoiceNumber.trim()) {
+      toast.error('Please enter a new invoice number')
+      return
+    }
+    
+    if (!resubmitData.revisionNotes.trim() || resubmitData.revisionNotes.trim().length < 10) {
+      toast.error('Please explain what changes were made (minimum 10 characters)')
+      return
+    }
+    
+    if (!resubmitFile) {
+      toast.error('Please upload the revised invoice document')
+      return
+    }
+
+    setIsResubmitting(true)
+    try {
+      // Upload file first
+      const formData = new FormData()
+      formData.append('file', resubmitFile)
+      
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload invoice file')
+      }
+      
+      const uploadData = await uploadRes.json()
+      const invoiceFileUrl = uploadData.url || uploadData.path
+
+      // Create revised invoice
+      const response = await fetch('/api/contractor/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: selectedInvoice.ticket.id,
+          invoiceNumber: resubmitData.invoiceNumber,
+          amount: parseFloat(resubmitData.amount),
+          hoursWorked: resubmitData.hoursWorked ? parseFloat(resubmitData.hoursWorked) : null,
+          workDescription: resubmitData.workDescription,
+          revisionNotes: resubmitData.revisionNotes,
+          invoiceFileUrl
+        })
+      })
+
+      if (response.ok) {
+        toast.success('Invoice resubmitted successfully!')
+        setShowResubmitDialog(false)
+        setResubmitFile(null)
+        setResubmitData({
+          invoiceNumber: '',
+          amount: '',
+          hoursWorked: '',
+          workDescription: '',
+          revisionNotes: ''
+        })
+        fetchData()
+      } else {
+        const error = await response.json()
+        toast.error(error.message || 'Failed to resubmit invoice')
+      }
+    } catch (error) {
+      console.error('Resubmit error:', error)
+      toast.error('Failed to resubmit invoice')
+    } finally {
+      setIsResubmitting(false)
     }
   }
 
@@ -571,7 +681,14 @@ export default function InvoiceTrackerPage() {
               {selectedInvoice.status === 'REJECTED' && selectedInvoice.rejectionReason && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <h4 className="font-medium text-red-800 mb-2">Rejection Reason</h4>
-                  <p className="text-red-700">{selectedInvoice.rejectionReason}</p>
+                  <p className="text-red-700 mb-4">{selectedInvoice.rejectionReason}</p>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => handleOpenResubmit(selectedInvoice)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Submit Revised Invoice
+                  </Button>
                 </div>
               )}
 
@@ -740,6 +857,129 @@ export default function InvoiceTrackerPage() {
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Send Response
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resubmit Invoice Dialog */}
+      <Dialog open={showResubmitDialog} onOpenChange={setShowResubmitDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Submit Revised Invoice</DialogTitle>
+            <DialogDescription>
+              Submit a corrected invoice to replace the rejected one. Please explain what changes were made.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedInvoice && (
+            <div className="space-y-4">
+              {/* Previous rejection reason */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-800 font-medium">Previous Rejection:</p>
+                <p className="text-sm text-red-700">{selectedInvoice.rejectionReason}</p>
+              </div>
+
+              {/* New Invoice Number */}
+              <div>
+                <Label>New Invoice Number *</Label>
+                <Input
+                  value={resubmitData.invoiceNumber}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                  placeholder="INV-2024-002-REV"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter a new/different invoice number</p>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <Label>Amount ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={resubmitData.amount}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, amount: e.target.value }))}
+                  placeholder="500.00"
+                />
+              </div>
+
+              {/* Hours Worked */}
+              <div>
+                <Label>Hours Worked</Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={resubmitData.hoursWorked}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, hoursWorked: e.target.value }))}
+                  placeholder="8"
+                />
+              </div>
+
+              {/* Work Description */}
+              <div>
+                <Label>Work Description</Label>
+                <Textarea
+                  value={resubmitData.workDescription}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, workDescription: e.target.value }))}
+                  placeholder="Describe the work completed..."
+                  rows={2}
+                />
+              </div>
+
+              {/* Revision Notes - Required */}
+              <div>
+                <Label>What Changes Were Made? *</Label>
+                <Textarea
+                  value={resubmitData.revisionNotes}
+                  onChange={(e) => setResubmitData(prev => ({ ...prev, revisionNotes: e.target.value }))}
+                  placeholder="Explain what was corrected in this revised invoice (e.g., 'Corrected calculation error, updated hourly rate from $50 to $45 as per agreement')"
+                  rows={3}
+                  className="border-blue-300 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Minimum 10 characters required</p>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <Label>Upload Revised Invoice *</Label>
+                <div className="mt-1">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setResubmitFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
+                {resubmitFile && (
+                  <p className="text-sm text-green-600 mt-2 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    {resubmitFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResubmitDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleResubmitInvoice}
+              disabled={isResubmitting || !resubmitData.invoiceNumber.trim() || !resubmitData.revisionNotes.trim() || !resubmitFile}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isResubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Submit Revised Invoice
                 </>
               )}
             </Button>

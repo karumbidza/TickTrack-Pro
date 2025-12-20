@@ -812,7 +812,7 @@ model Invoice {
   id                String        @id @default(cuid())
   contractorId      String?
   contractor        User?         @relation("ContractorInvoices", fields: [contractorId], references: [id])
-  ticketId          String        @unique
+  ticketId          String        // Multiple invoices allowed per ticket (revisions)
   tenantId          String?
   tenant            Tenant?       @relation(fields: [tenantId], references: [id])
   
@@ -826,6 +826,12 @@ model Invoice {
   variationDescription String?    // Explanation if invoice amount exceeds quoted amount
   quotedAmount      Float?        // Original quoted amount for reference
   status            InvoiceStatus @default(PENDING)
+  
+  // Invoice revision tracking
+  isActive          Boolean       @default(true)  // Only one active invoice per ticket
+  revisionNumber    Int           @default(1)     // Track version number
+  previousInvoiceId String?       // Link to previous rejected invoice
+  revisionNotes     String?       // What contractor changed in this revision
   
   // Clarification/Rejection
   rejectionReason   String?       // Why invoice was rejected
@@ -860,6 +866,7 @@ model Invoice {
   @@index([tenantId, status])
   @@index([contractorId])
   @@index([paymentBatchId])
+  @@index([ticketId, isActive])
   // Invoice number should be unique per tenant
   @@unique([tenantId, invoiceNumber])
   @@map("invoices")
