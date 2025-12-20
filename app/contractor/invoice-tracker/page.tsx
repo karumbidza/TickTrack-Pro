@@ -391,7 +391,7 @@ export default function InvoiceTrackerPage() {
       <Tabs defaultValue="invoices" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="invoices">My Invoices</TabsTrigger>
-          <TabsTrigger value="payments">Payment History</TabsTrigger>
+          <TabsTrigger value="payments">Payments & POPs</TabsTrigger>
         </TabsList>
 
         {/* Invoices Tab */}
@@ -499,8 +499,8 @@ export default function InvoiceTrackerPage() {
         <TabsContent value="payments">
           <Card>
             <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-              <CardDescription>Track all payments received from admin</CardDescription>
+              <CardTitle>Payment History & POPs</CardTitle>
+              <CardDescription>View all payments received with Proof of Payment documents and associated tickets</CardDescription>
             </CardHeader>
             <CardContent>
               {paymentBatches.length === 0 ? (
@@ -512,54 +512,116 @@ export default function InvoiceTrackerPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {paymentBatches.map((batch) => (
                     <div 
                       key={batch.id}
-                      className="border rounded-lg p-4 bg-green-50 border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
-                      onClick={() => {
-                        setSelectedBatch(batch)
-                        setShowBatchDetails(true)
-                      }}
+                      className="border-2 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 overflow-hidden"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                            <span className="font-mono font-bold text-lg">{batch.batchNumber}</span>
-                            <Badge className="bg-green-100 text-green-800">
-                              {batch.invoices.length} Invoice{batch.invoices.length !== 1 ? 's' : ''}
-                            </Badge>
+                      {/* POP Header */}
+                      <div className="bg-green-600 text-white p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-white/20 rounded-lg p-2">
+                              <CreditCard className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-lg">{batch.batchNumber}</p>
+                              <p className="text-green-100 text-sm">
+                                {new Date(batch.paymentDate).toLocaleDateString('en-US', { 
+                                  weekday: 'long', 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(batch.paymentDate).toLocaleDateString()}
-                            </span>
+                          <div className="text-right">
+                            <p className="text-3xl font-bold">${batch.totalAmount.toLocaleString()}</p>
                             {batch.popReference && (
-                              <span>Ref: {batch.popReference}</span>
+                              <p className="text-green-200 text-sm">Ref: {batch.popReference}</p>
                             )}
                           </div>
                         </div>
-                        
-                        <div className="text-right mr-4">
-                          <p className="text-2xl font-bold text-green-700">
-                            ${batch.totalAmount.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-500">Click to view details</p>
-                        </div>
+                      </div>
 
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            window.open(batch.popFileUrl, '_blank')
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          POP
-                        </Button>
+                      {/* POP Actions Bar */}
+                      <div className="bg-green-100 px-4 py-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-green-800 font-medium text-sm">
+                            {batch.invoices.length} Ticket{batch.invoices.length !== 1 ? 's' : ''} Paid
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="bg-white hover:bg-green-50"
+                            onClick={() => window.open(batch.popFileUrl, '_blank')}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View POP
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="bg-white hover:bg-green-50"
+                            onClick={() => {
+                              const link = document.createElement('a')
+                              link.href = batch.popFileUrl
+                              link.download = `POP-${batch.batchNumber}.pdf`
+                              link.click()
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Associated Tickets */}
+                      <div className="p-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Tickets Included in this Payment:
+                        </h4>
+                        <div className="grid gap-2">
+                          {batch.invoices.map((invoice) => (
+                            <div 
+                              key={invoice.id}
+                              className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-between hover:border-green-300 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="bg-green-100 rounded-full p-1.5">
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    <span className="font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded mr-2">
+                                      {invoice.ticket.ticketNumber}
+                                    </span>
+                                    {invoice.ticket.title}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    Invoice: {invoice.invoiceNumber} • {invoice.ticket.tenant.name}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-green-700">${invoice.amount.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {batch.notes && (
+                          <div className="mt-3 bg-gray-50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 uppercase font-medium mb-1">Payment Notes</p>
+                            <p className="text-sm text-gray-700">{batch.notes}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
