@@ -230,18 +230,20 @@ export default function InvoiceTrackerPage() {
       // Upload file first
       const formData = new FormData()
       formData.append('file', resubmitFile)
+      formData.append('ticketId', selectedInvoice.ticket.id)
       
-      const uploadRes = await fetch('/api/upload', {
+      const uploadRes = await fetch('/api/upload/invoice', {
         method: 'POST',
         body: formData
       })
       
       if (!uploadRes.ok) {
-        throw new Error('Failed to upload invoice file')
+        const uploadError = await uploadRes.json()
+        throw new Error(uploadError.message || 'Failed to upload invoice file')
       }
       
       const uploadData = await uploadRes.json()
-      const invoiceFileUrl = uploadData.url || uploadData.path
+      const invoiceFileUrl = uploadData.fileUrl || uploadData.url || uploadData.path
 
       // Create revised invoice
       const response = await fetch('/api/contractor/invoices', {
