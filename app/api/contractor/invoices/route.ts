@@ -165,6 +165,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(invoice, { status: 201 })
   } catch (error) {
     console.error('Error creating invoice:', error)
+    
+    // Check for unique constraint error on invoice number
+    if ((error as { code?: string }).code === 'P2002') {
+      return NextResponse.json(
+        { message: 'Invoice number already exists. Please use a different invoice number.' },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

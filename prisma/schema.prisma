@@ -817,7 +817,7 @@ model Invoice {
   tenant            Tenant?       @relation(fields: [tenantId], references: [id])
   
   // Invoice details
-  invoiceNumber     String        @unique
+  invoiceNumber     String        // Unique per tenant+contractor, not globally
   amount            Float
   hoursWorked       Float?
   hourlyRate        Float?
@@ -860,6 +860,8 @@ model Invoice {
   @@index([tenantId, status])
   @@index([contractorId])
   @@index([paymentBatchId])
+  // Invoice number should be unique per tenant
+  @@unique([tenantId, invoiceNumber])
   @@map("invoices")
 }
 
