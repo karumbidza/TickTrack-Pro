@@ -40,13 +40,15 @@ export async function GET(request: NextRequest) {
           },
           tickets: {
             include: {
-              invoice: {
+              invoices: {
+                where: { isActive: true },
                 select: {
                   id: true,
                   invoiceNumber: true,
                   amount: true,
                   status: true
-                }
+                },
+                take: 1
               },
               assignedTo: {
                 select: { id: true, name: true, email: true }
@@ -127,10 +129,10 @@ export async function GET(request: NextRequest) {
         contractorEmail: ticket.assignedTo?.email || null,
         createdAt: ticket.createdAt.toISOString(),
         completedAt: ticket.completedAt?.toISOString() || null,
-        invoiceId: ticket.invoice?.id || null,
-        invoiceNumber: ticket.invoice?.invoiceNumber || null,
-        invoiceAmount: ticket.invoice?.amount || null,
-        invoiceStatus: ticket.invoice?.status || null
+        invoiceId: ticket.invoices?.[0]?.id || null,
+        invoiceNumber: ticket.invoices?.[0]?.invoiceNumber || null,
+        invoiceAmount: ticket.invoices?.[0]?.amount || null,
+        invoiceStatus: ticket.invoices?.[0]?.status || null
       }))
 
       return {

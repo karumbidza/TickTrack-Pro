@@ -82,11 +82,13 @@ export async function GET(request: Request) {
             location: true
           }
         },
-        invoice: {
+        invoices: {
+          where: { isActive: true },
           select: {
             invoiceNumber: true,
             amount: true
-          }
+          },
+          take: 1
         }
       },
       orderBy: {
@@ -104,8 +106,8 @@ export async function GET(request: Request) {
       createdAt: ticket.createdAt,
       completedAt: ticket.completedAt,
       resolutionDeadline: ticket.resolutionDeadline,
-      repairCost: ticket.invoice?.amount || null,
-      invoiceNumber: ticket.invoice?.invoiceNumber || null,
+      repairCost: ticket.invoices?.[0]?.amount || null,
+      invoiceNumber: ticket.invoices?.[0]?.invoiceNumber || null,
       location: ticket.branch?.name || ticket.location || ticket.asset?.location || null,
       user: ticket.user,
       contractor: ticket.assignedTo,

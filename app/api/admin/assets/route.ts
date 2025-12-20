@@ -81,13 +81,15 @@ export async function GET(request: Request) {
         },
         tickets: {
           include: {
-            invoice: {
+            invoices: {
+              where: { isActive: true },
               select: {
                 id: true,
                 invoiceNumber: true,
                 amount: true,
                 status: true
-              }
+              },
+              take: 1
             },
             assignedTo: {
               select: { id: true, name: true, email: true }
@@ -113,7 +115,7 @@ export async function GET(request: Request) {
     // Calculate total repair costs for each asset and format repair history
     const assetsWithCosts = assets.map(asset => {
       const totalRepairCost = asset.tickets.reduce((sum, ticket) => {
-        return sum + (ticket.invoice?.amount || 0)
+        return sum + (ticket.invoices?.[0]?.amount || 0)
       }, 0)
       
       const maintenanceCost = asset.maintenanceHistory.reduce((sum, mh) => {
@@ -136,10 +138,10 @@ export async function GET(request: Request) {
         contractorEmail: ticket.assignedTo?.email || null,
         createdAt: ticket.createdAt.toISOString(),
         completedAt: ticket.completedAt?.toISOString() || null,
-        invoiceId: ticket.invoice?.id || null,
-        invoiceNumber: ticket.invoice?.invoiceNumber || null,
-        invoiceAmount: ticket.invoice?.amount || null,
-        invoiceStatus: ticket.invoice?.status || null
+        invoiceId: ticket.invoices?.[0]?.id || null,
+        invoiceNumber: ticket.invoices?.[0]?.invoiceNumber || null,
+        invoiceAmount: ticket.invoices?.[0]?.amount || null,
+        invoiceStatus: ticket.invoices?.[0]?.status || null
       }))
 
       return {

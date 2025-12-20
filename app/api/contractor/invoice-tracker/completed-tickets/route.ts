@@ -30,13 +30,15 @@ export async function GET(request: NextRequest) {
             email: true
           }
         },
-        invoice: {
+        invoices: {
+          where: { isActive: true },
           select: {
             id: true,
             invoiceNumber: true,
             amount: true,
             status: true
-          }
+          },
+          take: 1
         }
       },
       orderBy: {

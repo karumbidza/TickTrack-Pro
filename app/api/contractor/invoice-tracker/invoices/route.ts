@@ -105,16 +105,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if invoice already exists for this ticket
-    const existingInvoice = await prisma.invoice.findUnique({
-      where: { ticketId }
+    // Check if an active invoice already exists for this ticket
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { 
+        ticketId,
+        isActive: true
+      }
     })
 
-    if (existingInvoice) {
+    // Allow resubmission only if the existing invoice was REJECTED
+    if (existingInvoice && existingInvoice.status !== 'REJECTED') {
       return NextResponse.json(
-        { message: 'Invoice already exists for this ticket' },
+        { message: 'An active invoice already exists for this ticket' },
         { status: 409 }
       )
+    }
+
+    // If resubmitting, deactivate the old rejected invoice
+    let revisionNumber = 1
+    let previousInvoiceId: string | undefined = undefined
+    
+    if (existingInvoice && existingInvoice.status === 'REJECTED') {
+      await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: { isActive: false }
+      })
+      revisionNumber = (existingInvoice.revisionNumber || 1) + 1
+      previousInvoiceId = existingInvoice.id
     }
 
     // Handle file upload
@@ -147,7 +164,10 @@ export async function POST(request: NextRequest) {
         workDescription,
         invoiceFileUrl,
         status: 'PENDING',
-        balance: amount
+        balance: amount,
+        isActive: true,
+        revisionNumber,
+        previousInvoiceId
       },
       include: {
         ticket: {

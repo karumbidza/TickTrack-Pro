@@ -72,7 +72,7 @@ export async function POST(
           select: { id: true, name: true, assetNumber: true, location: true }
         },
         attachments: true,
-        invoice: true,
+        invoices: true,
         _count: { select: { messages: true } }
       }
     })

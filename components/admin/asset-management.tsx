@@ -74,10 +74,10 @@ interface Ticket {
   status: string
   createdAt: string
   completedAt: string | null
-  invoice?: {
+  invoices?: Array<{
     amount: number
     status: string
-  }
+  }>
   assignedTo?: {
     name: string
   }
@@ -859,9 +859,9 @@ export function AdminAssetManagement() {
                               )}
                             </div>
                             <div className="text-right">
-                              {ticket.invoice && (
+                              {ticket.invoices?.[0] && (
                                 <p className="font-medium text-green-600">
-                                  {formatCurrency(ticket.invoice.amount)}
+                                  {formatCurrency(ticket.invoices[0].amount)}
                                 </p>
                               )}
                               <p className="text-xs text-gray-500">

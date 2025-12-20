@@ -92,14 +92,16 @@ export async function GET(request: NextRequest) {
               mimeType: true
             }
           },
-          invoice: {
+          invoices: {
+            where: { isActive: true },
             select: {
               id: true,
               invoiceNumber: true,
               amount: true,
               status: true,
               invoiceFileUrl: true
-            }
+            },
+            take: 1
           },
           _count: {
             select: {

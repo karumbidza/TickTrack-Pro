@@ -108,11 +108,13 @@ export async function GET(request: NextRequest) {
                       name: true
                     }
                   },
-                  invoice: {
+                  invoices: {
+                    where: { isActive: true },
                     select: {
                       amount: true,
                       status: true
-                    }
+                    },
+                    take: 1
                   }
                 },
                 orderBy: {
@@ -131,14 +133,16 @@ export async function GET(request: NextRequest) {
               mimeType: true
             }
           },
-          invoice: {
+          invoices: {
+            where: { isActive: true },
             select: {
               id: true,
               invoiceNumber: true,
               amount: true,
               status: true,
               invoiceFileUrl: true
-            }
+            },
+            take: 1
           },
           branch: {
             select: {
@@ -239,12 +243,12 @@ export async function GET(request: NextRequest) {
           }))
       } : null,
       attachments: ticket.attachments || [],
-      invoice: ticket.invoice ? {
-        id: ticket.invoice.id,
-        invoiceNumber: ticket.invoice.invoiceNumber,
-        amount: ticket.invoice.amount,
-        status: ticket.invoice.status,
-        invoiceFileUrl: ticket.invoice.invoiceFileUrl
+      invoice: ticket.invoices?.[0] ? {
+        id: ticket.invoices[0].id,
+        invoiceNumber: ticket.invoices[0].invoiceNumber,
+        amount: ticket.invoices[0].amount,
+        status: ticket.invoices[0].status,
+        invoiceFileUrl: ticket.invoices[0].invoiceFileUrl
       } : null,
       // Quote request info for multi-contractor bidding
       myQuoteRequest: myQuoteRequest ? {

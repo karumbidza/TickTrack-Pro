@@ -46,7 +46,7 @@ export async function GET(
         },
         tickets: {
           include: {
-            invoice: true,
+            invoices: true,
             assignedTo: {
               select: { id: true, name: true, email: true }
             },
@@ -90,7 +90,8 @@ export async function GET(
 
     // Calculate costs
     const totalRepairCost = asset.tickets.reduce((sum, ticket) => {
-      return sum + (ticket.invoice?.amount || 0)
+      const activeInvoice = ticket.invoices?.find((inv: { isActive?: boolean }) => inv.isActive) || ticket.invoices?.[0]
+      return sum + (activeInvoice?.amount || 0)
     }, 0)
     
     const maintenanceCost = asset.maintenanceHistory.reduce((sum, mh) => {
