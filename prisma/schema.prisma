@@ -487,7 +487,7 @@ model Ticket {
   messages     Message[]
   attachments  Attachment[]
   statusHistory StatusHistory[]
-  invoice      Invoice?
+  invoices     Invoice[]       // Multiple invoices per ticket (revisions)
   ratings      Rating[]
   maintenanceHistory MaintenanceHistory[]
   quoteRequests QuoteRequest[] // Multiple quote requests sent to contractors
