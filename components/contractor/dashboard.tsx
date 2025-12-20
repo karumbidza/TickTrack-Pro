@@ -248,11 +248,43 @@ export function ContractorDashboard() {
     procedureComplianceRate: 0
   })
 
+  // Auto-refresh state
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval] = useState(30) // seconds
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   useEffect(() => {
     if (session?.user) {
       fetchContractorData()
     }
   }, [session])
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefresh || !session?.user) return
+    
+    const interval = setInterval(async () => {
+      // Don't refresh if any modal is open
+      if (selectedJob || showChat) return
+      
+      setIsRefreshing(true)
+      try {
+        const response = await fetch('/api/contractor/jobs')
+        if (response.ok) {
+          const jobsData = await response.json()
+          setJobs(Array.isArray(jobsData) ? jobsData : (jobsData.jobs || []))
+          setLastRefresh(new Date())
+        }
+      } catch (error) {
+        console.error('Auto-refresh failed:', error)
+      } finally {
+        setIsRefreshing(false)
+      }
+    }, refreshInterval * 1000)
+    
+    return () => clearInterval(interval)
+  }, [autoRefresh, refreshInterval, selectedJob, showChat, session])
 
   const fetchContractorData = async () => {
     try {
@@ -1015,17 +1047,38 @@ export function ContractorDashboard() {
     <div className="bg-gray-50 p-5">
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               Welcome, {session.user.name}!
             </h1>
-            <p className="text-gray-600">Manage your assigned jobs and track your work</p>
+            <p className="text-gray-600 text-sm sm:text-base">Manage your assigned jobs and track your work</p>
           </div>
-          <Button onClick={fetchContractorData} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Auto-refresh toggle */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border shadow-sm">
+              <Switch
+                id="auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={setAutoRefresh}
+              />
+              <label htmlFor="auto-refresh" className="text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+                Live updates
+              </label>
+              {isRefreshing && (
+                <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+              )}
+            </div>
+            {autoRefresh && (
+              <span className="text-xs text-gray-500 hidden sm:inline">
+                Updated {lastRefresh.toLocaleTimeString()}
+              </span>
+            )}
+            <Button onClick={fetchContractorData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </div>
 
         {/* Quick Stats */}

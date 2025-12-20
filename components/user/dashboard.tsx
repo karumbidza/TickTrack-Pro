@@ -48,7 +48,8 @@ import {
   Video,
   Upload,
   Image as ImageIcon,
-  Timer
+  Timer,
+  RefreshCw
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -171,9 +172,39 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [dateFilter, setDateFilter] = useState('all')
   const [assignedFilter, setAssignedFilter] = useState('all')
 
+  // Auto-refresh state
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [refreshInterval] = useState(30) // seconds
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   useEffect(() => {
     fetchUserTickets()
   }, [])
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefresh) return
+    
+    const interval = setInterval(async () => {
+      // Don't refresh if any modal is open
+      if (selectedTicket || showCreateDialog || showEditDialog || showCancelDialog) return
+      
+      setIsRefreshing(true)
+      try {
+        const response = await fetch('/api/tickets')
+        const data = await response.json()
+        setTickets(data.tickets || [])
+        setLastRefresh(new Date())
+      } catch (error) {
+        console.error('Auto-refresh failed:', error)
+      } finally {
+        setIsRefreshing(false)
+      }
+    }, refreshInterval * 1000)
+    
+    return () => clearInterval(interval)
+  }, [autoRefresh, refreshInterval, selectedTicket, showCreateDialog, showEditDialog, showCancelDialog])
 
   useEffect(() => {
     applyFilters()
@@ -801,27 +832,61 @@ export function UserDashboard({ user }: UserDashboardProps) {
   }
 
   return (
-    <div className="bg-gray-50 p-5">
-      <div className="space-y-5">
+    <div className="bg-gray-50 p-3 sm:p-5">
+      <div className="space-y-4 sm:space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.name || 'User'}</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back, {user.name || 'User'}</h1>
+            <p className="text-sm sm:text-base text-gray-600">
               {user.role === 'END_USER' ? 'Manage your tickets and assets' : 
                user.role === 'TENANT_ADMIN' ? 'Manage company tickets and projects' :
                user.role === 'CONTRACTOR' ? 'View assigned tickets and projects' :
                'System administration'}
             </p>
           </div>
-          {activeTab === 'tickets' && user.role === 'END_USER' ? (
-            <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
-          ) : activeTab === 'assets' && user.role === 'END_USER' ? (
-            <Button onClick={() => setActiveTab('tickets')}>
-              <Ticket className="h-4 w-4 mr-2" />
-              View Tickets
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Auto-refresh indicator */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+              {isRefreshing && (
+                <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+              )}
+              {autoRefresh && !isRefreshing && (
+                <span>Updated {lastRefresh.toLocaleTimeString()}</span>
+              )}
+            </div>
+            
+            {/* Auto-refresh toggle */}
+            <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-gray-100 rounded-lg">
+              <span className="text-xs font-medium text-gray-600 hidden sm:inline">Live</span>
+              <button
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className={`relative w-9 sm:w-10 h-5 rounded-full transition-colors ${
+                  autoRefresh ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    autoRefresh ? 'translate-x-4 sm:translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              {autoRefresh && (
+                <span className="text-xs text-green-600 font-medium hidden sm:inline">
+                  {refreshInterval}s
+                </span>
+              )}
+            </div>
+            
+            {activeTab === 'tickets' && user.role === 'END_USER' ? (
+              <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
+            ) : activeTab === 'assets' && user.role === 'END_USER' ? (
+              <Button onClick={() => setActiveTab('tickets')} size="sm">
+                <Ticket className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">View Tickets</span>
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         {/* Tab Navigation */}
