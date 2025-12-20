@@ -25,7 +25,9 @@ import {
   Send,
   RefreshCw,
   Upload,
-  RotateCcw
+  RotateCcw,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
@@ -104,6 +106,9 @@ export default function InvoiceTrackerPage() {
   // View invoice state
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [showInvoiceDetails, setShowInvoiceDetails] = useState(false)
+  
+  // POP collapsible state
+  const [expandedPops, setExpandedPops] = useState<Set<string>>(new Set())
   
   // Clarification response state
   const [showClarificationDialog, setShowClarificationDialog] = useState(false)
@@ -513,13 +518,28 @@ export default function InvoiceTrackerPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {paymentBatches.map((batch) => (
+                  {paymentBatches.map((batch) => {
+                    const isExpanded = expandedPops.has(batch.id)
+                    return (
                     <div 
                       key={batch.id}
                       className="border-2 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 overflow-hidden"
                     >
-                      {/* POP Header */}
-                      <div className="bg-green-600 text-white p-4">
+                      {/* POP Header - Clickable to toggle */}
+                      <div 
+                        className="bg-green-600 text-white p-4 cursor-pointer hover:bg-green-700 transition-colors"
+                        onClick={() => {
+                          setExpandedPops(prev => {
+                            const newSet = new Set(prev)
+                            if (newSet.has(batch.id)) {
+                              newSet.delete(batch.id)
+                            } else {
+                              newSet.add(batch.id)
+                            }
+                            return newSet
+                          })
+                        }}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="bg-white/20 rounded-lg p-2">
@@ -537,21 +557,46 @@ export default function InvoiceTrackerPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-3xl font-bold">${batch.totalAmount.toLocaleString()}</p>
-                            {batch.popReference && (
-                              <p className="text-green-200 text-sm">Ref: {batch.popReference}</p>
-                            )}
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-3xl font-bold">${batch.totalAmount.toLocaleString()}</p>
+                              {batch.popReference && (
+                                <p className="text-green-200 text-sm">Ref: {batch.popReference}</p>
+                              )}
+                            </div>
+                            <div className="bg-white/20 rounded-full p-1.5">
+                              {isExpanded ? (
+                                <ChevronUp className="h-5 w-5" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
 
                       {/* POP Actions Bar */}
                       <div className="bg-green-100 px-4 py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => {
+                            setExpandedPops(prev => {
+                              const newSet = new Set(prev)
+                              if (newSet.has(batch.id)) {
+                                newSet.delete(batch.id)
+                              } else {
+                                newSet.add(batch.id)
+                              }
+                              return newSet
+                            })
+                          }}
+                        >
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <span className="text-green-800 font-medium text-sm">
                             {batch.invoices.length} Ticket{batch.invoices.length !== 1 ? 's' : ''} Paid
+                          </span>
+                          <span className="text-green-600 text-xs ml-1">
+                            {isExpanded ? '(click to collapse)' : '(click to view)'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -559,7 +604,10 @@ export default function InvoiceTrackerPage() {
                             variant="outline" 
                             size="sm"
                             className="bg-white hover:bg-green-50"
-                            onClick={() => window.open(batch.popFileUrl, '_blank')}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open(batch.popFileUrl, '_blank')
+                            }}
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View POP
@@ -568,7 +616,8 @@ export default function InvoiceTrackerPage() {
                             variant="outline" 
                             size="sm"
                             className="bg-white hover:bg-green-50"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation()
                               const link = document.createElement('a')
                               link.href = batch.popFileUrl
                               link.download = `POP-${batch.batchNumber}.pdf`
@@ -581,7 +630,8 @@ export default function InvoiceTrackerPage() {
                         </div>
                       </div>
 
-                      {/* Associated Tickets */}
+                      {/* Associated Tickets - Collapsible */}
+                      {isExpanded && (
                       <div className="p-4">
                         <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                           <FileText className="h-4 w-4" />
@@ -623,8 +673,9 @@ export default function InvoiceTrackerPage() {
                           </div>
                         )}
                       </div>
+                      )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </CardContent>
