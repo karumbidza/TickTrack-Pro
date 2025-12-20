@@ -59,6 +59,10 @@ export async function POST(
       }
     })
 
+    // Helper to get contact info - prefer reporterContact over user.phone
+    const getContactPhone = () => existingTicket?.reporterContact || existingTicket?.user?.phone || 'N/A'
+    const getContactName = () => existingTicket?.reporterName || existingTicket?.user?.name || 'User'
+
     if (!existingTicket) {
       // Debug: check if ticket exists at all
       const ticketCheck = await prisma.ticket.findUnique({ where: { id: ticketId } })
@@ -158,7 +162,7 @@ export async function POST(
         title: existingTicket.title,
         priority: existingTicket.priority,
         location: existingTicket.location || existingTicket.tenant?.name || 'N/A',
-        userPhone: existingTicket.user?.phone || 'N/A',
+        userPhone: getContactPhone(),
         resolutionDeadline: existingTicket.resolutionDeadline
       }
       
@@ -190,8 +194,8 @@ export async function POST(
         priority: existingTicket.priority,
         type: existingTicket.type || 'MAINTENANCE',
         location: existingTicket.location || existingTicket.tenant?.name || 'N/A',
-        userName: existingTicket.user?.name || 'User',
-        userPhone: existingTicket.user?.phone || 'N/A',
+        userName: getContactName(),
+        userPhone: getContactPhone(),
         resolutionDeadline: existingTicket.resolutionDeadline,
         companyName: existingTicket.tenant?.name || 'Company'
       }).catch(err => logger.error('Failed to send job assigned email:', err))

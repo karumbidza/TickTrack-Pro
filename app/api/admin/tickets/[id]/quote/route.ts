@@ -104,7 +104,7 @@ export async function POST(
             title: ticket.title,
             priority: ticket.priority,
             location: ticket.location || (ticket as any).tenant?.name || 'N/A',
-            userPhone: (ticket as any).user?.phone || 'N/A',
+            userPhone: (ticket as any).reporterContact || (ticket as any).user?.phone || 'N/A',
             resolutionDeadline: ticket.resolutionDeadline
           }
           
@@ -125,8 +125,8 @@ export async function POST(
             priority: ticket.priority,
             type: ticket.type || 'MAINTENANCE',
             location: ticket.location || (ticket as any).tenant?.name || 'N/A',
-            userName: (ticket as any).user?.name || 'User',
-            userPhone: (ticket as any).user?.phone || 'N/A',
+            userName: (ticket as any).reporterName || (ticket as any).user?.name || 'User',
+            userPhone: (ticket as any).reporterContact || (ticket as any).user?.phone || 'N/A',
             resolutionDeadline: ticket.resolutionDeadline,
             companyName: (ticket as any).tenant?.name || 'Company'
           }).catch(err => logger.error('Failed to send email:', err))

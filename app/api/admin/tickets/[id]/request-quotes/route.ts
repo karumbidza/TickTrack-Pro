@@ -203,7 +203,7 @@ export async function POST(
           title: `QUOTE REQUEST: ${ticket.title}`,
           priority: ticket.priority,
           location: ticket.branch?.name || ticket.location || 'N/A',
-          userPhone: ticket.user?.phone || 'N/A',
+          userPhone: ticket.reporterContact || ticket.user?.phone || 'N/A',
           resolutionDeadline: ticket.resolutionDeadline
         }).catch(err => logger.error('Failed to send quote request SMS:', err))
       }
