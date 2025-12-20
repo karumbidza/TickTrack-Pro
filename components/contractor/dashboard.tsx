@@ -266,7 +266,7 @@ export function ContractorDashboard() {
     
     const interval = setInterval(async () => {
       // Don't refresh if any modal is open
-      if (selectedJob || showChat) return
+      if (selectedJob || showJobModal || showInvoiceDialog || showWorkDescriptionDialog || showQuoteDialog) return
       
       setIsRefreshing(true)
       try {
@@ -284,7 +284,7 @@ export function ContractorDashboard() {
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [autoRefresh, refreshInterval, selectedJob, showChat, session])
+  }, [autoRefresh, refreshInterval, selectedJob, showJobModal, showInvoiceDialog, showWorkDescriptionDialog, showQuoteDialog, session])
 
   const fetchContractorData = async () => {
     try {
