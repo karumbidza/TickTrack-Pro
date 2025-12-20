@@ -173,18 +173,15 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [assignedFilter, setAssignedFilter] = useState('all')
 
   // Auto-refresh interval (30 seconds)
-  const [refreshInterval] = useState(30)
+  const refreshInterval = 30
 
   useEffect(() => {
     fetchUserTickets()
   }, [])
 
-  // Auto-refresh effect (background)
+  // Auto-refresh effect (background) - runs independently
   useEffect(() => {
     const interval = setInterval(async () => {
-      // Don't refresh if any modal is open
-      if (selectedTicket || showCreateDialog || showEditDialog || showCancelDialog) return
-      
       try {
         const response = await fetch('/api/tickets')
         const data = await response.json()
@@ -195,7 +192,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [refreshInterval, selectedTicket, showCreateDialog, showEditDialog, showCancelDialog])
+  }, [])
 
   useEffect(() => {
     applyFilters()

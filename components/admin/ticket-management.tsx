@@ -257,7 +257,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [assetUpdateLoading, setAssetUpdateLoading] = useState(false)
 
   // Auto-refresh interval (30 seconds - background feature)
-  const [refreshInterval] = useState(30)
+  const refreshInterval = 30
 
   const statusOptions = [
     'OPEN', 'AWAITING_QUOTE', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
@@ -280,12 +280,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     fetchBranches()
   }, [user])
 
-  // Auto-refresh effect (background)
+  // Auto-refresh effect (background) - runs independently
   useEffect(() => {
     const interval = setInterval(async () => {
-      // Don't refresh if a modal is open
-      if (showTicketModal || showAssignDialog || showRatingModal) return
-      
       try {
         const response = await fetch('/api/admin/tickets')
         if (response.ok) {
@@ -298,7 +295,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [refreshInterval, showTicketModal, showAssignDialog, showRatingModal])
+  }, [])
 
   useEffect(() => {
     filterTickets()

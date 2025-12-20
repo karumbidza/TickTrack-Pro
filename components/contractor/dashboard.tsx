@@ -249,7 +249,7 @@ export function ContractorDashboard() {
   })
 
   // Auto-refresh interval (30 seconds)
-  const [refreshInterval] = useState(30)
+  const refreshInterval = 30
 
   useEffect(() => {
     if (session?.user) {
@@ -257,14 +257,11 @@ export function ContractorDashboard() {
     }
   }, [session])
 
-  // Auto-refresh effect (background)
+  // Auto-refresh effect (background) - runs independently
   useEffect(() => {
     if (!session?.user) return
     
     const interval = setInterval(async () => {
-      // Don't refresh if any modal is open
-      if (selectedJob || showJobModal || showInvoiceDialog || showWorkDescriptionDialog || showQuoteDialog) return
-      
       try {
         const response = await fetch('/api/contractor/jobs')
         if (response.ok) {
@@ -277,7 +274,7 @@ export function ContractorDashboard() {
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [refreshInterval, selectedJob, showJobModal, showInvoiceDialog, showWorkDescriptionDialog, showQuoteDialog, session])
+  }, [session])
 
   const fetchContractorData = async () => {
     try {
