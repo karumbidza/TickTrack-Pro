@@ -24,7 +24,6 @@ import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import Divider from '@mui/material/Divider'
-import Avatar from '@mui/material/Avatar'
 import CircularProgress from '@mui/material/CircularProgress'
 import { 
   Plus,
@@ -2285,9 +2284,20 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
+                                <Box 
+                                  sx={{ 
+                                    width: 32, 
+                                    height: 32, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    color: 'primary.main'
+                                  }}
+                                >
                                   {(qr.contractor?.name || 'C')[0].toUpperCase()}
-                                </Avatar>
+                                </Box>
                                 <div>
                                   <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
                                   <p className="text-xs text-gray-500">{qr.contractor?.email}</p>
@@ -2790,9 +2800,20 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   sx={{ py: 1 }}
                 >
                   <ListItemIcon>
-                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
+                    <Box 
+                      sx={{ 
+                        width: 28, 
+                        height: 28, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: 'primary.main'
+                      }}
+                    >
                       {contractor.name?.charAt(0).toUpperCase()}
-                    </Avatar>
+                    </Box>
                   </ListItemIcon>
                   <ListItemText 
                     primary={contractor.name}

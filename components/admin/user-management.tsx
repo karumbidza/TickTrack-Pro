@@ -15,7 +15,6 @@ import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
-import Avatar from '@mui/material/Avatar'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
@@ -460,9 +459,20 @@ export function UserManagement({ user }: UserManagementProps) {
         const initials = userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData.email.slice(0, 2).toUpperCase()
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1, width: '100%' }}>
-            <Avatar sx={{ bgcolor: 'primary.light', width: 32, height: 32, fontSize: '0.75rem' }}>
+            <Box 
+              sx={{ 
+                width: 32, 
+                height: 32, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: 'primary.main'
+              }}
+            >
               {initials}
-            </Avatar>
+            </Box>
             <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
               <p className="font-medium text-gray-900 text-sm truncate">{userData.name || 'No Name'}</p>
               <p className="text-xs text-gray-500 truncate">{userData.email}</p>
