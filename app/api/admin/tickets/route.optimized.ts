@@ -9,7 +9,6 @@ import {
   getPaginationParams,
   buildPaginatedResponse,
   getPrismaPagination,
-  getStableOrderBy,
 } from '@/lib/pagination'
 import { metrics } from '@/lib/metrics'
 
@@ -87,9 +86,6 @@ export async function GET(request: NextRequest) {
           ...departmentFilter,
         }
 
-        // Apply stable sorting for consistent pagination
-        const orderBy = getStableOrderBy([{ createdAt: 'desc' }], 'createdAt')
-
         // Get Prisma pagination config (empty if not paginated)
         const prismaPagination = getPrismaPagination(paginationParams)
 
@@ -159,7 +155,8 @@ export async function GET(request: NextRequest) {
                 },
               },
             },
-            orderBy,
+            // Stable sorting for consistent pagination
+            orderBy: { createdAt: 'desc' },
             ...prismaPagination,
           }),
           prisma.ticket.count({ where: whereClause }),
