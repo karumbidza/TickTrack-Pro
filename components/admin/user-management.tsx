@@ -458,21 +458,17 @@ export function UserManagement({ user }: UserManagementProps) {
         const userData = params.row
         const initials = userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData.email.slice(0, 2).toUpperCase()
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 1, width: '100%' }}>
-            <Box 
-              sx={{ 
-                width: 32, 
-                height: 32, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, width: '100%' }}>
+            <span 
+              style={{ 
                 fontSize: '0.875rem',
-                fontWeight: 600,
-                color: 'primary.main'
+                fontWeight: 700,
+                color: '#1976d2',
+                minWidth: '24px'
               }}
             >
               {initials}
-            </Box>
+            </span>
             <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
               <p className="font-medium text-gray-900 text-sm truncate">{userData.name || 'No Name'}</p>
               <p className="text-xs text-gray-500 truncate">{userData.email}</p>

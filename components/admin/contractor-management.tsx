@@ -458,22 +458,18 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         const contractor = params.row
         const initials = contractor.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
-            <Box 
-              sx={{ 
-                width: 32, 
-                height: 32, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+            <span 
+              style={{ 
                 fontSize: '0.875rem',
-                fontWeight: 600,
-                color: 'primary.main'
+                fontWeight: 700,
+                color: '#1976d2',
+                minWidth: '24px'
               }}
             >
               {initials}
-            </Box>
-            <Box sx={{ overflow: 'hidden' }}>
+            </span>
+            <Box sx={{ overflow: 'hidden', textAlign: 'left' }}>
               <p className="font-medium text-gray-900 text-sm leading-tight truncate">{contractor.name}</p>
               <p className="text-xs text-gray-500 truncate">{contractor.email}</p>
             </Box>

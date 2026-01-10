@@ -2283,21 +2283,17 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             }`}
                           >
                             <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Box 
-                                  sx={{ 
-                                    width: 32, 
-                                    height: 32, 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center',
+                              <div className="flex items-center gap-3">
+                                <span 
+                                  style={{ 
                                     fontSize: '0.875rem',
-                                    fontWeight: 600,
-                                    color: 'primary.main'
+                                    fontWeight: 700,
+                                    color: '#1976d2',
+                                    minWidth: '20px'
                                   }}
                                 >
                                   {(qr.contractor?.name || 'C')[0].toUpperCase()}
-                                </Box>
+                                </span>
                                 <div>
                                   <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
                                   <p className="text-xs text-gray-500">{qr.contractor?.email}</p>
@@ -2800,20 +2796,16 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   sx={{ py: 1 }}
                 >
                   <ListItemIcon>
-                    <Box 
-                      sx={{ 
-                        width: 28, 
-                        height: 28, 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        color: 'primary.main'
+                    <span 
+                      style={{ 
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        color: '#1976d2',
+                        minWidth: '20px'
                       }}
                     >
                       {contractor.name?.charAt(0).toUpperCase()}
-                    </Box>
+                    </span>
                   </ListItemIcon>
                   <ListItemText 
                     primary={contractor.name}
