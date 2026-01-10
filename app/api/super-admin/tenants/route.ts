@@ -27,24 +27,52 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     })
 
-    const formattedTenants = tenants.map(tenant => ({
-      id: tenant.id,
-      name: tenant.name,
-      slug: tenant.slug,
-      email: tenant.email,
-      phone: tenant.phone,
-      address: tenant.address,
-      status: tenant.status,
-      isActive: tenant.status === 'ACTIVE' || tenant.status === 'TRIAL',
-      userCount: tenant._count.users,
-      ticketCount: tenant._count.tickets,
-      subscription: tenant.subscription ? {
-        plan: tenant.subscription.plan,
-        status: tenant.subscription.status
-      } : null,
-      features: tenant.features as Record<string, boolean>,
-      createdAt: tenant.createdAt
-    }))
+    const formattedTenants = tenants.map(tenant => {
+      // Calculate expiry information
+      let expiryDate: Date | null = null
+      let daysUntilExpiry: number | undefined
+      
+      if (tenant.subscription?.currentPeriodEnd) {
+        expiryDate = tenant.subscription.currentPeriodEnd
+      } else if (tenant.subscription?.trialEndsAt) {
+        expiryDate = tenant.subscription.trialEndsAt
+      } else if (tenant.trialEndsAt) {
+        expiryDate = tenant.trialEndsAt
+      }
+      
+      if (expiryDate) {
+        const today = new Date()
+        const diffTime = expiryDate.getTime() - today.getTime()
+        daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      }
+
+      // Check onboarding completion (basic check)
+      const onboardingComplete = tenant._count.users > 0 && tenant._count.tickets > 0
+
+      return {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        email: tenant.email,
+        phone: tenant.phone,
+        address: tenant.address,
+        status: tenant.status,
+        isActive: tenant.status === 'ACTIVE' || tenant.status === 'TRIAL',
+        userCount: tenant._count.users,
+        ticketCount: tenant._count.tickets,
+        onboardingComplete,
+        trialEndsAt: tenant.trialEndsAt,
+        subscription: tenant.subscription ? {
+          plan: tenant.subscription.plan,
+          status: tenant.subscription.status,
+          currentPeriodEnd: tenant.subscription.currentPeriodEnd,
+          trialEndsAt: tenant.subscription.trialEndsAt,
+          daysUntilExpiry
+        } : null,
+        features: tenant.features as Record<string, boolean>,
+        createdAt: tenant.createdAt
+      }
+    })
 
     return NextResponse.json({ tenants: formattedTenants })
   } catch (error) {

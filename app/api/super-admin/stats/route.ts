@@ -26,8 +26,33 @@ export async function GET() {
     // Get total user count
     const totalUsers = await prisma.user.count()
     
-    // Calculate revenue (mock for now, would integrate with Stripe)
-    // For now, estimate revenue based on active tenants
+    // Calculate expiring soon (within 7 days)
+    const sevenDaysFromNow = new Date()
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
+    
+    const expiringSoon = await prisma.tenant.count({
+      where: {
+        OR: [
+          {
+            trialEndsAt: {
+              lte: sevenDaysFromNow,
+              gte: new Date()
+            }
+          },
+          {
+            subscription: {
+              currentPeriodEnd: {
+                lte: sevenDaysFromNow,
+                gte: new Date()
+              }
+            }
+          }
+        ]
+      }
+    })
+    
+    // Calculate revenue (mock for now, would integrate with Paynow)
+    // For now, estimate revenue based on active subscriptions
     const revenue = activeTenants * 99 // Assuming $99/month per tenant
 
     return NextResponse.json({
@@ -35,6 +60,7 @@ export async function GET() {
         totalTenants,
         activeTenants,
         totalUsers,
+        expiringSoon,
         revenue
       }
     })

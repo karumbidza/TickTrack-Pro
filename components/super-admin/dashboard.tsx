@@ -46,9 +46,14 @@ interface Tenant {
   subscription: {
     plan: string
     status: string
+    currentPeriodEnd?: string
+    trialEndsAt?: string
+    daysUntilExpiry?: number
   } | null
   features: Record<string, boolean>
   createdAt: string
+  trialEndsAt?: string
+  onboardingComplete?: boolean
 }
 
 interface TenantDetails extends Tenant {
@@ -66,6 +71,21 @@ interface TenantDetails extends Tenant {
     assets: number
     contractors: number
   }
+  payments?: Array<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    paymentMethod?: string
+    paidAt?: string
+    createdAt: string
+  }>
+  onboardingSteps?: {
+    adminCreated: boolean
+    branchCreated: boolean
+    categoryCreated: boolean
+    firstTicketCreated: boolean
+  }
 }
 
 export function SuperAdminDashboard() {
@@ -74,6 +94,7 @@ export function SuperAdminDashboard() {
     totalTenants: 0,
     activeTenants: 0,
     totalUsers: 0,
+    expiringSoon: 0,
     revenue: 0
   })
   const [loading, setLoading] = useState(true)
@@ -349,17 +370,20 @@ export function SuperAdminDashboard() {
 
           <Card className="bg-gradient-to-br from-yellow-500 to-orange-500 text-white border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-100">Trial Tenants</CardTitle>
+              <CardTitle className="text-sm font-medium text-yellow-100">Expiring Soon</CardTitle>
               <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {tenants.filter(t => t.status === 'TRIAL').length}
+                {tenants.filter(t => {
+                  const daysUntil = t.subscription?.daysUntilExpiry
+                  return daysUntil !== undefined && daysUntil >= 0 && daysUntil <= 7
+                }).length}
               </div>
               <p className="text-sm text-yellow-100">
-                Pending conversion
+                Within 7 days
               </p>
             </CardContent>
           </Card>
@@ -414,97 +438,107 @@ export function SuperAdminDashboard() {
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Company</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Subscription</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Expires/Renews</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-900">Users</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-900">Tickets</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Features</th>
                       <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTenants.map((tenant) => (
-                      <tr key={tenant.id} className="border-b hover:bg-gray-50">
-                        <td className="py-4 px-4">
-                          <div>
-                            <div className="font-medium text-gray-900">{tenant.name}</div>
-                            <div className="text-sm text-gray-500">{tenant.slug}</div>
-                            {tenant.email && (
-                              <div className="text-xs text-gray-400 flex items-center mt-1">
-                                <Mail className="h-3 w-3 mr-1" />
-                                {tenant.email}
+                    {filteredTenants.map((tenant) => {
+                      const expiryDate = tenant.subscription?.currentPeriodEnd || tenant.subscription?.trialEndsAt || tenant.trialEndsAt
+                      const daysUntilExpiry = tenant.subscription?.daysUntilExpiry
+                      const isExpiringSoon = daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && daysUntilExpiry <= 7
+                      
+                      return (
+                        <tr key={tenant.id} className="border-b hover:bg-gray-50">
+                          <td className="py-4 px-4">
+                            <div>
+                              <div className="font-medium text-gray-900 flex items-center">
+                                {tenant.name}
+                                {!tenant.onboardingComplete && (
+                                  <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700">
+                                    New
+                                  </Badge>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge className={getStatusColor(tenant.status)}>
-                            {tenant.status}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div>
-                            <div className="font-medium">{tenant.subscription?.plan || 'Free'}</div>
-                            <div className="text-sm text-gray-500">
-                              {tenant.subscription?.status || 'No subscription'}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <div className="flex items-center justify-center">
-                            <Users className="h-4 w-4 text-gray-400 mr-1" />
-                            <span className="font-medium">{tenant.userCount}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <div className="flex items-center justify-center">
-                            <Ticket className="h-4 w-4 text-gray-400 mr-1" />
-                            <span className="font-medium">{tenant.ticketCount}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="space-y-1">
-                            {Object.entries(tenant.features || {}).slice(0, 3).map(([feature, enabled]) => (
-                              <div key={feature} className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => toggleFeature(tenant.id, feature, enabled)}
-                                  className="flex items-center space-x-1 text-sm hover:bg-gray-100 p-1 rounded"
-                                >
-                                  {enabled ? (
-                                    <ToggleRight className="h-4 w-4 text-green-500" />
-                                  ) : (
-                                    <ToggleLeft className="h-4 w-4 text-gray-400" />
-                                  )}
-                                  <span className={enabled ? 'text-gray-900' : 'text-gray-400'}>
-                                    {feature.replace(/([A-Z])/g, ' $1').trim()}
-                                  </span>
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-center space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => viewTenantDetails(tenant.id)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant={tenant.isActive ? "destructive" : "default"}
-                              onClick={() => toggleTenantStatus(tenant.id, tenant.isActive)}
-                            >
-                              {tenant.isActive ? (
-                                <PowerOff className="h-4 w-4" />
-                              ) : (
-                                <Power className="h-4 w-4" />
+                              <div className="text-sm text-gray-500">{tenant.slug}</div>
+                              {tenant.email && (
+                                <div className="text-xs text-gray-400 flex items-center mt-1">
+                                  <Mail className="h-3 w-3 mr-1" />
+                                  {tenant.email}
+                                </div>
                               )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge className={getStatusColor(tenant.status)}>
+                              {tenant.status}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div>
+                              <div className="font-medium text-gray-900">{tenant.subscription?.plan || 'Free'}</div>
+                              <div className="text-sm text-gray-500">
+                                {tenant.subscription?.status || 'No subscription'}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {expiryDate ? (
+                              <div>
+                                <div className={`text-sm font-medium ${isExpiringSoon ? 'text-orange-600' : 'text-gray-900'}`}>
+                                  {new Date(expiryDate).toLocaleDateString()}
+                                </div>
+                                {daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && (
+                                  <div className={`text-xs ${isExpiringSoon ? 'text-orange-500' : 'text-gray-500'}`}>
+                                    {daysUntilExpiry === 0 ? 'Expires today' : 
+                                     daysUntilExpiry === 1 ? 'Expires tomorrow' :
+                                     `${daysUntilExpiry} days left`}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="flex items-center justify-center">
+                              <Users className="h-4 w-4 text-gray-400 mr-1" />
+                              <span className="font-medium">{tenant.userCount}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="flex items-center justify-center">
+                              <Ticket className="h-4 w-4 text-gray-400 mr-1" />
+                              <span className="font-medium">{tenant.ticketCount}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center justify-center space-x-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => viewTenantDetails(tenant.id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant={tenant.isActive ? "destructive" : "default"}
+                                onClick={() => toggleTenantStatus(tenant.id, tenant.isActive)}
+                              >
+                                {tenant.isActive ? (
+                                  <PowerOff className="h-4 w-4" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
