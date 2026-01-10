@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { generateRequestId } from '@/lib/async-logger'
 
 /**
  * ENHANCED MIDDLEWARE WITH PERFORMANCE OPTIMIZATIONS
@@ -10,6 +9,16 @@ import { generateRequestId } from '@/lib/async-logger'
  * - Compression hint headers
  * - Performance monitoring
  */
+
+// Edge-compatible UUID generator (crypto.randomUUID is available in Edge Runtime)
+function generateRequestId(): string {
+  // Use crypto.randomUUID if available (Web Crypto API)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // Fallback to a simple random ID
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 15)}`
+}
 
 // Add your public paths here
 const publicPaths = [
