@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { SuperAdminDashboard } from '@/components/super-admin/dashboard'
+import { TenantManagement } from '@/components/super-admin/tenant-management'
 import { AuthGuard } from '@/components/auth/auth-guard'
 
 export default function TenantsPage() {
@@ -20,7 +20,7 @@ export default function TenantsPage() {
 
   return (
     <AuthGuard>
-      {isSuperAdmin && <SuperAdminDashboard />}
+      {isSuperAdmin && <TenantManagement />}
     </AuthGuard>
   )
 }
