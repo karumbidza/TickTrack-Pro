@@ -8,7 +8,6 @@ import { CACHE_TTL } from '@/lib/redis'
 import {
   getPaginationParams,
   buildPaginatedResponse,
-  getPrismaPagination,
 } from '@/lib/pagination'
 import { metrics } from '@/lib/metrics'
 
@@ -86,13 +85,12 @@ export async function GET(request: NextRequest) {
           ...departmentFilter,
         }
 
-        // Get Prisma pagination config (empty if not paginated)
-        const prismaPagination = getPrismaPagination(paginationParams)
-
         // Run count and data query in parallel
         const [tickets, total] = await Promise.all([
           prisma.ticket.findMany({
             where: whereClause,
+            skip: paginationParams.isPaginated ? paginationParams.skip : undefined,
+            take: paginationParams.isPaginated ? paginationParams.limit : undefined,
             include: {
               user: {
                 select: {
@@ -156,8 +154,7 @@ export async function GET(request: NextRequest) {
               },
             },
             // Stable sorting for consistent pagination
-            orderBy: { createdAt: 'desc' },
-            ...prismaPagination,
+            orderBy: { createdAt: 'desc' as const },
           }),
           prisma.ticket.count({ where: whereClause }),
         ])
