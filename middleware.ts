@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import { generateRequestId } from '@/lib/async-logger'
+
+/**
+ * ENHANCED MIDDLEWARE WITH PERFORMANCE OPTIMIZATIONS
+ * ===================================================
+ * - Request ID generation for correlation
+ * - Compression hint headers
+ * - Performance monitoring
+ */
 
 // Add your public paths here
 const publicPaths = [
@@ -97,6 +106,10 @@ export async function middleware(request: NextRequest) {
 
   // Add tenant context to headers for API routes and pages
   const response = NextResponse.next()
+  
+  // Add request ID for correlation
+  const requestId = generateRequestId()
+  response.headers.set('x-request-id', requestId)
   
   if (tenantSlug) {
     response.headers.set('x-tenant-slug', tenantSlug)
