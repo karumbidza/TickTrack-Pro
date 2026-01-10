@@ -1006,10 +1006,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Ticket',
       flex: 1.2,
       minWidth: 140,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
+        <Box sx={{ py: 1, textAlign: 'left', width: '100%' }}>
           <p className="font-semibold text-gray-900 text-sm truncate">{params.row.title}</p>
           <p className="text-sm text-blue-600 font-medium">{params.row.ticketNumber}</p>
         </Box>
@@ -1020,8 +1020,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Ticket ID',
       flex: 0.7,
       minWidth: 90,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <span className="text-sm font-mono text-gray-600">
           {params.row.id.slice(0, 8).toUpperCase()}
@@ -1033,11 +1033,11 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Site',
       flex: 0.7,
       minWidth: 100,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Tooltip title={params.row.branch?.name || params.row.location || 'No site specified'}>
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: 'left' }}>
             <p className="text-sm text-gray-900 font-medium truncate">
               {params.row.branch?.name || params.row.location || '-'}
             </p>
@@ -1050,10 +1050,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Description',
       flex: 1.5,
       minWidth: 150,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
           <Tooltip 
             title={
               <Box sx={{ p: 1, maxWidth: 400 }}>
@@ -1074,7 +1074,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               },
             }}
           >
-            <p className="text-sm text-gray-700 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+            <p className="text-sm text-gray-700 truncate cursor-pointer text-left" style={{ maxWidth: '100%' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -1086,8 +1086,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Category',
       flex: 0.7,
       minWidth: 100,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Tooltip title={params.row.category?.name || 'No category'}>
           <Chip
@@ -1114,8 +1114,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Priority',
       flex: 0.5,
       minWidth: 70,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const priorityColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
           LOW: 'success',
@@ -1157,8 +1157,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Status',
       flex: 0.7,
       minWidth: 90,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const statusColors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default'> = {
           OPEN: 'primary',
@@ -1196,8 +1196,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'SLA',
       flex: 0.9,
       minWidth: 110,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const slaInfo = calculateSLAInfo({
           createdAt: params.row.createdAt,
@@ -1242,8 +1242,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Contractor',
       flex: 0.9,
       minWidth: 120,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => {
         const isAssignable = ['OPEN', 'PROCESSING'].includes(params.row.status) || !params.row.assignedTo
         return (
@@ -1258,7 +1258,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 }
               }}
               sx={{ 
-                textAlign: 'center', 
+                textAlign: 'left', 
                 cursor: isAssignable ? 'pointer' : 'default',
                 px: 1,
                 py: 0.5,
@@ -1270,12 +1270,12 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               }}
             >
               {params.row.assignedTo ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
                   <UserCheck className="h-4 w-4 text-green-600" />
                   <p className="text-sm font-medium text-gray-900 truncate">{params.row.assignedTo.name}</p>
                 </Box>
               ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
                   <Plus className="h-4 w-4 text-blue-600" />
                   <span className="text-sm text-blue-600 font-semibold">Assign</span>
                 </Box>
@@ -1290,10 +1290,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Created By',
       flex: 0.7,
       minWidth: 90,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ textAlign: 'center' }}>
+        <Box sx={{ textAlign: 'left' }}>
           <p className="text-sm text-gray-900 font-medium truncate">{params.row.user.name}</p>
         </Box>
       ),
@@ -1303,8 +1303,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerName: 'Created',
       flex: 0.6,
       minWidth: 80,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <span className="text-sm text-gray-600 font-medium">
           {new Date(params.row.createdAt).toLocaleDateString()}

@@ -609,10 +609,10 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Ticket',
       flex: 1.2,
       minWidth: 130,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
+        <Box sx={{ py: 1, textAlign: 'left', width: '100%' }}>
           <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
         </Box>
       ),
@@ -622,8 +622,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Ticket ID',
       flex: 0.6,
       minWidth: 80,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <span className="text-xs font-mono text-gray-600">
           {params.row.id.slice(0, 8).toUpperCase()}
@@ -635,10 +635,10 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Description',
       flex: 1.5,
       minWidth: 150,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
           <Tooltip 
             title={
               <Box sx={{ p: 1, maxWidth: 400 }}>
@@ -659,7 +659,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
               },
             }}
           >
-            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+            <p className="text-xs text-gray-600 truncate cursor-pointer text-left" style={{ maxWidth: '100%' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -671,8 +671,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Category',
       flex: 0.6,
       minWidth: 80,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={params.row.category?.name || 'Uncategorized'}
@@ -691,8 +691,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Priority',
       flex: 0.5,
       minWidth: 70,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={params.row.priority}
@@ -707,8 +707,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Status',
       flex: 0.7,
       minWidth: 90,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Chip
           label={formatStatus(params.row.status)}
@@ -723,8 +723,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'SLA',
       flex: 0.8,
       minWidth: 100,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => {
         const slaInfo = calculateSLAInfo({
           createdAt: params.row.createdAt,
@@ -763,8 +763,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Contractor',
       flex: 0.7,
       minWidth: 90,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         params.row.assignedTo ? (
           <span className="text-xs truncate">{params.row.assignedTo.name || params.row.assignedTo.email}</span>
@@ -778,8 +778,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerName: 'Created',
       flex: 0.5,
       minWidth: 75,
-      align: 'center',
-      headerAlign: 'center',
+      align: 'left',
+      headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <span className="text-xs text-gray-500">
           {new Date(params.row.createdAt).toLocaleDateString()}
