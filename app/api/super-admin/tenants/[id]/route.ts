@@ -20,7 +20,14 @@ export async function GET(
     const tenant = await prisma.tenant.findUnique({
       where: { id },
       include: {
-        subscription: true,
+        subscription: {
+          include: {
+            payments: {
+              take: 10,
+              orderBy: { createdAt: 'desc' }
+            }
+          }
+        },
         _count: {
           select: {
             users: true,
@@ -39,6 +46,14 @@ export async function GET(
             createdAt: true
           },
           orderBy: { createdAt: 'desc' }
+        },
+        branches: {
+          select: { id: true },
+          take: 1
+        },
+        assetCategories: {
+          select: { id: true },
+          take: 1
         }
       }
     })
@@ -47,7 +62,23 @@ export async function GET(
       return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ tenant })
+    // Calculate onboarding steps
+    const onboardingSteps = {
+      adminCreated: tenant.users.some(u => u.role === 'TENANT_ADMIN' || u.role === 'IT_ADMIN'),
+      branchCreated: tenant.branches.length > 0,
+      categoryCreated: tenant.assetCategories.length > 0,
+      firstTicketCreated: tenant._count.tickets > 0
+    }
+
+    // Format response
+    const response = {
+      ...tenant,
+      onboardingSteps,
+      onboardingComplete: Object.values(onboardingSteps).every(Boolean),
+      payments: tenant.subscription?.payments || []
+    }
+
+    return NextResponse.json({ tenant: response })
   } catch (error) {
     console.error('Failed to fetch tenant:', error)
     return NextResponse.json(

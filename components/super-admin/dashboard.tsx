@@ -767,6 +767,89 @@ export function SuperAdminDashboard() {
                   </div>
                 </div>
 
+                {/* Onboarding Progress */}
+                {selectedTenant.onboardingSteps && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Onboarding Progress</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.adminCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                        {selectedTenant.onboardingSteps.adminCreated ? (
+                          <span className="text-green-600 mr-2">✓</span>
+                        ) : (
+                          <span className="text-yellow-600 mr-2">○</span>
+                        )}
+                        <span className={selectedTenant.onboardingSteps.adminCreated ? 'text-green-800' : 'text-yellow-800'}>
+                          Admin Created
+                        </span>
+                      </div>
+                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.branchCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                        {selectedTenant.onboardingSteps.branchCreated ? (
+                          <span className="text-green-600 mr-2">✓</span>
+                        ) : (
+                          <span className="text-yellow-600 mr-2">○</span>
+                        )}
+                        <span className={selectedTenant.onboardingSteps.branchCreated ? 'text-green-800' : 'text-yellow-800'}>
+                          Branch Created
+                        </span>
+                      </div>
+                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.categoryCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                        {selectedTenant.onboardingSteps.categoryCreated ? (
+                          <span className="text-green-600 mr-2">✓</span>
+                        ) : (
+                          <span className="text-yellow-600 mr-2">○</span>
+                        )}
+                        <span className={selectedTenant.onboardingSteps.categoryCreated ? 'text-green-800' : 'text-yellow-800'}>
+                          Category Created
+                        </span>
+                      </div>
+                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.firstTicketCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                        {selectedTenant.onboardingSteps.firstTicketCreated ? (
+                          <span className="text-green-600 mr-2">✓</span>
+                        ) : (
+                          <span className="text-yellow-600 mr-2">○</span>
+                        )}
+                        <span className={selectedTenant.onboardingSteps.firstTicketCreated ? 'text-green-800' : 'text-yellow-800'}>
+                          First Ticket
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment History */}
+                {selectedTenant.payments && selectedTenant.payments.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Recent Payments</h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {selectedTenant.payments.map((payment: any) => (
+                        <div 
+                          key={payment.id}
+                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-medium">${payment.amount} {payment.currency}</p>
+                            <p className="text-xs text-gray-500">
+                              {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : new Date(payment.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={
+                              payment.status === 'success' ? 'bg-green-100 text-green-800' :
+                              payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }>
+                              {payment.status}
+                            </Badge>
+                            {payment.paymentMethod && (
+                              <span className="text-xs text-gray-500">{payment.paymentMethod}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Users */}
                 {selectedTenant.users && selectedTenant.users.length > 0 && (
                   <div>
