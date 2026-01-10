@@ -79,11 +79,11 @@ function simpleHash(str: string): string {
 /**
  * Cache GET responses with automatic fallback
  */
-export async function withCache<T = any>(
+export async function withCache(
   request: NextRequest,
-  handler: () => Promise<NextResponse<T>>,
+  handler: () => Promise<NextResponse>,
   options: CacheOptions = {}
-): Promise<NextResponse<T>> {
+): Promise<NextResponse> {
   // Only cache GET requests
   if (request.method !== 'GET') {
     return handler()
@@ -113,7 +113,7 @@ export async function withCache<T = any>(
           'X-Cache': 'HIT',
           ...cached.headers,
         },
-      }) as NextResponse<T>
+      })
     }
 
     // Cache miss - execute handler
