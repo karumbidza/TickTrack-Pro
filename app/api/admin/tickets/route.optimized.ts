@@ -227,8 +227,8 @@ export async function POST(request: NextRequest) {
 
     // Invalidate caches asynchronously (non-blocking)
     setImmediate(async () => {
-      await CacheInvalidation.tickets(session.user.tenantId)
-      await CacheInvalidation.stats(session.user.tenantId)
+      await CacheInvalidation.tickets(session.user.tenantId || undefined)
+      await CacheInvalidation.stats(session.user.tenantId || undefined)
     })
 
     requestLogger.info(`Ticket created: ${ticket.id}`)
