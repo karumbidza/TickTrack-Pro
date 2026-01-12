@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
 import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/africastalking-service'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
+import { BillingService, getSubscriptionPricing } from '@/lib/billing-service'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
@@ -21,7 +22,9 @@ const companyRegisterSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(1, 'Phone number is required'),
   password: passwordSchema,
-  address: z.string().optional()
+  address: z.string().optional(),
+  selectedPlan: z.enum(['BASIC', 'PRO', 'ENTERPRISE']).optional().default('PRO'),
+  billingCycle: z.enum(['monthly', 'yearly']).optional().default('monthly')
 })
 
 function generateSlug(name: string): string {
@@ -29,6 +32,53 @@ function generateSlug(name: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
+}
+
+// Get features based on selected plan
+function getPlanFeatures(plan: string) {
+  const features = {
+    BASIC: {
+      maxUsers: 10,
+      maxBranches: 3,
+      maxAssets: 100,
+      ticketManagement: true,
+      assetTracking: true,
+      contractorManagement: true,
+      invoicing: false,
+      reporting: true,
+      advancedReporting: false,
+      apiAccess: false,
+      whiteLabel: false
+    },
+    PRO: {
+      maxUsers: 50,
+      maxBranches: 10,
+      maxAssets: 500,
+      ticketManagement: true,
+      assetTracking: true,
+      contractorManagement: true,
+      invoicing: true,
+      reporting: true,
+      advancedReporting: true,
+      apiAccess: true,
+      whiteLabel: false
+    },
+    ENTERPRISE: {
+      maxUsers: -1, // Unlimited
+      maxBranches: -1,
+      maxAssets: -1,
+      ticketManagement: true,
+      assetTracking: true,
+      contractorManagement: true,
+      invoicing: true,
+      reporting: true,
+      advancedReporting: true,
+      apiAccess: true,
+      whiteLabel: true
+    }
+  }
+  
+  return features[plan as keyof typeof features] || features.BASIC
 }
 
 export async function POST(request: NextRequest) {
@@ -80,6 +130,9 @@ export async function POST(request: NextRequest) {
 
     // Create tenant and admin user in a transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Get plan features based on selected plan
+      const planFeatures = getPlanFeatures(validatedData.selectedPlan)
+      
       // Create the tenant (company)
       const tenant = await tx.tenant.create({
         data: {
@@ -90,16 +143,27 @@ export async function POST(request: NextRequest) {
           address: validatedData.address || null,
           status: 'TRIAL',
           trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
-          features: JSON.stringify({
-            maxUsers: 5,
-            maxBranches: 2,
-            maxAssets: 50,
-            ticketManagement: true,
-            assetTracking: true,
-            contractorManagement: true,
-            invoicing: true,
-            reporting: true
-          })
+          features: JSON.stringify(planFeatures)
+        }
+      })
+
+      // Get pricing for selected plan
+      const pricing = getSubscriptionPricing()
+      const planKey = validatedData.selectedPlan.toLowerCase() as 'basic' | 'pro' | 'enterprise'
+      const amount = pricing[planKey][validatedData.billingCycle].usd
+
+      // Create subscription in TRIAL status
+      const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days
+      await tx.subscription.create({
+        data: {
+          tenantId: tenant.id,
+          plan: validatedData.selectedPlan,
+          status: 'TRIAL',
+          billingCycle: validatedData.billingCycle,
+          amount,
+          currency: 'USD',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: trialEnd
         }
       })
 
@@ -157,6 +221,11 @@ export async function POST(request: NextRequest) {
         id: result.tenant.id,
         name: result.tenant.name,
         slug: result.tenant.slug
+      },
+      subscription: {
+        plan: validatedData.selectedPlan,
+        billingCycle: validatedData.billingCycle,
+        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
       }
     })
 

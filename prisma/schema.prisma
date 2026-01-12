@@ -190,9 +190,11 @@ enum InvoiceStatus {
 enum TenantStatus {
   ACTIVE
   TRIAL
-  SUSPENDED
+  GRACE         // Payment overdue, in grace period
+  READ_ONLY     // Grace expired, can only view/export
+  SUSPENDED     // Admin override
   CANCELLED
-  EXPIRED
+  EXPIRED       // Legacy - mapped to READ_ONLY
 }
 
 enum SubscriptionPlan {
@@ -205,16 +207,20 @@ enum SubscriptionPlan {
 enum SubscriptionStatus {
   ACTIVE
   TRIAL
-  PAST_DUE
+  PAST_DUE      // Legacy - mapped to GRACE
+  GRACE         // Payment overdue, 0-7 days grace period
+  READ_ONLY     // Grace period expired, view/export only
   CANCELLED
-  EXPIRED
+  EXPIRED       // Legacy - mapped to READ_ONLY
   PAUSED
+  SUSPENDED     // Admin override - blocked completely
 }
 
 enum PaymentProvider {
   PAYNOW
   STRIPE
   PAYPAL
+  BANK_TRANSFER
 }
 
 model User {
@@ -331,6 +337,7 @@ model Subscription {
   trialEndsAt     DateTime?
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
+  gracePeriodEnd     DateTime?       // 7 days after currentPeriodEnd
   cancelAtPeriodEnd  Boolean         @default(false)
   
   // Payment provider details
@@ -354,8 +361,12 @@ model Payment {
   subscriptionId  String?
   amount          Float
   currency        String          @default("USD")
-  status          String          // success, failed, pending, refunded
-  paymentMethod   String?         // ecocash, onemoney, visa, mastercard
+  status          String          // pending, success, failed, refunded, overdue
+  paymentMethod   String?         // ecocash, onemoney, visa, mastercard, bank_transfer
+  
+  // Invoice fields (Payment doubles as invoice)
+  invoiceNumber   String?         @unique  // INV-TENANT-YYYYMM-XXX
+  dueDate         DateTime?       // When payment is due
   
   // Payment provider details
   provider        PaymentProvider @default(PAYNOW)
@@ -367,12 +378,20 @@ model Payment {
   paidAt          DateTime?
   failedAt        DateTime?
   refundedAt      DateTime?
+  
+  // Bank transfer specific
+  bankReference   String?         // Customer's bank reference
+  confirmedById   String?         // Super admin who confirmed bank transfer
+  confirmedAt     DateTime?       // When bank transfer was confirmed
+  
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   tenant          Tenant          @relation(fields: [tenantId], references: [id])
   subscription    Subscription?   @relation(fields: [subscriptionId], references: [id])
 
+  @@index([tenantId, status])
+  @@index([dueDate, status])
   @@map("payments")
 }
 

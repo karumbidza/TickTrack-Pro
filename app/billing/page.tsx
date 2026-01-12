@@ -140,12 +140,26 @@ export default function BillingPage() {
   ]
 
   const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active': return 'default'
-      case 'trial': return 'secondary'
-      case 'past_due': return 'destructive'
-      case 'cancelled': return 'outline'
+    switch (status.toUpperCase()) {
+      case 'ACTIVE': return 'default'
+      case 'TRIAL': return 'secondary'
+      case 'GRACE': return 'warning' as any // Yellow warning
+      case 'READ_ONLY': return 'destructive'
+      case 'SUSPENDED': return 'destructive'
+      case 'PAST_DUE': return 'destructive'
+      case 'CANCELLED': return 'outline'
       default: return 'secondary'
+    }
+  }
+
+  const getStatusMessage = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE': return { text: 'Your subscription is active', color: 'text-green-600' }
+      case 'TRIAL': return { text: 'You are on a free trial', color: 'text-blue-600' }
+      case 'GRACE': return { text: 'Payment overdue - grace period active', color: 'text-yellow-600' }
+      case 'READ_ONLY': return { text: 'Account is read-only - payment required', color: 'text-red-600' }
+      case 'SUSPENDED': return { text: 'Account suspended - contact support', color: 'text-red-600' }
+      default: return { text: '', color: '' }
     }
   }
 
@@ -232,6 +246,73 @@ export default function BillingPage() {
                 >
                   Upgrade Now
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Grace Period Warning */}
+        {subscription?.status === 'GRACE' && (
+          <Card className="mb-8 border-yellow-400 bg-yellow-50">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-6 w-6 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-900">Payment Overdue - Grace Period Active</h3>
+                    <p className="text-yellow-800">
+                      Your subscription payment is overdue. You have 7 days to make a payment before your account becomes read-only.
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => setShowUpgradeDialog(true)}
+                  className="bg-yellow-600 hover:bg-yellow-700"
+                >
+                  Pay Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Read-Only Warning */}
+        {subscription?.status === 'READ_ONLY' && (
+          <Card className="mb-8 border-red-400 bg-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-red-900">Account Read-Only</h3>
+                    <p className="text-red-800">
+                      Your account is now in read-only mode. You can view existing data but cannot create new tickets or update records. Please make a payment to restore full access.
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => setShowUpgradeDialog(true)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Pay Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Suspended Warning */}
+        {subscription?.status === 'SUSPENDED' && (
+          <Card className="mb-8 border-red-600 bg-red-100">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="h-6 w-6 text-red-700 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-red-900">Account Suspended</h3>
+                  <p className="text-red-800">
+                    Your account has been suspended. Please contact support at support@ticktrackpro.com to resolve this issue.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

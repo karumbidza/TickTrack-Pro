@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import PaynowService from '@/lib/paynow-service'
+import { BillingService } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
 
-const prisma = new PrismaClient()
+/**
+ * PAYNOW WEBHOOK HANDLER
+ * =======================
+ * Receives payment notifications from Paynow.
+ * 
+ * CRITICAL RULES:
+ * - This is the SOURCE OF TRUTH for payment status
+ * - Must be IDEMPOTENT (same reference may arrive multiple times)
+ * - Frontend redirects must NOT activate subscriptions
+ * - Uses BillingService as single point for subscription changes
+ */
 
 export async function POST(request: NextRequest) {
+  const requestId = crypto.randomUUID()
+  logger.info(`[Webhook:${requestId}] Received Paynow webhook`)
+  
   try {
     const webhookData = await request.formData()
     
@@ -14,11 +28,14 @@ export async function POST(request: NextRequest) {
     for (const [key, value] of webhookData.entries()) {
       data[key] = value.toString()
     }
+    
+    logger.info(`[Webhook:${requestId}] Data: ${JSON.stringify(data)}`)
 
-    // Process the webhook
+    // Process and verify the webhook
     const processedData = await PaynowService.processWebhook(data)
 
     if (!processedData.verified) {
+      logger.error(`[Webhook:${requestId}] Invalid webhook signature`)
       return NextResponse.json(
         { message: 'Invalid webhook signature' },
         { status: 400 }
@@ -26,9 +43,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract tenant ID from reference
+    // Format: TENANT-{tenantId}-{timestamp} or SUB-{tenantId}-{timestamp}
     const referenceMatch = processedData.reference.match(/(?:TENANT|SUB)-([^-]+)/)
     if (!referenceMatch) {
-      logger.error('Invalid payment reference format:', processedData.reference)
+      logger.error(`[Webhook:${requestId}] Invalid reference format: ${processedData.reference}`)
       return NextResponse.json(
         { message: 'Invalid payment reference' },
         { status: 400 }
@@ -37,35 +55,49 @@ export async function POST(request: NextRequest) {
 
     const tenantId = referenceMatch[1]
 
-    // Find the payment record
+    // IDEMPOTENCY CHECK: Find existing payment by provider reference
     let payment = await prisma.payment.findFirst({
       where: {
-        tenantId,
         OR: [
           { providerPaymentId: processedData.paynowReference },
-          { 
+          {
+            tenantId,
             providerResponse: {
               path: ['hash'],
-              equals: processedData.reference
+              equals: data.hash
             }
           }
         ]
       },
       include: {
-        tenant: true,
         subscription: true
       }
     })
 
+    // If no payment found, look for pending payment for this tenant
     if (!payment) {
-      // Create a new payment record if not found
+      payment = await prisma.payment.findFirst({
+        where: {
+          tenantId,
+          status: 'pending',
+          provider: 'PAYNOW'
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          subscription: true
+        }
+      })
+    }
+
+    // If still no payment, create one (shouldn't happen normally)
+    if (!payment) {
       const tenant = await prisma.tenant.findUnique({
         where: { id: tenantId },
         include: { subscription: true }
       })
 
       if (!tenant) {
-        logger.error('Tenant not found for payment:', tenantId)
+        logger.error(`[Webhook:${requestId}] Tenant not found: ${tenantId}`)
         return NextResponse.json(
           { message: 'Tenant not found' },
           { status: 404 }
@@ -77,104 +109,96 @@ export async function POST(request: NextRequest) {
           tenantId,
           subscriptionId: tenant.subscription?.id,
           amount: processedData.amount,
-          currency: 'USD', // Default, should be determined from the payment
+          currency: 'USD',
           status: 'pending',
           provider: 'PAYNOW',
           providerPaymentId: processedData.paynowReference,
+          providerResponse: data,
           description: 'Payment received via webhook'
         },
         include: {
-          tenant: true,
           subscription: true
         }
       })
+      
+      logger.info(`[Webhook:${requestId}] Created payment record: ${payment.id}`)
     }
 
-    // Update payment status based on Paynow status
-    let paymentStatus = 'pending'
-    let paidAt: Date | null = null
-
-    switch (processedData.status.toLowerCase()) {
-      case 'paid':
-      case 'delivered':
-        paymentStatus = 'success'
-        paidAt = new Date()
-        break
-      case 'cancelled':
-      case 'failed':
-        paymentStatus = 'failed'
-        break
-      case 'created':
-      case 'sent':
-        paymentStatus = 'pending'
-        break
-      default:
-        paymentStatus = processedData.status.toLowerCase()
+    // IDEMPOTENCY: Check if already processed successfully
+    if (payment.status === 'success') {
+      logger.info(`[Webhook:${requestId}] Payment ${payment.id} already processed, returning OK`)
+      return NextResponse.json({
+        message: 'Payment already processed',
+        paymentId: payment.id,
+        status: 'success'
+      })
     }
 
-    // Update the payment record
-    const updatedPayment = await prisma.payment.update({
+    // Update provider response for audit trail
+    await prisma.payment.update({
       where: { id: payment.id },
       data: {
-        status: paymentStatus,
         providerPaymentId: processedData.paynowReference,
-        paidAt,
-        updatedAt: new Date()
+        providerResponse: data
       }
     })
 
-    // If payment is successful and it's for a subscription, activate the subscription
-    if (paymentStatus === 'success' && payment.subscription) {
-      await prisma.$transaction(async (tx) => {
-        // Update subscription status
-        await tx.subscription.update({
-          where: { id: payment.subscription!.id },
-          data: {
-            status: 'ACTIVE',
-            paynowSubscriptionId: processedData.paynowReference,
-            currentPeriodStart: new Date(),
-            currentPeriodEnd: new Date(
-              Date.now() + (
-                payment.subscription!.billingCycle === 'yearly' ? 365 : 30
-              ) * 24 * 60 * 60 * 1000
-            )
-          }
-        })
+    // Process based on Paynow status
+    const paynowStatus = processedData.status.toLowerCase()
+    let result: { status: string; message: string }
 
-        // Update tenant status
-        await tx.tenant.update({
-          where: { id: tenantId },
-          data: {
-            status: 'ACTIVE'
-          }
-        })
-      })
+    switch (paynowStatus) {
+      case 'paid':
+      case 'delivered':
+        // SUCCESS - Use BillingService to activate subscription
+        const successResult = await BillingService.processSuccessfulPayment(
+          payment.id,
+          processedData.paynowReference,
+          data
+        )
+        result = {
+          status: 'success',
+          message: successResult.alreadyProcessed 
+            ? 'Payment already activated' 
+            : 'Payment successful, subscription activated'
+        }
+        logger.info(`[Webhook:${requestId}] Payment SUCCESS: ${payment.id}`)
+        break
 
-      // TODO: Send confirmation email to customer
-      // await sendSubscriptionConfirmation(payment.tenant.email, payment.subscription)
+      case 'cancelled':
+      case 'failed':
+        // FAILED
+        await BillingService.processFailedPayment(payment.id, `Paynow status: ${paynowStatus}`)
+        result = { status: 'failed', message: 'Payment failed' }
+        logger.warn(`[Webhook:${requestId}] Payment FAILED: ${payment.id}`)
+        break
 
-      console.log(`Subscription activated for tenant ${tenantId} - Plan: ${payment.subscription.plan}`)
+      case 'created':
+      case 'sent':
+      case 'pending':
+        // Still pending - no action needed
+        result = { status: 'pending', message: 'Payment still pending' }
+        logger.info(`[Webhook:${requestId}] Payment PENDING: ${payment.id}`)
+        break
+
+      default:
+        result = { status: paynowStatus, message: `Unknown status: ${paynowStatus}` }
+        logger.warn(`[Webhook:${requestId}] Unknown status: ${paynowStatus}`)
     }
 
-    // TODO: Send payment confirmation email
-    // await sendPaymentConfirmation(payment.tenant.email, updatedPayment)
-
-    console.log(`Payment webhook processed: ${processedData.paynowReference} - Status: ${paymentStatus}`)
-
     return NextResponse.json({
-      message: 'Webhook processed successfully',
+      message: result.message,
       paymentId: payment.id,
-      status: paymentStatus
+      status: result.status,
+      requestId
     })
 
   } catch (error) {
-    console.error('Paynow webhook processing error:', error)
+    logger.error(`[Webhook:${requestId}] Processing error:`, error)
     return NextResponse.json(
-      { message: 'Webhook processing failed' },
+      { message: 'Webhook processing failed', requestId },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -187,5 +211,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ challenge })
   }
   
-  return NextResponse.json({ message: 'Paynow webhook endpoint' })
+  return NextResponse.json({ 
+    message: 'Paynow webhook endpoint',
+    status: 'active'
+  })
 }
