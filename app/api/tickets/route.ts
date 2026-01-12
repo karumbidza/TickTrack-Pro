@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { calculateSLADeadlines } from '@/lib/sla-utils'
 import { sendNewTicketEmailToAdmin } from '@/lib/email'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 import { z } from 'zod'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -17,6 +18,10 @@ const createTicketSchema = z.object({
 })
 
 export async function GET(request: NextRequest) {
+  // Rate limit: 100 requests per minute
+  const rateLimitResponse = await rateLimitCheck(request, 'api')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const session = await getServerSession(authOptions)
     

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
 import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/africastalking-service'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { z } from 'zod'
@@ -14,6 +15,9 @@ const registerSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 requests per minute for auth endpoints
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
   try {
     const body = await request.json()
     const validatedData = registerSchema.parse(body)

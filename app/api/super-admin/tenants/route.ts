@@ -3,10 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limit: 200 requests per minute for super admin
+  const rateLimitResponse = await rateLimitCheck(request, 'superAdmin')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const session = await getServerSession(authOptions)
     

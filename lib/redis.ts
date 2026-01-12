@@ -192,6 +192,10 @@ class RedisClient {
 // Singleton instance
 export const redisClient = new RedisClient()
 
+// Export direct client access for advanced operations (rate limiting)
+export const getRedisClient = () => redisClient['client']
+export const isRedisAvailable = () => redisClient.isAvailable()
+
 // Graceful shutdown handler
 if (typeof process !== 'undefined') {
   const shutdown = async () => {
