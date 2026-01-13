@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import {
 
 type PaymentStatus = 'checking' | 'success' | 'failed' | 'pending' | 'unknown'
 
-export default function PaymentReturnPage() {
+function PaymentReturnContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [status, setStatus] = useState<PaymentStatus>('checking')
@@ -252,5 +252,22 @@ export default function PaymentReturnPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function PaymentReturnPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardContent className="p-12 text-center">
+            <Loader2 className="h-16 w-16 mx-auto text-blue-500 animate-spin mb-4" />
+            <p className="text-gray-600">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <PaymentReturnContent />
+    </Suspense>
   )
 }
