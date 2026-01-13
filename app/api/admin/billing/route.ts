@@ -6,6 +6,9 @@ import { prisma } from '@/lib/prisma'
 /**
  * GET /api/admin/billing
  * Returns comprehensive billing data for the tenant admin dashboard
+ * 
+ * Access: ADMIN (Tenant Admin) only
+ * Super Admins should use /api/super-admin/tenants/[id] to view tenant billing
  */
 export async function GET(request: NextRequest) {
   try {
@@ -15,20 +18,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Only ADMIN and SUPER_ADMIN can access billing
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    // Super Admin should manage billing from Super Admin dashboard, not here
+    if (session.user.role === 'SUPER_ADMIN') {
+      return NextResponse.json({ 
+        error: 'Tenant billing is managed from the Super Admin Dashboard',
+        redirectTo: '/super-admin'
+      }, { status: 403 })
+    }
+
+    // Only ADMIN (Tenant Admin) can access their billing
+    if (session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // SUPER_ADMIN without a tenant can't view billing (needs to select a tenant)
+    // Tenant Admin must have a tenant
     if (!session.user.tenantId) {
-      if (session.user.role === 'SUPER_ADMIN') {
-        return NextResponse.json({ 
-          error: 'Super Admin: Please select a tenant to view billing',
-          isSuperAdmin: true
-        }, { status: 400 })
-      }
-      return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
+      return NextResponse.json({ error: 'No tenant associated with your account' }, { status: 400 })
     }
 
     const tenantId = session.user.tenantId

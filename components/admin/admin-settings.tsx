@@ -660,21 +660,26 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                     <span className="truncate">Organization</span>
                   </button>
                   
-                  <div className="pt-2 pb-1">
-                    <p className="px-2.5 text-xs font-medium text-gray-400 uppercase">Account</p>
-                  </div>
-                  
-                  <button
-                    onClick={() => setActiveTab('billing')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'billing' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <CreditCard className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Billing</span>
-                  </button>
+                  {/* Only show Billing tab for Tenant Admins, not Super Admins */}
+                  {user.role !== 'SUPER_ADMIN' && (
+                    <>
+                      <div className="pt-2 pb-1">
+                        <p className="px-2.5 text-xs font-medium text-gray-400 uppercase">Account</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => setActiveTab('billing')}
+                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
+                          activeTab === 'billing' 
+                            ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <CreditCard className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">Billing</span>
+                      </button>
+                    </>
+                  )}
                 </nav>
               </CardContent>
             </Card>
@@ -1412,11 +1417,29 @@ export function AdminSettings({ user }: AdminSettingsProps) {
           {/* ==================== BILLING TAB ==================== */}
           {activeTab === 'billing' && (
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Billing & Subscription</h2>
-                <p className="text-sm text-gray-500 mt-1">Manage your subscription, view usage, and access invoices</p>
-              </div>
-              <BillingManagement />
+              {user.role === 'SUPER_ADMIN' ? (
+                <div className="text-center py-12">
+                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Super Admin Billing</h3>
+                  <p className="text-gray-500 mb-4">
+                    Tenant billing is managed from the Super Admin Dashboard.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.href = '/super-admin'}
+                  >
+                    Go to Super Admin Dashboard
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">Billing & Subscription</h2>
+                    <p className="text-sm text-gray-500 mt-1">Manage your subscription, view usage, and access invoices</p>
+                  </div>
+                  <BillingManagement />
+                </>
+              )}
             </div>
           )}
 
