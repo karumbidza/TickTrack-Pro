@@ -1,6 +1,5 @@
 import NextAuth, { AuthOptions } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
@@ -8,10 +7,6 @@ import bcrypt from "bcryptjs"
 export const authOptions: AuthOptions = {
   // adapter: PrismaAdapter(prisma), // Commented out temporarily due to type compatibility
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -135,26 +130,7 @@ export const authOptions: AuthOptions = {
       }
       return session
     },
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "google") {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! }
-        })
 
-        if (!existingUser) {
-          // Create new user with default role
-          await prisma.user.create({
-            data: {
-              email: user.email!,
-              name: user.name,
-              image: user.image,
-              role: "END_USER"
-            }
-          })
-        }
-      }
-      return true
-    }
   },
   pages: {
     signIn: '/auth/signin',
