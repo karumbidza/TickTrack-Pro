@@ -26,8 +26,9 @@ export async function GET(request: NextRequest) {
       }, { status: 403 })
     }
 
-    // Only ADMIN (Tenant Admin) can access their billing
-    if (session.user.role !== 'ADMIN') {
+    // Only Tenant Admins (TENANT_ADMIN and department admins) can access billing
+    const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+    if (!adminRoles.includes(session.user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
