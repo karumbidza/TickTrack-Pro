@@ -74,9 +74,10 @@ export async function POST(request: NextRequest) {
     let paymentAmount = amount
     if (!paymentAmount) {
       const pricing = getSubscriptionPricing()
-      const planKey = plan.toLowerCase() as keyof typeof pricing
+      const planKey = plan.toLowerCase() as 'basic' | 'pro' | 'enterprise'
+      const cycleKey = billingCycle as 'monthly' | 'yearly'
       const currencyKey = currency.toLowerCase() as 'usd' | 'zwl'
-      paymentAmount = pricing[planKey]?.[billingCycle]?.[currencyKey] || 29
+      paymentAmount = pricing[planKey][cycleKey][currencyKey] || 29
     }
 
     // Create the subscription if it doesn't exist or update it
