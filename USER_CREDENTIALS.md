@@ -2,66 +2,75 @@
 
 ## 🔐 Login Credentials (DELETE THIS FILE BEFORE PRODUCTION)
 
-### Super Admin Account
+### Super Admin Accounts
+
+#### Primary Super Admin
 - **Email**: admin@ticktrackpro.com
-- **Password**: admin123
+- **Password**: Check secure vault (production account)
 - **Role**: SUPER_ADMIN
 - **Access**: Full system control, manage all tenants and subscriptions
 - **Dashboard**: /super-admin
+- **Status**: ACTIVE
 
-### Tenant Admin Account  
+#### Secondary Super Admin
+- **Email**: superadmin@tick-trackpro.com
+- **Password**: Check secure vault (production account)
+- **Role**: SUPER_ADMIN
+- **Access**: Full system control, manage all tenants and subscriptions
+- **Dashboard**: /super-admin
+- **Status**: ACTIVE
+
+### Tenant Admin Accounts
+
+#### Demo Company Admin
 - **Email**: admin@democompany.com
-- **Password**: demo123
+- **Password**: Check secure vault (production account)
 - **Role**: TENANT_ADMIN
 - **Company**: Demo Company
 - **Access**: Manage company tickets, assign contractors, process invoices
 - **Dashboard**: /admin
+- **Status**: ACTIVE
 
-### End User Account
+#### Test Tenant Admin
+- **Email**: allenkarumbidza@yahoo.com
+- **Password**: Check secure vault (production account)
+- **Role**: TENANT_ADMIN
+- **Access**: Manage company tickets, assign contractors, process invoices
+- **Dashboard**: /admin
+- **Status**: ACTIVE
+
+### End User Accounts
+
+#### Demo Company User
 - **Email**: user@democompany.com
-- **Password**: user123
+- **Password**: Check secure vault (production account)
 - **Role**: END_USER
 - **Company**: Demo Company
 - **Access**: Submit tickets, track status, chat with support
 - **Dashboard**: /dashboard
+- **Status**: ACTIVE
 
-### Contractor Accounts
-
-#### Contractor 1 - John Smith
-- **Email**: contractor1@freelance.com
-- **Password**: contractor123
-- **Role**: CONTRACTOR
-- **Specialties**: IT Support, Hardware Repair
-- **Access**: View assigned jobs, update status, manage invoices
-- **Dashboard**: /contractor
-
-#### Contractor 2 - Sarah Johnson
-- **Email**: contractor2@services.com
-- **Password**: contractor123
-- **Role**: CONTRACTOR
-- **Specialties**: Network Setup, Maintenance
-- **Access**: View assigned jobs, update status, manage invoices
-- **Dashboard**: /contractor
-- **Email**: user@democompany.com
-- **Password**: user123
+#### Test End User
+- **Email**: karumbidzaallen21@gmail.com
+- **Password**: Check secure vault (production account)
 - **Role**: END_USER
-- **Company**: Demo Company
-- **Access**: Create tickets, track status, chat with contractors
+- **Access**: Submit tickets, track status, chat with support
 - **Dashboard**: /dashboard
+- **Status**: ACTIVE
 
 ## 🚀 How to Login
 
-1. Go to: http://localhost:3000
+1. Go to: https://tick-trackpro.com
 2. Click "Sign In" 
-3. Use any of the email/password combinations above
+3. Use email and password from the accounts above
 4. Select "Sign in with Credentials"
 
-## 🏢 Demo Tenant Information
+**Note**: Passwords are stored in the secure vault. Contact the system administrator for access.
 
-- **Company Name**: Demo Company
-- **Slug**: demo-company
-- **Features Enabled**: Chat, Invoicing
-- **Features Disabled**: Inventory, Projects
+## 🏢 Active Tenants
+
+- **Demo Company** - Demo tenant for testing purposes
 
 ---
 **⚠️ SECURITY WARNING: Delete this file before deploying to production!**
+**⚠️ PASSWORD SECURITY: Never store plaintext passwords in version control!**
