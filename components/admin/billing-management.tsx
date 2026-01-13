@@ -36,6 +36,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { PaynowPaymentDialog } from '@/components/billing/paynow-payment-dialog'
 
 interface BillingData {
   subscription: {
@@ -91,7 +92,9 @@ export function BillingManagement() {
   const [loading, setLoading] = useState(true)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [showPaynowDialog, setShowPaynowDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<string>('')
+  const [selectedAmount, setSelectedAmount] = useState<number>(0)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [paymentMethod, setPaymentMethod] = useState<'paynow' | 'bank_transfer'>('paynow')
   const [processing, setProcessing] = useState(false)
@@ -190,41 +193,30 @@ export function BillingManagement() {
       return
     }
 
-    setProcessing(true)
-    try {
-      const response = await fetch('/api/subscriptions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: selectedPlan,
-          billingCycle,
-          paymentMethod
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        
-        if (data.paynow?.redirectUrl) {
-          window.location.href = data.paynow.redirectUrl
-        } else if (data.bankDetails) {
-          setShowUpgradeDialog(false)
-          setShowPaymentDialog(true)
-        } else {
-          toast.success('Plan updated successfully')
-          fetchBillingData()
-          setShowUpgradeDialog(false)
-        }
-      } else {
-        const error = await response.json()
-        toast.error(error.message || 'Failed to process upgrade')
-      }
-    } catch (error) {
-      console.error('Upgrade error:', error)
-      toast.error('Failed to process upgrade')
-    } finally {
-      setProcessing(false)
+    // Calculate amount based on selected plan and billing cycle
+    const plan = plans.find(p => p.id === selectedPlan)
+    if (!plan) {
+      toast.error('Invalid plan selected')
+      return
     }
+
+    const amount = billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly
+    setSelectedAmount(amount)
+
+    // Close upgrade dialog and show payment method dialog
+    setShowUpgradeDialog(false)
+    
+    if (paymentMethod === 'paynow') {
+      setShowPaynowDialog(true)
+    } else if (paymentMethod === 'bank_transfer') {
+      setShowPaymentDialog(true)
+    }
+  }
+
+  const handlePaymentSuccess = () => {
+    toast.success('Payment successful! Your subscription has been activated.')
+    fetchBillingData()
+    setShowPaynowDialog(false)
   }
 
   const downloadInvoice = async (paymentId: string) => {
@@ -1154,6 +1146,18 @@ export function BillingManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Paynow Payment Dialog */}
+      <PaynowPaymentDialog
+        open={showPaynowDialog}
+        onOpenChange={setShowPaynowDialog}
+        plan={selectedPlan}
+        billingCycle={billingCycle}
+        amount={selectedAmount}
+        currency={billingData?.subscription?.currency || 'USD'}
+        onSuccess={handlePaymentSuccess}
+        onCancel={() => setShowPaynowDialog(false)}
+      />
     </div>
   )
 }
