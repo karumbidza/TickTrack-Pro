@@ -23,7 +23,7 @@ export function LandingNavbar() {
             <Link href="/auth/login">
               <Button variant="outline">Login</Button>
             </Link>
-            <Link href="/auth/register">
+            <Link href="/get-started">
               <Button>Get Started</Button>
             </Link>
           </div>

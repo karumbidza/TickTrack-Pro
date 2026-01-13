@@ -39,7 +39,7 @@ export default async function HomePage() {
               Multi-tenant helpdesk and ticket tracking system for modern organizations
             </p>
             <div className="space-x-4">
-              <Link href="/auth/register">
+              <Link href="/get-started">
                 <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
                   Get Started Free
                 </Button>
