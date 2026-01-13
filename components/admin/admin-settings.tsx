@@ -27,12 +27,14 @@ import {
   FileSpreadsheet,
   Download,
   Calendar,
-  Filter
+  Filter,
+  CreditCard
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { UserManagement } from './user-management'
 import { ContractorManagement } from './contractor-management'
 import { AdminAssetManagement } from './asset-management'
+import { BillingManagement } from './billing-management'
 
 interface User {
   id: string
@@ -656,6 +658,22 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                   >
                     <Building2 className="h-4 w-4 flex-shrink-0" />
                     <span className="truncate">Organization</span>
+                  </button>
+                  
+                  <div className="pt-2 pb-1">
+                    <p className="px-2.5 text-xs font-medium text-gray-400 uppercase">Account</p>
+                  </div>
+                  
+                  <button
+                    onClick={() => setActiveTab('billing')}
+                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
+                      activeTab === 'billing' 
+                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Billing</span>
                   </button>
                 </nav>
               </CardContent>
@@ -1389,6 +1407,17 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* ==================== BILLING TAB ==================== */}
+          {activeTab === 'billing' && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Billing & Subscription</h2>
+                <p className="text-sm text-gray-500 mt-1">Manage your subscription, view usage, and access invoices</p>
+              </div>
+              <BillingManagement />
+            </div>
           )}
 
           {/* ==================== ORGANIZATION TAB ==================== */}
