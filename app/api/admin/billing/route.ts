@@ -20,7 +20,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId && session.user.role !== 'SUPER_ADMIN') {
+    // SUPER_ADMIN without a tenant can't view billing (needs to select a tenant)
+    if (!session.user.tenantId) {
+      if (session.user.role === 'SUPER_ADMIN') {
+        return NextResponse.json({ 
+          error: 'Super Admin: Please select a tenant to view billing',
+          isSuperAdmin: true
+        }, { status: 400 })
+      }
       return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
     }
 

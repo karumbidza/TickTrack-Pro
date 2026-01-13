@@ -165,6 +165,16 @@ export function BillingManagement() {
         if (data.subscription) {
           setSelectedPlan(data.subscription.plan)
         }
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Billing API error:', response.status, errorData)
+        if (response.status === 401) {
+          toast.error('Please sign in to view billing information')
+        } else if (response.status === 403) {
+          toast.error('You do not have permission to view billing')
+        } else {
+          toast.error(errorData.error || 'Failed to load billing information')
+        }
       }
     } catch (error) {
       console.error('Error fetching billing data:', error)
