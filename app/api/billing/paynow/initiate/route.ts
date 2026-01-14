@@ -83,17 +83,37 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create invoice/payment record
-    const payment = await BillingService.createInvoice(
-      tenant.id,
-      paymentAmount,
-      currency,
-      'PAYNOW',
-      `${plan} Plan - ${billingCycle} subscription`
-    )
-
-    // Create payment reference
+    // Create payment reference (unique per request)
     const reference = `SUB-${tenant.id.slice(0, 8)}-${Date.now()}`
+
+    // Check if we already initiated this payment (avoid duplicates)
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
+        tenantId: tenant.id,
+        provider: 'PAYNOW',
+        status: 'pending',
+        createdAt: {
+          gte: new Date(Date.now() - 60000) // Within last 60 seconds
+        }
+      }
+    })
+
+    let payment = existingPayment
+    
+    if (!existingPayment) {
+      // Create invoice/payment record only if doesn't exist
+      payment = await BillingService.createInvoice(
+        tenant.id,
+        paymentAmount,
+        currency,
+        'PAYNOW',
+        `${plan} Plan - ${billingCycle} subscription`
+      )
+    }
+
+    if (!payment) {
+      return NextResponse.json({ error: 'Failed to create payment record' }, { status: 500 })
+    }
 
     // Create Paynow payment
     const paynowPayment = paynow.createPayment(reference, session.user.email!)
