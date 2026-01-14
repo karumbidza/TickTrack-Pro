@@ -53,7 +53,10 @@ export default function BillingPage() {
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZWL'>('USD')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'paynow' | 'bank_transfer'>('paynow')
+  const [mobileProvider, setMobileProvider] = useState<'ecocash' | 'onemoney' | 'telecash'>('ecocash')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [paymentError, setPaymentError] = useState('')
+  const [paymentInstructions, setPaymentInstructions] = useState('')
   const [popFile, setPopFile] = useState<File | null>(null)
   const [uploadingPop, setUploadingPop] = useState(false)
 
@@ -82,10 +85,17 @@ export default function BillingPage() {
     }
 
     setPaymentError('')
+    setPaymentInstructions('')
     setUpgradeLoading(true)
 
     if (selectedPaymentMethod === 'paynow') {
-      // Redirect to Paynow gateway
+      // Validate phone number
+      if (!phoneNumber || phoneNumber.length < 9) {
+        setPaymentError('Please enter a valid phone number (e.g., 0771234567)')
+        setUpgradeLoading(false)
+        return
+      }
+
       try {
         const paymentResponse = await fetch('/api/billing/paynow/initiate', {
           method: 'POST',
@@ -93,18 +103,25 @@ export default function BillingPage() {
           body: JSON.stringify({
             plan: selectedPlan,
             billingCycle: selectedBillingCycle,
-            currency: selectedCurrency
+            currency: selectedCurrency,
+            phone: phoneNumber,
+            method: mobileProvider
           })
         })
 
+        const paymentData = await paymentResponse.json()
+
         if (paymentResponse.ok) {
-          const paymentData = await paymentResponse.json()
-          if (paymentData.redirectUrl) {
-            window.location.href = paymentData.redirectUrl
+          // Mobile payment initiated - show instructions
+          setPaymentInstructions(paymentData.instructions || 
+            `A payment request has been sent to ${phoneNumber}. Please check your phone and enter your PIN to complete the payment.`)
+          
+          // Start polling for payment status
+          if (paymentData.pollUrl) {
+            pollPaymentStatus(paymentData.paymentId, paymentData.pollUrl)
           }
         } else {
-          const error = await paymentResponse.json()
-          setPaymentError(error.error || 'Failed to initiate payment')
+          setPaymentError(paymentData.error || 'Failed to initiate payment')
         }
       } catch (error) {
         console.error('Paynow error:', error)
@@ -117,6 +134,42 @@ export default function BillingPage() {
       setUpgradeLoading(false)
       // Keep dialog open for POP upload
     }
+  }
+
+  const pollPaymentStatus = async (paymentId: string, pollUrl: string) => {
+    const maxAttempts = 30 // Poll for up to 5 minutes
+    let attempts = 0
+
+    const poll = async () => {
+      attempts++
+      try {
+        const response = await fetch(`/api/billing/paynow/status?paymentId=${paymentId}`)
+        const data = await response.json()
+
+        if (data.status === 'paid' || data.status === 'success') {
+          alert('Payment successful! Your subscription is now active.')
+          setShowUpgradeDialog(false)
+          fetchBillingData() // Refresh billing data
+          return
+        } else if (data.status === 'failed' || data.status === 'cancelled') {
+          setPaymentError('Payment was not completed. Please try again.')
+          setPaymentInstructions('')
+          return
+        }
+
+        // Continue polling if still pending
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 10000) // Poll every 10 seconds
+        } else {
+          setPaymentInstructions('Payment is still processing. Check your phone for the payment prompt, or try again.')
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }
+
+    // Start polling after a short delay
+    setTimeout(poll, 5000)
   }
 
   const handlePopUpload = async () => {
@@ -651,8 +704,8 @@ export default function BillingPage() {
                       className="mt-1"
                     />
                     <div className="ml-3">
-                      <h4 className="font-semibold text-gray-900">Paynow (Mobile Money)</h4>
-                      <p className="text-sm text-gray-600">Ecocash, OneMoney, Telecash</p>
+                      <h4 className="font-semibold text-gray-900">Mobile Money</h4>
+                      <p className="text-sm text-gray-600">EcoCash, OneMoney, Telecash</p>
                     </div>
                   </label>
 
@@ -679,6 +732,75 @@ export default function BillingPage() {
                   </label>
                 </div>
               </div>
+
+              {/* Mobile Money Details */}
+              {selectedPaymentMethod === 'paynow' && (
+                <div className="space-y-4 bg-gray-50 border rounded-lg p-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Select Provider</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMobileProvider('ecocash')}
+                        className={`p-3 border rounded-lg text-center transition-all ${
+                          mobileProvider === 'ecocash' 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-300 hover:border-gray-400 bg-white'
+                        }`}
+                      >
+                        <p className="font-medium text-green-700">EcoCash</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMobileProvider('onemoney')}
+                        className={`p-3 border rounded-lg text-center transition-all ${
+                          mobileProvider === 'onemoney' 
+                            ? 'border-purple-500 bg-purple-50' 
+                            : 'border-gray-300 hover:border-gray-400 bg-white'
+                        }`}
+                      >
+                        <p className="font-medium text-purple-700">OneMoney</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMobileProvider('telecash')}
+                        className={`p-3 border rounded-lg text-center transition-all ${
+                          mobileProvider === 'telecash' 
+                            ? 'border-orange-500 bg-orange-50' 
+                            : 'border-gray-300 hover:border-gray-400 bg-white'
+                        }`}
+                      >
+                        <p className="font-medium text-orange-700">Telecash</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                      placeholder="0771234567"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      maxLength={10}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Enter your {mobileProvider === 'ecocash' ? 'Econet' : mobileProvider === 'onemoney' ? 'NetOne' : 'Telecel'} number</p>
+                  </div>
+
+                  {paymentInstructions && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start">
+                        <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-green-800">Payment Request Sent!</p>
+                          <p className="text-sm text-green-700 mt-1">{paymentInstructions}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Bank Transfer POP Upload */}
               {selectedPaymentMethod === 'bank_transfer' && (
@@ -721,15 +843,20 @@ export default function BillingPage() {
                       handlePopUpload()
                     }
                   }}
-                  disabled={upgradeLoading || uploadingPop || !selectedPlan}
+                  disabled={upgradeLoading || uploadingPop || !selectedPlan || !!paymentInstructions}
                 >
                   {upgradeLoading || uploadingPop ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
+                      Sending payment request...
+                    </>
+                  ) : paymentInstructions ? (
+                    <>
+                      <Clock className="h-4 w-4 mr-2" />
+                      Waiting for payment...
                     </>
                   ) : selectedPaymentMethod === 'paynow' ? (
-                    'Continue to Payment'
+                    'Pay Now'
                   ) : (
                     'Submit Payment Proof'
                   )}

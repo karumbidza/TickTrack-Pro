@@ -42,8 +42,23 @@ export async function POST(request: NextRequest) {
       plan = 'BASIC', 
       billingCycle = 'monthly', 
       amount, 
-      currency = 'USD'
+      currency = 'USD',
+      phone,
+      method = 'ecocash'  // ecocash, onemoney, telecash
     } = body
+
+    // Validate phone number for mobile money
+    if (!phone || phone.length < 9) {
+      return NextResponse.json({ error: 'Valid phone number is required' }, { status: 400 })
+    }
+
+    // Normalize phone number (remove leading 0, add 263)
+    let normalizedPhone = phone.replace(/\D/g, '')
+    if (normalizedPhone.startsWith('0')) {
+      normalizedPhone = '263' + normalizedPhone.slice(1)
+    } else if (!normalizedPhone.startsWith('263')) {
+      normalizedPhone = '263' + normalizedPhone
+    }
 
     // Get tenant and subscription
     const tenant = await prisma.tenant.findUnique({
@@ -155,14 +170,14 @@ export async function POST(request: NextRequest) {
     const paynowPayment = paynow.createPayment(reference, paymentEmail)
     paynowPayment.add(`TickTrack Pro ${plan} - ${billingCycle}`, paymentAmount)
 
-    logger.info(`[Paynow] Initiating web payment for tenant ${tenant.id}, amount ${paymentAmount} ${currency}`)
+    logger.info(`[Paynow] Initiating mobile payment for tenant ${tenant.id}, phone ${normalizedPhone}, method ${method}, amount ${paymentAmount} ${currency}`)
 
-    // Send web payment request (user redirected to Paynow payment gateway)
+    // Send mobile money payment request (direct to user's phone)
     let response
     try {
-      response = await paynow.send(paynowPayment)
+      response = await paynow.sendMobile(paynowPayment, normalizedPhone, method)
     } catch (sendError) {
-      logger.error('[Paynow] Web send error:', sendError)
+      logger.error('[Paynow] Mobile send error:', sendError)
       
       // Mark payment as failed
       await prisma.payment.update({
@@ -185,22 +200,27 @@ export async function POST(request: NextRequest) {
         where: { id: payment.id },
         data: {
           providerResponse: {
-            redirectUrl: response.redirectUrl,
             pollUrl: response.pollUrl,
             hash: response.hash,
-            reference
+            reference,
+            phone: normalizedPhone,
+            method
           }
         }
       })
 
-      logger.info(`[Paynow] Payment initiated successfully, redirectUrl: ${response.redirectUrl}`)
+      logger.info(`[Paynow] Mobile payment initiated successfully, pollUrl: ${response.pollUrl}`)
+
+      // Get provider-specific instructions
+      const providerName = method === 'ecocash' ? 'EcoCash' : method === 'onemoney' ? 'OneMoney' : 'Telecash'
+      const instructions = `A payment request has been sent to your ${providerName} number (${phone}). Please check your phone and enter your PIN to complete the payment.`
 
       return NextResponse.json({
         success: true,
         paymentId: payment.id,
-        redirectUrl: response.redirectUrl,
         pollUrl: response.pollUrl,
-        reference
+        reference,
+        instructions
       })
     } else {
       // Payment initiation failed
