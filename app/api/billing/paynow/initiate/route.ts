@@ -149,7 +149,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Paynow payment
-    const paynowPayment = paynow.createPayment(reference, session.user.email!)
+    // In test mode, Paynow requires the merchant's registered email
+    // Use PAYNOW_MERCHANT_EMAIL env var if set, otherwise use user's email
+    const paymentEmail = process.env.PAYNOW_MERCHANT_EMAIL || session.user.email!
+    const paynowPayment = paynow.createPayment(reference, paymentEmail)
     paynowPayment.add(`TickTrack Pro ${plan} - ${billingCycle}`, paymentAmount)
 
     logger.info(`[Paynow] Initiating web payment for tenant ${tenant.id}, amount ${paymentAmount} ${currency}`)
