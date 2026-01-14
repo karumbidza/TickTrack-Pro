@@ -52,6 +52,8 @@ export default function BillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('')
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZWL'>('USD')
+  const [phone, setPhone] = useState('')
+  const [paymentError, setPaymentError] = useState('')
 
   useEffect(() => {
     fetchBillingData()
@@ -74,6 +76,19 @@ export default function BillingPage() {
   const handleUpgrade = async () => {
     if (!selectedPlan) return
 
+    // Validate phone number
+    if (!phone) {
+      setPaymentError('Phone number is required for payment')
+      return
+    }
+
+    const normalizedPhone = phone.replace(/\D/g, '')
+    if (!normalizedPhone.match(/^263(71|73|77|78)\d{7}$/)) {
+      setPaymentError('Please use a valid Zimbabwe phone number (e.g., 263771234567)')
+      return
+    }
+
+    setPaymentError('')
     setUpgradeLoading(true)
     try {
       const response = await fetch('/api/subscriptions', {
@@ -89,17 +104,37 @@ export default function BillingPage() {
       if (response.ok) {
         const data = await response.json()
         
-        if (data.paynow?.redirectUrl) {
-          // Redirect to Paynow payment page
-          window.location.href = data.paynow.redirectUrl
+        // Initiate Paynow payment
+        if (data.subscription?.id) {
+          const paymentResponse = await fetch('/api/billing/paynow/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              plan: selectedPlan,
+              billingCycle: selectedBillingCycle,
+              currency: selectedCurrency,
+              phone: phone,
+              paymentMethod: 'ecocash'
+            })
+          })
+
+          if (paymentResponse.ok) {
+            const paymentData = await paymentResponse.json()
+            if (paymentData.redirectUrl) {
+              window.location.href = paymentData.redirectUrl
+            }
+          } else {
+            const error = await paymentResponse.json()
+            setPaymentError(error.error || 'Failed to initiate payment')
+          }
         }
       } else {
         const error = await response.json()
-        alert(error.message || 'Failed to create subscription')
+        setPaymentError(error.message || 'Failed to create subscription')
       }
     } catch (error) {
       console.error('Upgrade error:', error)
-      alert('Failed to process upgrade')
+      setPaymentError('An error occurred. Please try again.')
     } finally {
       setUpgradeLoading(false)
     }
@@ -485,6 +520,36 @@ export default function BillingPage() {
             </DialogHeader>
             
             <div className="space-y-6">
+              {/* Payment Error Alert */}
+              {paymentError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium text-red-900">Payment Error</h3>
+                      <p className="text-red-800 text-sm mt-1">{paymentError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Phone Number Input */}
+              <div className="border-b pb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mobile Money Phone Number (Required for Paynow)
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="263771234567 or +27771234567"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Enter your Zimbabwe mobile number (Ecocash, Econet, Vodafone, NetOne)
+                </p>
+              </div>
+
               {/* Billing Options */}
               <div className="flex items-center justify-center space-x-4">
                 <div className="flex items-center space-x-2">
@@ -556,23 +621,36 @@ export default function BillingPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end space-x-4">
-                <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleUpgrade}
-                  disabled={!selectedPlan || upgradeLoading}
-                >
-                  {upgradeLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Upgrade Now'
-                  )}
-                </Button>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    <strong>Payment Method:</strong> Paynow (Mobile Money)<br/>
+                    <strong>Supported Networks:</strong> Ecocash, Econet, Vodafone, NetOne<br/>
+                    <strong>Processing:</strong> Instant confirmation to your mobile number
+                  </p>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => {
+                    setShowUpgradeDialog(false)
+                    setPaymentError('')
+                    setPhone('')
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleUpgrade}
+                    disabled={!selectedPlan || !phone || upgradeLoading}
+                  >
+                    {upgradeLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Pay with Paynow'
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>
