@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract tenant ID from reference
-    // Format: TENANT-{tenantId}-{timestamp} or SUB-{tenantId}-{timestamp}
+    // Extract tenant ID prefix from reference
+    // Format: TENANT-{tenantIdPrefix}-{timestamp} or SUB-{tenantIdPrefix}-{timestamp}
+    // Note: tenantIdPrefix is first 8 chars of the full tenant ID
     const referenceMatch = processedData.reference.match(/(?:TENANT|SUB)-([^-]+)/)
     if (!referenceMatch) {
       logger.error(`[Webhook:${requestId}] Invalid reference format: ${processedData.reference}`)
@@ -53,7 +54,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const tenantId = referenceMatch[1]
+    const tenantIdPrefix = referenceMatch[1]
+    
+    // Find tenant by ID prefix (reference only contains first 8 chars)
+    const tenant = await prisma.tenant.findFirst({
+      where: {
+        id: { startsWith: tenantIdPrefix }
+      },
+      include: { subscription: true }
+    })
+    
+    if (!tenant) {
+      logger.error(`[Webhook:${requestId}] Tenant not found with prefix: ${tenantIdPrefix}`)
+      return NextResponse.json(
+        { message: 'Tenant not found' },
+        { status: 404 }
+      )
+    }
+    
+    const tenantId = tenant.id
+    logger.info(`[Webhook:${requestId}] Found tenant: ${tenantId}`)
 
     // IDEMPOTENCY CHECK: Find existing payment by provider reference
     let payment = await prisma.payment.findFirst({
@@ -91,19 +111,7 @@ export async function POST(request: NextRequest) {
 
     // If still no payment, create one (shouldn't happen normally)
     if (!payment) {
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        include: { subscription: true }
-      })
-
-      if (!tenant) {
-        logger.error(`[Webhook:${requestId}] Tenant not found: ${tenantId}`)
-        return NextResponse.json(
-          { message: 'Tenant not found' },
-          { status: 404 }
-        )
-      }
-
+      // We already have the tenant from earlier lookup
       payment = await prisma.payment.create({
         data: {
           tenantId,
