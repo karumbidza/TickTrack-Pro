@@ -70,23 +70,20 @@ export function getSubscriptionPricing() {
 }
 
 /**
- * Generate invoice number: INV-TENANTSLUG-YYYYMM-XXX
+ * Generate invoice number: INV-TENANTSLUG-YYYYMM-TIMESTAMP-RANDOM
+ * Uses timestamp + random suffix to avoid race conditions
  */
 async function generateInvoiceNumber(tenantId: string): Promise<string> {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
   const now = new Date()
   const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
   
-  // Count existing invoices for this tenant this month
-  const count = await prisma.payment.count({
-    where: {
-      tenantId,
-      invoiceNumber: { startsWith: `INV-${tenant?.slug?.toUpperCase() || 'UNK'}-${yearMonth}` }
-    }
-  })
+  // Use timestamp (last 6 digits) + random suffix to ensure uniqueness
+  const timestamp = Date.now().toString().slice(-6)
+  const randomSuffix = Math.random().toString(36).substring(2, 5).toUpperCase()
   
   const slug = tenant?.slug?.toUpperCase().slice(0, 8) || 'UNK'
-  return `INV-${slug}-${yearMonth}-${String(count + 1).padStart(3, '0')}`
+  return `INV-${slug}-${yearMonth}-${timestamp}${randomSuffix}`
 }
 
 /**
