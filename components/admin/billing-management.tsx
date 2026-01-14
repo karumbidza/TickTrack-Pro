@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select } from '@/components/ui/select'
 import { Loader2, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Star, Download } from 'lucide-react'
 import { toast } from 'sonner'
@@ -373,6 +373,9 @@ export function BillingManagement() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upgrade Your Plan</DialogTitle>
+            <DialogDescription>
+              Select a plan and payment method to continue with your subscription upgrade
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">

@@ -102,13 +102,46 @@ export async function POST(request: NextRequest) {
     
     if (!existingPayment) {
       // Create invoice/payment record only if doesn't exist
-      payment = await BillingService.createInvoice(
-        tenant.id,
-        paymentAmount,
-        currency,
-        'PAYNOW',
-        `${plan} Plan - ${billingCycle} subscription`
-      )
+      try {
+        payment = await BillingService.createInvoice(
+          tenant.id,
+          paymentAmount,
+          currency,
+          'PAYNOW',
+          `${plan} Plan - ${billingCycle} subscription`
+        )
+      } catch (invoiceError: any) {
+        // Handle unique constraint error - likely a duplicate invoice number from concurrent requests
+        if (invoiceError?.code === 'P2002' && invoiceError?.meta?.target?.includes('invoiceNumber')) {
+          logger.warn(`[Paynow] Duplicate invoice number, checking for existing payment...`, invoiceError.message)
+          
+          // Try to find an existing pending payment for this tenant within last 5 minutes
+          const recentPayment = await prisma.payment.findFirst({
+            where: {
+              tenantId: tenant.id,
+              provider: 'PAYNOW',
+              status: 'pending',
+              createdAt: {
+                gte: new Date(Date.now() - 300000) // Within last 5 minutes
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          })
+          
+          if (recentPayment) {
+            payment = recentPayment
+            logger.info(`[Paynow] Using existing pending payment: ${recentPayment.id}`)
+          } else {
+            // If no recent payment found, this is an unexpected error
+            return NextResponse.json({ 
+              error: 'Failed to create payment record. Please try again.' 
+            }, { status: 500 })
+          }
+        } else {
+          // Re-throw if it's a different error
+          throw invoiceError
+        }
+      }
     }
 
     if (!payment) {
