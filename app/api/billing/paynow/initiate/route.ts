@@ -42,23 +42,8 @@ export async function POST(request: NextRequest) {
       plan = 'BASIC', 
       billingCycle = 'monthly', 
       amount, 
-      currency = 'USD',
-      paymentMethod = 'ecocash',
-      phone 
+      currency = 'USD'
     } = body
-
-    // Validate required fields
-    if (!phone) {
-      return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
-    }
-
-    // Validate phone format (Zimbabwe)
-    const normalizedPhone = phone.replace(/\D/g, '')
-    if (!normalizedPhone.match(/^263(71|73|77|78)\d{7}$/)) {
-      return NextResponse.json({ 
-        error: 'Invalid phone number. Please use format: 263XXXXXXXXX' 
-      }, { status: 400 })
-    }
 
     // Get tenant and subscription
     const tenant = await prisma.tenant.findUnique({
@@ -107,15 +92,6 @@ export async function POST(request: NextRequest) {
       `${plan} Plan - ${billingCycle} subscription`
     )
 
-    // Map payment method to Paynow mobile method
-    const mobileMethodMap: Record<string, string> = {
-      ecocash: 'ecocash',
-      onemoney: 'onemoney',
-      innbucks: 'innbucks',
-      telecash: 'telecash'
-    }
-    const paynowMethod = mobileMethodMap[paymentMethod] || 'ecocash'
-
     // Create payment reference
     const reference = `SUB-${tenant.id.slice(0, 8)}-${Date.now()}`
 
@@ -123,14 +99,14 @@ export async function POST(request: NextRequest) {
     const paynowPayment = paynow.createPayment(reference, session.user.email!)
     paynowPayment.add(`TickTrack Pro ${plan} - ${billingCycle}`, paymentAmount)
 
-    logger.info(`[Paynow] Initiating ${paynowMethod} payment for tenant ${tenant.id}, amount ${paymentAmount} ${currency}`)
+    logger.info(`[Paynow] Initiating web payment for tenant ${tenant.id}, amount ${paymentAmount} ${currency}`)
 
-    // Send mobile money payment request
+    // Send web payment request (user redirected to Paynow payment gateway)
     let response
     try {
-      response = await paynow.sendMobile(paynowPayment, normalizedPhone, paynowMethod)
+      response = await paynow.send(paynowPayment)
     } catch (sendError) {
-      logger.error('[Paynow] Mobile send error:', sendError)
+      logger.error('[Paynow] Web send error:', sendError)
       
       // Mark payment as failed
       await prisma.payment.update({
@@ -153,21 +129,21 @@ export async function POST(request: NextRequest) {
         where: { id: payment.id },
         data: {
           providerResponse: {
+            redirectUrl: response.redirectUrl,
             pollUrl: response.pollUrl,
-            instructions: response.instructions,
             hash: response.hash,
             reference
           }
         }
       })
 
-      logger.info(`[Paynow] Payment initiated successfully, pollUrl: ${response.pollUrl}`)
+      logger.info(`[Paynow] Payment initiated successfully, redirectUrl: ${response.redirectUrl}`)
 
       return NextResponse.json({
         success: true,
         paymentId: payment.id,
+        redirectUrl: response.redirectUrl,
         pollUrl: response.pollUrl,
-        instructions: response.instructions || getInstructions(paymentMethod),
         reference
       })
     } else {
@@ -193,14 +169,4 @@ export async function POST(request: NextRequest) {
       error: 'Internal server error' 
     }, { status: 500 })
   }
-}
-
-function getInstructions(method: string): string {
-  const instructions: Record<string, string> = {
-    ecocash: 'Please check your phone for a payment prompt and enter your EcoCash PIN to complete the payment.',
-    onemoney: 'Please check your phone for a payment prompt and enter your OneMoney PIN to complete the payment.',
-    innbucks: 'Please approve the payment request in your InnBucks app.',
-    telecash: 'Please check your phone for a payment prompt and enter your Telecash PIN to complete the payment.'
-  }
-  return instructions[method] || 'Please check your phone and approve the payment request.'
 }

@@ -52,7 +52,6 @@ export default function BillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('')
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZWL'>('USD')
-  const [phone, setPhone] = useState('')
   const [paymentError, setPaymentError] = useState('')
 
   useEffect(() => {
@@ -73,64 +72,30 @@ export default function BillingPage() {
     }
   }
 
-  const handleUpgrade = async () => {
-    if (!selectedPlan) return
-
-    // Validate phone number
-    if (!phone) {
-      setPaymentError('Phone number is required for payment')
-      return
-    }
-
-    const normalizedPhone = phone.replace(/\D/g, '')
-    if (!normalizedPhone.match(/^263(71|73|77|78)\d{7}$/)) {
-      setPaymentError('Please use a valid Zimbabwe phone number (e.g., 263771234567)')
-      return
-    }
-
+  const handleUpgrade = async (planId: string) => {
     setPaymentError('')
     setUpgradeLoading(true)
     try {
-      const response = await fetch('/api/subscriptions', {
+      // Initiate Paynow web payment (redirects to Paynow gateway)
+      const paymentResponse = await fetch('/api/billing/paynow/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan: selectedPlan,
+          plan: planId,
           billingCycle: selectedBillingCycle,
           currency: selectedCurrency
         })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Initiate Paynow payment
-        if (data.subscription?.id) {
-          const paymentResponse = await fetch('/api/billing/paynow/initiate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              plan: selectedPlan,
-              billingCycle: selectedBillingCycle,
-              currency: selectedCurrency,
-              phone: phone,
-              paymentMethod: 'ecocash'
-            })
-          })
-
-          if (paymentResponse.ok) {
-            const paymentData = await paymentResponse.json()
-            if (paymentData.redirectUrl) {
-              window.location.href = paymentData.redirectUrl
-            }
-          } else {
-            const error = await paymentResponse.json()
-            setPaymentError(error.error || 'Failed to initiate payment')
-          }
+      if (paymentResponse.ok) {
+        const paymentData = await paymentResponse.json()
+        if (paymentData.redirectUrl) {
+          // Redirect to Paynow's payment gateway
+          window.location.href = paymentData.redirectUrl
         }
       } else {
-        const error = await response.json()
-        setPaymentError(error.message || 'Failed to create subscription')
+        const error = await paymentResponse.json()
+        setPaymentError(error.error || 'Failed to initiate payment')
       }
     } catch (error) {
       console.error('Upgrade error:', error)
@@ -533,25 +498,8 @@ export default function BillingPage() {
                 </div>
               )}
 
-              {/* Phone Number Input */}
-              <div className="border-b pb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mobile Money Phone Number (Required for Paynow)
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="263771234567 or +27771234567"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Enter your Zimbabwe mobile number (Ecocash, Econet, Vodafone, NetOne)
-                </p>
-              </div>
-
               {/* Billing Options */}
-              <div className="flex items-center justify-center space-x-4">
+              <div className="flex items-center justify-center space-x-4 border-b pb-6">
                 <div className="flex items-center space-x-2">
                   <label>Billing Cycle:</label>
                   <select
@@ -581,16 +529,13 @@ export default function BillingPage() {
                 {plans.map((plan) => (
                   <Card 
                     key={plan.id}
-                    className={`cursor-pointer transition-all duration-200 ${
-                      selectedPlan === plan.id 
-                        ? 'ring-2 ring-blue-500 shadow-md' 
-                        : 'hover:shadow-md'
-                    } ${plan.popular ? 'border-purple-300' : ''}`}
-                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`transition-all duration-200 ${
+                      plan.popular ? 'ring-2 ring-purple-300 shadow-md' : ''
+                    } hover:shadow-lg`}
                   >
                     <CardHeader className="text-center">
                       {plan.popular && (
-                        <Badge className="mb-2 bg-purple-600">
+                        <Badge className="mb-2 bg-purple-600 mx-auto w-fit">
                           <Star className="w-3 h-3 mr-1" />
                           Popular
                         </Badge>
@@ -606,7 +551,7 @@ export default function BillingPage() {
                         </span>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <ul className="space-y-2">
                         {plan.features.map((feature, index) => (
                           <li key={index} className="flex items-center text-sm">
@@ -615,42 +560,42 @@ export default function BillingPage() {
                           </li>
                         ))}
                       </ul>
+                      <Button
+                        onClick={() => handleUpgrade(plan.id)}
+                        disabled={upgradeLoading}
+                        className="w-full"
+                      >
+                        {upgradeLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Select Plan'
+                        )}
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-900">
-                    <strong>Payment Method:</strong> Paynow (Mobile Money)<br/>
-                    <strong>Supported Networks:</strong> Ecocash, Econet, Vodafone, NetOne<br/>
-                    <strong>Processing:</strong> Instant confirmation to your mobile number
-                  </p>
-                </div>
-                <div className="flex justify-end space-x-4">
-                  <Button variant="outline" onClick={() => {
-                    setShowUpgradeDialog(false)
-                    setPaymentError('')
-                    setPhone('')
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleUpgrade}
-                    disabled={!selectedPlan || !phone || upgradeLoading}
-                  >
-                    {upgradeLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Pay with Paynow'
-                    )}
-                  </Button>
-                </div>
+              {/* Info Box */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>Payment Gateway:</strong> Paynow<br/>
+                  <strong>Supported Methods:</strong> Visa, Mastercard, ZIM-Switch, EcoCash, OneMoney, Telecash<br/>
+                  <strong>Next Step:</strong> Click "Select Plan" to proceed to Paynow's secure payment gateway
+                </p>
+              </div>
+
+              {/* Cancel Button */}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => {
+                  setShowUpgradeDialog(false)
+                  setPaymentError('')
+                }}>
+                  Cancel
+                </Button>
               </div>
             </div>
           </DialogContent>
