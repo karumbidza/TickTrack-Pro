@@ -49,10 +49,13 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<string>('')
+  const [selectedPlan, setSelectedPlan] = useState<string>('ENTERPRISE')
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZWL'>('USD')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'paynow' | 'bank_transfer'>('paynow')
   const [paymentError, setPaymentError] = useState('')
+  const [popFile, setPopFile] = useState<File | null>(null)
+  const [uploadingPop, setUploadingPop] = useState(false)
 
   useEffect(() => {
     fetchBillingData()
@@ -72,36 +75,86 @@ export default function BillingPage() {
     }
   }
 
-  const handleUpgrade = async (planId: string) => {
+  const handleUpgrade = async () => {
+    if (!selectedPlan) {
+      setPaymentError('Please select a plan')
+      return
+    }
+
     setPaymentError('')
     setUpgradeLoading(true)
-    try {
-      // Initiate Paynow web payment (redirects to Paynow gateway)
-      const paymentResponse = await fetch('/api/billing/paynow/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: planId,
-          billingCycle: selectedBillingCycle,
-          currency: selectedCurrency
+
+    if (selectedPaymentMethod === 'paynow') {
+      // Redirect to Paynow gateway
+      try {
+        const paymentResponse = await fetch('/api/billing/paynow/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: selectedPlan,
+            billingCycle: selectedBillingCycle,
+            currency: selectedCurrency
+          })
         })
+
+        if (paymentResponse.ok) {
+          const paymentData = await paymentResponse.json()
+          if (paymentData.redirectUrl) {
+            window.location.href = paymentData.redirectUrl
+          }
+        } else {
+          const error = await paymentResponse.json()
+          setPaymentError(error.error || 'Failed to initiate payment')
+        }
+      } catch (error) {
+        console.error('Paynow error:', error)
+        setPaymentError('An error occurred. Please try again.')
+      } finally {
+        setUpgradeLoading(false)
+      }
+    } else {
+      // Bank transfer - show POP upload
+      setUpgradeLoading(false)
+      // Keep dialog open for POP upload
+    }
+  }
+
+  const handlePopUpload = async () => {
+    if (!popFile || !selectedPlan) {
+      setPaymentError('Please select a POP file')
+      return
+    }
+
+    setPaymentError('')
+    setUploadingPop(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', popFile)
+      formData.append('plan', selectedPlan)
+      formData.append('billingCycle', selectedBillingCycle)
+      formData.append('currency', selectedCurrency)
+
+      const response = await fetch('/api/billing/bank-transfer/submit-pop', {
+        method: 'POST',
+        body: formData
       })
 
-      if (paymentResponse.ok) {
-        const paymentData = await paymentResponse.json()
-        if (paymentData.redirectUrl) {
-          // Redirect to Paynow's payment gateway
-          window.location.href = paymentData.redirectUrl
-        }
+      if (response.ok) {
+        setShowUpgradeDialog(false)
+        setPaymentError('')
+        setPopFile(null)
+        // Show success message
+        alert('Payment proof submitted successfully. Admin will review and activate your account soon.')
       } else {
-        const error = await paymentResponse.json()
-        setPaymentError(error.error || 'Failed to initiate payment')
+        const error = await response.json()
+        setPaymentError(error.error || 'Failed to upload payment proof')
       }
     } catch (error) {
-      console.error('Upgrade error:', error)
+      console.error('Upload error:', error)
       setPaymentError('An error occurred. Please try again.')
     } finally {
-      setUpgradeLoading(false)
+      setUploadingPop(false)
     }
   }
 
@@ -479,9 +532,10 @@ export default function BillingPage() {
 
         {/* Upgrade Dialog */}
         <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent className="max-w-4xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Choose Your Plan</DialogTitle>
+              <DialogTitle>Upgrade Your Plan</DialogTitle>
+              <p className="text-sm text-gray-600 mt-1">Select a plan and payment method to continue</p>
             </DialogHeader>
             
             <div className="space-y-6">
@@ -491,110 +545,194 @@ export default function BillingPage() {
                   <div className="flex items-start space-x-3">
                     <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h3 className="font-medium text-red-900">Payment Error</h3>
+                      <h3 className="font-medium text-red-900">Error</h3>
                       <p className="text-red-800 text-sm mt-1">{paymentError}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Billing Options */}
-              <div className="flex items-center justify-center space-x-4 border-b pb-6">
-                <div className="flex items-center space-x-2">
-                  <label>Billing Cycle:</label>
-                  <select
-                    value={selectedBillingCycle}
-                    onChange={(e) => setSelectedBillingCycle(e.target.value as 'monthly' | 'yearly')}
-                    className="border border-gray-300 rounded px-3 py-1"
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly (Save 17%)</option>
-                  </select>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <label>Currency:</label>
-                  <select
-                    value={selectedCurrency}
-                    onChange={(e) => setSelectedCurrency(e.target.value as 'USD' | 'ZWL')}
-                    className="border border-gray-300 rounded px-3 py-1"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="ZWL">ZWL (Z$)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Plans Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {plans.map((plan) => (
-                  <Card 
-                    key={plan.id}
-                    className={`transition-all duration-200 ${
-                      plan.popular ? 'ring-2 ring-purple-300 shadow-md' : ''
-                    } hover:shadow-lg`}
-                  >
-                    <CardHeader className="text-center">
-                      {plan.popular && (
-                        <Badge className="mb-2 bg-purple-600 mx-auto w-fit">
-                          <Star className="w-3 h-3 mr-1" />
-                          Popular
-                        </Badge>
-                      )}
-                      <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      <p className="text-sm text-gray-600">{plan.description}</p>
-                      <div className="mt-4">
-                        <span className="text-2xl font-bold">
-                          {selectedCurrency} ${plan.pricing[selectedBillingCycle][selectedCurrency]}
-                        </span>
-                        <span className="text-gray-600">
-                          /{selectedBillingCycle === 'yearly' ? 'year' : 'month'}
-                        </span>
+              {/* Select Plan Section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Select Plan</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {plans.map((plan) => (
+                    <label
+                      key={plan.id}
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                        selectedPlan === plan.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-start">
+                        <input
+                          type="radio"
+                          name="plan"
+                          value={plan.id}
+                          checked={selectedPlan === plan.id}
+                          onChange={(e) => setSelectedPlan(e.target.value)}
+                          className="mt-1"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                            {plan.popular && (
+                              <Badge className="bg-purple-600 text-xs">Popular</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">{plan.description}</p>
+                          <p className="text-lg font-bold text-gray-900 mt-2">
+                            ${plan.pricing[selectedBillingCycle][selectedCurrency]}
+                            <span className="text-sm font-normal text-gray-600">
+                              /{selectedBillingCycle === 'yearly' ? 'year' : 'month'}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-center text-sm">
-                            <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        onClick={() => handleUpgrade(plan.id)}
-                        disabled={upgradeLoading}
-                        className="w-full"
-                      >
-                        {upgradeLoading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Processing...
-                          </>
-                        ) : (
-                          'Select Plan'
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  <strong>Payment Gateway:</strong> Paynow<br/>
-                  <strong>Supported Methods:</strong> Visa, Mastercard, ZIM-Switch, EcoCash, OneMoney, Telecash<br/>
-                  <strong>Next Step:</strong> Click "Select Plan" to proceed to Paynow's secure payment gateway
-                </p>
+              {/* Billing Cycle Section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Billing Cycle</h3>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={selectedBillingCycle === 'monthly'}
+                      onChange={() => setSelectedBillingCycle('monthly')}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-900">Monthly</span>
+                  </label>
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={selectedBillingCycle === 'yearly'}
+                      onChange={() => setSelectedBillingCycle('yearly')}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-900">Yearly <span className="text-green-600 text-sm">-17%</span></span>
+                  </label>
+                  <div className="flex-1 flex items-center justify-end">
+                    <select
+                      value={selectedCurrency}
+                      onChange={(e) => setSelectedCurrency(e.target.value as 'USD' | 'ZWL')}
+                      className="border border-gray-300 rounded px-3 py-1 text-sm"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="ZWL">ZWL (Z$)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              {/* Cancel Button */}
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={() => {
-                  setShowUpgradeDialog(false)
-                  setPaymentError('')
-                }}>
+              {/* Payment Method Section */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Payment Method</h3>
+                <div className="space-y-3">
+                  {/* Paynow */}
+                  <label
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start ${
+                      selectedPaymentMethod === 'paynow'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="paynow"
+                      checked={selectedPaymentMethod === 'paynow'}
+                      onChange={(e) => setSelectedPaymentMethod(e.target.value as 'paynow' | 'bank_transfer')}
+                      className="mt-1"
+                    />
+                    <div className="ml-3">
+                      <h4 className="font-semibold text-gray-900">Paynow (Mobile Money)</h4>
+                      <p className="text-sm text-gray-600">Ecocash, OneMoney, Telecash</p>
+                    </div>
+                  </label>
+
+                  {/* Bank Transfer */}
+                  <label
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start ${
+                      selectedPaymentMethod === 'bank_transfer'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="bank_transfer"
+                      checked={selectedPaymentMethod === 'bank_transfer'}
+                      onChange={(e) => setSelectedPaymentMethod(e.target.value as 'paynow' | 'bank_transfer')}
+                      className="mt-1"
+                    />
+                    <div className="ml-3">
+                      <h4 className="font-semibold text-gray-900">Bank Transfer</h4>
+                      <p className="text-sm text-gray-600">Direct bank deposit</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Bank Transfer POP Upload */}
+              {selectedPaymentMethod === 'bank_transfer' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Submit Proof of Payment</h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Please upload a screenshot or image of your payment proof. Our admin will review and activate your account.
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setPopFile(e.currentTarget.files?.[0] || null)}
+                    className="block w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  />
+                  {popFile && (
+                    <p className="text-sm text-green-600 mt-2">✓ {popFile.name} selected</p>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowUpgradeDialog(false)
+                    setPaymentError('')
+                    setPopFile(null)
+                    setSelectedPlan('ENTERPRISE')
+                    setSelectedPaymentMethod('paynow')
+                  }}
+                >
                   Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedPaymentMethod === 'paynow') {
+                      handleUpgrade()
+                    } else {
+                      handlePopUpload()
+                    }
+                  }}
+                  disabled={upgradeLoading || uploadingPop || !selectedPlan}
+                >
+                  {upgradeLoading || uploadingPop ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : selectedPaymentMethod === 'paynow' ? (
+                    'Continue to Payment'
+                  ) : (
+                    'Submit Payment Proof'
+                  )}
                 </Button>
               </div>
             </div>
