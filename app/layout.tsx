@@ -3,7 +3,7 @@ import { DM_Sans, DM_Mono } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/providers/auth-provider'
 import { MUIThemeProvider } from '@/components/providers/mui-theme-provider'
-import { ConditionalNavbar } from '@/components/layout/conditional-navbar'
+import { AppLayout } from '@/components/layout/app-layout'
 import { Toaster } from '@/components/ui/sonner'
 
 const dmSans = DM_Sans({
@@ -35,11 +35,10 @@ export default function RootLayout({
       <body className={dmSans.className}>
         <AuthProvider>
           <MUIThemeProvider>
-            <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)', color: 'var(--text-primary)' }}>
-              <ConditionalNavbar />
-              <main>{children}</main>
+            <AppLayout>
+              {children}
               <Toaster />
-            </div>
+            </AppLayout>
           </MUIThemeProvider>
         </AuthProvider>
       </body>
