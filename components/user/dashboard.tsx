@@ -126,9 +126,10 @@ interface TicketSummary {
 
 interface UserDashboardProps {
   user: User
+  initialTab?: 'tickets' | 'assets'
 }
 
-export function UserDashboard({ user }: UserDashboardProps) {
+export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardProps) {
   const [tickets, setTickets] = useState<TicketSummary[]>([])
   const [filteredTickets, setFilteredTickets] = useState<TicketSummary[]>([])
   const [selectedTicket, setSelectedTicket] = useState<TicketSummary | null>(null)
@@ -159,7 +160,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
-  const [activeTab, setActiveTab] = useState('tickets')
+  const [activeTab, setActiveTab] = useState(initialTab)
   
   // Work description approval state
   const [showWorkApprovalDialog, setShowWorkApprovalDialog] = useState(false)
@@ -881,60 +882,12 @@ export function UserDashboard({ user }: UserDashboardProps) {
             </p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            {activeTab === 'tickets' && user.role === 'END_USER' ? (
+            {activeTab === 'tickets' && user.role === 'END_USER' && (
               <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
-            ) : activeTab === 'assets' && user.role === 'END_USER' ? (
-              <Button onClick={() => setActiveTab('tickets')} size="sm">
-                <Ticket className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">View Tickets</span>
-              </Button>
-            ) : null}
+            )}
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-border">
-          <nav className="-mb-px flex space-x-8">
-            {/* Only show My Tickets tab for END_USER */}
-            {user.role === 'END_USER' && (
-              <button
-                onClick={() => setActiveTab('tickets')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'tickets'
-                    ? 'border-border'
-                    : 'border-transparent hover:border-border'
-                }`}
-                style={activeTab === 'tickets' ? { color: 'var(--accent)' } : { color: 'var(--text-secondary)' }}
-              >
-                <div className="flex items-center space-x-2">
-                  <Ticket className="h-4 w-4" />
-                  <span>My Tickets</span>
-                  <Badge variant="secondary" className="ml-1">
-                    {tickets.length}
-                  </Badge>
-                </div>
-              </button>
-            )}
-
-            {/* Asset Register tab for END_USER */}
-            {user.role === 'END_USER' && (
-              <button
-                onClick={() => setActiveTab('assets')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'assets'
-                    ? 'border-border'
-                    : 'border-transparent hover:border-border'
-                }`}
-                style={activeTab === 'assets' ? { color: 'var(--accent)' } : { color: 'var(--text-secondary)' }}
-              >
-                <div className="flex items-center space-x-2">
-                  <Package className="h-4 w-4" />
-                  <span>Asset Register</span>
-                </div>
-              </button>
-            )}
-          </nav>
-        </div>
 
         {/* Tab Content */}
         {user.role === 'END_USER' ? (

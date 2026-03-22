@@ -72,6 +72,7 @@ function getNavItems(role: string): NavItem[] {
 
   return [
     { href: '/dashboard', label: 'My Tickets', icon: <Inbox size={14} strokeWidth={1.5} />, exact: true },
+    { href: '/dashboard/assets', label: 'Asset Register', icon: <Package size={14} strokeWidth={1.5} /> },
   ]
 }
 
