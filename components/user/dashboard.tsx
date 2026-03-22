@@ -868,30 +868,170 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   }
 
   return (
-    <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Compact Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-              {activeTab === 'tickets' ? 'My Tickets' : 'Asset Register'}
-            </h1>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, marginTop: 1 }}>
-              {user.name || user.email}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {activeTab === 'tickets' && user.role === 'END_USER' && (
-              <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
-            )}
-          </div>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Page header bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+            {activeTab === 'tickets' ? 'My Tickets' : 'Asset Register'}
+          </h1>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{user.name || user.email}</p>
         </div>
+        <div className="flex items-center gap-2">
+          {activeTab === 'tickets' && user.role === 'END_USER' && (
+            <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
+          )}
+        </div>
+      </div>
 
-        {/* Tab Content */}
-        {user.role === 'END_USER' ? (
-          activeTab === 'tickets' ? (
-            <>
-              {/* Compact Stats Strip */}
+      {/* Tab Content */}
+      {user.role === 'END_USER' ? (
+        activeTab === 'tickets' ? (
+          <div className="page-with-filter-panel">
+            {/* ── Left Filter Panel ── */}
+            <div className="filter-panel">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+                {getActiveFilterCount() > 0 && (
+                  <button onClick={clearAllFilters} style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    Clear all
+                  </button>
+                )}
+              </div>
+
+              {/* Search */}
+              <div className="filter-section">
+                <span className="filter-section-label">Search</span>
+                <div style={{ position: 'relative' }}>
+                  <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, color: 'var(--text-muted)' }} />
+                  <Input
+                    placeholder="Search tickets..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ height: 30, fontSize: 12, paddingLeft: 26, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="filter-section">
+                <span className="filter-section-label">Status</span>
+                {[
+                  { value: 'OPEN', label: 'Open' },
+                  { value: 'ASSIGNED', label: 'Assigned' },
+                  { value: 'IN_PROGRESS', label: 'In Progress' },
+                  { value: 'ON_SITE', label: 'On Site' },
+                  { value: 'AWAITING_APPROVAL', label: 'Awaiting Approval' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                  { value: 'CLOSED', label: 'Closed' },
+                  { value: 'CANCELLED', label: 'Cancelled' },
+                ].map(({ value, label }) => {
+                  const count = tickets.filter(t => t.status === value).length
+                  const active = statusFilter === value
+                  return (
+                    <div
+                      key={value}
+                      className={`filter-option${active ? ' active' : ''}`}
+                      onClick={() => setStatusFilter(active ? 'all' : value)}
+                    >
+                      <span className="filter-option-label">
+                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                        {label}
+                      </span>
+                      <span className="filter-option-count">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Priority */}
+              <div className="filter-section">
+                <span className="filter-section-label">Priority</span>
+                {[
+                  { value: 'LOW', label: 'Low' },
+                  { value: 'MEDIUM', label: 'Medium' },
+                  { value: 'HIGH', label: 'High' },
+                  { value: 'CRITICAL', label: 'Critical' },
+                ].map(({ value, label }) => {
+                  const count = tickets.filter(t => t.priority === value).length
+                  const active = priorityFilter === value
+                  return (
+                    <div
+                      key={value}
+                      className={`filter-option${active ? ' active' : ''}`}
+                      onClick={() => setPriorityFilter(active ? 'all' : value)}
+                    >
+                      <span className="filter-option-label">
+                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                        {label}
+                      </span>
+                      <span className="filter-option-count">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Type */}
+              <div className="filter-section">
+                <span className="filter-section-label">Type</span>
+                {['IT', 'SALES', 'RETAIL', 'MAINTENANCE', 'PROJECTS', 'GENERAL'].map(value => {
+                  const count = tickets.filter(t => t.type === value).length
+                  const active = typeFilter === value
+                  return (
+                    <div
+                      key={value}
+                      className={`filter-option${active ? ' active' : ''}`}
+                      onClick={() => setTypeFilter(active ? 'all' : value)}
+                    >
+                      <span className="filter-option-label">
+                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                        {value.charAt(0) + value.slice(1).toLowerCase()}
+                      </span>
+                      <span className="filter-option-count">{count}</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Date */}
+              <div className="filter-section">
+                <span className="filter-section-label">Created</span>
+                {[
+                  { value: 'today', label: 'Today' },
+                  { value: 'week', label: 'Last 7 days' },
+                  { value: 'month', label: 'Last 30 days' },
+                  { value: 'quarter', label: 'Last 90 days' },
+                ].map(({ value, label }) => {
+                  const active = dateFilter === value
+                  return (
+                    <div
+                      key={value}
+                      className={`filter-option${active ? ' active' : ''}`}
+                      onClick={() => setDateFilter(active ? 'all' : value)}
+                    >
+                      <span className="filter-option-label">{label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Show Closed */}
+              <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <div
+                  className={`filter-option${showClosedTickets ? ' active' : ''}`}
+                  onClick={() => setShowClosedTickets(!showClosedTickets)}
+                >
+                  <span className="filter-option-label">
+                    <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${showClosedTickets ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: showClosedTickets ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                    Show Closed
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Right Content ── */}
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
+              {/* Stats Strip */}
               <div className="stats-strip">
                 {[
                   { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
@@ -906,177 +1046,33 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
                 ))}
               </div>
 
-              {/* Search + Filter Row */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <div style={{ flex: 1, position: 'relative' }}>
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
-                  <Input
-                    placeholder="Search tickets..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    style={{ height: 36, fontSize: 13 }}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)', height: 36 } : { height: 36 }}
-                >
-                  <Filter className="h-3.5 w-3.5 mr-1.5" />
-                  Filters
-                  {getActiveFilterCount() > 0 && (
-                    <Badge className="ml-1.5 h-4 w-4 p-0 text-xs">{getActiveFilterCount()}</Badge>
-                  )}
-                </Button>
-                {getActiveFilterCount() > 0 && (
-                  <Button variant="ghost" size="sm" onClick={clearAllFilters} style={{ height: 36 }}>
-                    <X className="h-3.5 w-3.5 mr-1" />Clear
-                  </Button>
-                )}
-              </div>
-              {/* Advanced Filters */}
-              {showFilters && (
-              <div style={{ borderRadius: 10, border: '1px solid var(--border)', padding: '12px 16px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)' }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                  {/* Status Filter */}
-                  <div>
-                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Status</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="OPEN">Open</SelectItem>
-                        <SelectItem value="ASSIGNED">Assigned</SelectItem>
-                        <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                        <SelectItem value="ON_SITE">On Site</SelectItem>
-                        <SelectItem value="AWAITING_APPROVAL">Awaiting Approval</SelectItem>
-                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                        <SelectItem value="CLOSED">Closed</SelectItem>
-                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Priority Filter */}
-                  <div>
-                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Priority</label>
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priority</SelectItem>
-                        <SelectItem value="LOW">Low</SelectItem>
-                        <SelectItem value="MEDIUM">Medium</SelectItem>
-                        <SelectItem value="HIGH">High</SelectItem>
-                        <SelectItem value="CRITICAL">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Type Filter */}
-                  <div>
-                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Type</label>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="IT">IT</SelectItem>
-                        <SelectItem value="SALES">Sales</SelectItem>
-                        <SelectItem value="RETAIL">Retail</SelectItem>
-                        <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                        <SelectItem value="PROJECTS">Projects</SelectItem>
-                        <SelectItem value="GENERAL">General</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Date Filter */}
-                  <div>
-                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Created</label>
-                    <Select value={dateFilter} onValueChange={setDateFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="week">Last 7 days</SelectItem>
-                        <SelectItem value="month">Last 30 days</SelectItem>
-                        <SelectItem value="quarter">Last 90 days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Assignment Filter */}
-                  <div>
-                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Assignment</label>
-                    <Select value={assignedFilter} onValueChange={setAssignedFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any assignment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Tickets</SelectItem>
-                        <SelectItem value="assigned">Assigned</SelectItem>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Show Closed Tickets Toggle */}
-                  <div className="flex items-center justify-between col-span-full pt-2 border-t border-border">
-                    <div>
-                      <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Show Closed Tickets</label>
-                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Closed tickets are hidden by default</p>
-                    </div>
-                    <button
-                      onClick={() => setShowClosedTickets(!showClosedTickets)}
-                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                      style={{ backgroundColor: showClosedTickets ? 'var(--accent)' : 'var(--surface2)' }}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full transition-transform ${
-                          showClosedTickets ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                        style={{ backgroundColor: 'var(--surface)' }}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              )}
-
               {/* Tickets Table */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</span>
-                  {getActiveFilterCount() > 0 && (
-                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                      {filteredTickets.length} of {tickets.length}
-                    </span>
-                  )}
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    Tickets
+                    {getActiveFilterCount() > 0 && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
+                        {filteredTickets.length} of {tickets.length}
+                      </span>
+                    )}
+                  </span>
                 </CardHeader>
                 <CardContent style={{ paddingTop: 0 }}>
                   {filteredTickets.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
                       {tickets.length === 0 ? (
                         <>
-                          <Ticket style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
+                          <Ticket style={{ width: 28, height: 28, marginBottom: 10, color: 'var(--text-muted)' }} />
                           <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>No tickets yet</p>
-                          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>Create your first support ticket to get started</p>
+                          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>Create your first support ticket to get started</p>
                           <Button size="sm" onClick={() => setShowCreateDialog(true)}>
                             <Plus className="h-3.5 w-3.5 mr-1.5" />Create Ticket
                           </Button>
                         </>
                       ) : (
                         <>
-                          <Search style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
+                          <Search style={{ width: 28, height: 28, marginBottom: 10, color: 'var(--text-muted)' }} />
                           <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>No tickets match your filters</p>
                           <Button variant="outline" size="sm" onClick={clearAllFilters}>
                             <X className="h-3.5 w-3.5 mr-1.5" />Clear Filters
@@ -1101,7 +1097,8 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
                   )}
                 </CardContent>
               </Card>
-          </>
+            </div>
+          </div>
         ) : (
           /* Asset Register Tab */
           <AssetRegister tenantId={user.tenantId || ''} userRole={user.role} />
@@ -1758,7 +1755,6 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
           onOpenChange={setShowCreateDialog}
           hideTrigger={true}
         />
-      </div>
     </div>
   )
 }

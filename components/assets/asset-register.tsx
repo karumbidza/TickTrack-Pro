@@ -587,19 +587,18 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
   }
 
   return (
-    <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {/* Compact Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Asset Register</h1>
-            {userBranches.length > 0 && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, marginTop: 1 }}>
-                {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
-              </p>
-            )}
-          </div>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Page Header Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Asset Register</h1>
+          {userBranches.length > 0 && (
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
+              {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
+            </p>
+          )}
+        </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -625,81 +624,137 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
           </Dialog>
         </div>
 
-        {/* Compact Stats Strip */}
-        <div className="stats-strip">
-          {[
-            { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
-            { label: 'Active', value: stats.active, color: 'var(--green)' },
-            { label: 'Maintenance', value: stats.maintenance, color: 'var(--amber)' },
-            { label: 'Out of Service', value: stats.outOfService, color: 'var(--red)' },
-          ].map((s, i) => (
-            <div key={i} className="stats-strip-item">
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 300, color: s.color, letterSpacing: '-0.025em', lineHeight: 1 }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Search + Filter Row */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
-            <Input
-              placeholder="Search assets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-              style={{ height: 36, fontSize: 13 }}
-            />
+      {/* Two-column layout: filter panel + content */}
+      <div className="page-with-filter-panel">
+        {/* ── Left Filter Panel ── */}
+        <div className="filter-panel">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+            {(statusFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
+              <button
+                onClick={() => { setStatusFilter('all'); setCategoryFilter('all'); setSearchTerm('') }}
+                style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Clear all
+              </button>
+            )}
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger style={{ width: 140, height: 36, fontSize: 13 }}>
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              {assetStatuses.map(status => (
-                <SelectItem key={status} value={status}>{status.replace('_', ' ')}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger style={{ width: 160, height: 36, fontSize: 13 }}>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(category => (
-                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          {/* Search */}
+          <div className="filter-section">
+            <span className="filter-section-label">Search</span>
+            <div style={{ position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, color: 'var(--text-muted)' }} />
+              <Input
+                placeholder="Name, number, serial..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ height: 30, fontSize: 12, paddingLeft: 26, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
+              />
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="filter-section">
+            <span className="filter-section-label">Status</span>
+            {assetStatuses.map(status => {
+              const count = assets.filter(a => a.status === status).length
+              const active = statusFilter === status
+              return (
+                <div
+                  key={status}
+                  className={`filter-option${active ? ' active' : ''}`}
+                  onClick={() => setStatusFilter(active ? 'all' : status)}
+                >
+                  <span className="filter-option-label">
+                    <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                    {status.replace(/_/g, ' ')}
+                  </span>
+                  <span className="filter-option-count">{count}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Category */}
+          {categories.length > 0 && (
+            <div className="filter-section">
+              <span className="filter-section-label">Category</span>
+              {categories.map(cat => {
+                const count = assets.filter(a => a.categoryId === cat.id).length
+                const active = categoryFilter === cat.id
+                return (
+                  <div
+                    key={cat.id}
+                    className={`filter-option${active ? ' active' : ''}`}
+                    onClick={() => setCategoryFilter(active ? 'all' : cat.id)}
+                  >
+                    <span className="filter-option-label">
+                      <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
+                      {cat.name}
+                    </span>
+                    <span className="filter-option-count">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setShowCategoryDialog(true)} style={{ height: 36 }}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />Categories
-            </Button>
+            <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+              <button
+                onClick={() => setShowCategoryDialog(true)}
+                style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <Plus style={{ width: 11, height: 11 }} />Manage Categories
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Assets Table */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Asset Inventory</span>
-          </CardHeader>
-          <CardContent style={{ paddingTop: 0 }}>
-            {filteredAssets.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
-                <FileText style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
-                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
-                </p>
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-                  {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
-                </p>
-                <Button size="sm" onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />Add Asset
-                </Button>
+        {/* ── Right Content ── */}
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
+          {/* Stats Strip */}
+          <div className="stats-strip">
+            {[
+              { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
+              { label: 'Active', value: stats.active, color: 'var(--green)' },
+              { label: 'Maintenance', value: stats.maintenance, color: 'var(--amber)' },
+              { label: 'Out of Service', value: stats.outOfService, color: 'var(--red)' },
+            ].map((s, i) => (
+              <div key={i} className="stats-strip-item">
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 300, color: s.color, letterSpacing: '-0.025em', lineHeight: 1 }}>{s.value}</div>
               </div>
+            ))}
+          </div>
+
+          {/* Assets Table */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                Asset Inventory
+                {(statusFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
+                    {filteredAssets.length} of {assets.length}
+                  </span>
+                )}
+              </span>
+            </CardHeader>
+            <CardContent style={{ paddingTop: 0 }}>
+              {filteredAssets.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+                  <FileText style={{ width: 28, height: 28, marginBottom: 10, color: 'var(--text-muted)' }} />
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                    {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
+                  </p>
+                  <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Asset
+                  </Button>
+                </div>
             ) : (
               <Box sx={{ width: '100%' }}>
                 <ScrollableDataGrid
@@ -755,10 +810,12 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-        {/* Decommission Dialog */}
+      {/* Decommission Dialog */}
         <Dialog open={showDecommissionDialog} onOpenChange={setShowDecommissionDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -1053,7 +1110,6 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             )}
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   )
 }

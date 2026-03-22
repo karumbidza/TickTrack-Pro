@@ -256,6 +256,80 @@
     color: var(--tag-text);
   }
 
+  /* Filter panel layout */
+  .page-with-filter-panel {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: calc(100vh - 0px);
+  }
+
+  .filter-panel {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    padding: 16px 14px;
+    flex-shrink: 0;
+  }
+
+  .filter-section {
+    margin-bottom: 20px;
+  }
+
+  .filter-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .filter-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+    margin-bottom: 1px;
+  }
+
+  .filter-option:hover {
+    background: var(--surface2);
+  }
+
+  .filter-option.active {
+    background: var(--tag-bg);
+  }
+
+  .filter-option-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .filter-option.active .filter-option-label {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .filter-option-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    min-width: 20px;
+    text-align: right;
+  }
+
   /* Sidebar layout utilities */
   .sidebar-layout {
     display: flex;
@@ -266,7 +340,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 210px;
+    width: 170px;
     height: 100vh;
     z-index: 40;
     display: flex;
@@ -278,9 +352,9 @@
   }
 
   .sidebar-content {
-    margin-left: 210px;
+    margin-left: 170px;
     min-height: 100vh;
-    width: calc(100% - 210px);
+    width: calc(100% - 170px);
   }
 
   @media (max-width: 768px) {
