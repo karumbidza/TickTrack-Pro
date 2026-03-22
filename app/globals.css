@@ -7,10 +7,10 @@
 @layer base {
   :root {
     /* Design system colour tokens */
-    --bg: #ffffff;
+    --bg: #f2f1ee;
     --surface: #ffffff;
-    --surface2: #f5f4f1;
-    --border: #e8e6e0;
+    --surface2: #eceae5;
+    --border: #e0ddd6;
     --border-strong: #c8c6bc;
     --text-primary: #1a1916;
     --text-secondary: #6b6860;
@@ -142,15 +142,51 @@
   }
 
   .ds-card {
-    background-color: var(--surface);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
     border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 8px rgba(0, 0, 0, 0.04);
   }
 
   .ds-card-lg {
-    background-color: var(--surface);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
     border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Compact stats strip */
+  .stats-strip {
+    display: flex;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .stats-strip-item {
+    flex: 1;
+    padding: 12px 16px;
+    border-right: 1px solid var(--border);
+  }
+
+  .stats-strip-item:last-child {
+    border-right: none;
   }
 
   .ds-btn-primary {

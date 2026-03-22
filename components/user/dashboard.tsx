@@ -868,74 +868,78 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   }
 
   return (
-    <div className="p-3 sm:p-5" style={{ backgroundColor: 'var(--bg)' }}>
-      <div className="space-y-4 sm:space-y-5">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+    <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Compact Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>Welcome back, {user.name || 'User'}</h1>
-            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
-              {user.role === 'END_USER' ? 'Manage your tickets and assets' : 
-               user.role === 'TENANT_ADMIN' ? 'Manage company tickets and projects' :
-               user.role === 'CONTRACTOR' ? 'View assigned tickets and projects' :
-               'System administration'}
+            <h1 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+              {activeTab === 'tickets' ? 'My Tickets' : 'Asset Register'}
+            </h1>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, marginTop: 1 }}>
+              {user.name || user.email}
             </p>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2">
             {activeTab === 'tickets' && user.role === 'END_USER' && (
               <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
             )}
           </div>
         </div>
 
-
         {/* Tab Content */}
         {user.role === 'END_USER' ? (
-          // END_USER content with tabs
           activeTab === 'tickets' ? (
             <>
-              {/* Search and Filter Bar */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    {/* Search */}
-                    <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                      <Input
-                        placeholder="Search tickets..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                
-                {/* Filter Toggle */}
+              {/* Compact Stats Strip */}
+              <div className="stats-strip">
+                {[
+                  { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
+                  { label: 'Open', value: stats.open, color: 'var(--blue)' },
+                  { label: 'In Progress', value: stats.inProgress, color: 'var(--amber)' },
+                  { label: 'Completed', value: stats.completed, color: 'var(--green)' },
+                ].map((s, i) => (
+                  <div key={i} className="stats-strip-item">
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 300, color: s.color, letterSpacing: '-0.025em', lineHeight: 1 }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Search + Filter Row */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
+                  <Input
+                    placeholder="Search tickets..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                    style={{ height: 36, fontSize: 13 }}
+                  />
+                </div>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
+                  style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)', height: 36 } : { height: 36 }}
                 >
-                  <Filter className="h-4 w-4 mr-2" />
+                  <Filter className="h-3.5 w-3.5 mr-1.5" />
                   Filters
                   {getActiveFilterCount() > 0 && (
-                    <Badge className="ml-2 h-5 w-5 p-0 text-xs">
-                      {getActiveFilterCount()}
-                    </Badge>
+                    <Badge className="ml-1.5 h-4 w-4 p-0 text-xs">{getActiveFilterCount()}</Badge>
                   )}
                 </Button>
-              
-              {getActiveFilterCount() > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-            
-            {/* Advanced Filters */}
-            {showFilters && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                {getActiveFilterCount() > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} style={{ height: 36 }}>
+                    <X className="h-3.5 w-3.5 mr-1" />Clear
+                  </Button>
+                )}
+              </div>
+              {/* Advanced Filters */}
+              {showFilters && (
+              <div style={{ borderRadius: 10, border: '1px solid var(--border)', padding: '12px 16px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
                   {/* Status Filter */}
                   <div>
                     <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Status</label>
@@ -1046,111 +1050,57 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
                   </div>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Tickets</CardTitle>
-              <Ticket className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Open</CardTitle>
-              <Ticket className="h-4 w-4" style={{ color: 'var(--blue)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.open}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>In Progress</CardTitle>
-              <Clock className="h-4 w-4" style={{ color: 'var(--amber)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.inProgress}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Completed</CardTitle>
-              <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.completed}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tickets Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>My Tickets</span>
-              {getActiveFilterCount() > 0 && (
-                <span className="text-sm font-normal" style={{ color: 'var(--text-secondary)' }}>
-                  Showing {filteredTickets.length} of {tickets.length} tickets
-                </span>
               )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-          {filteredTickets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              {tickets.length === 0 ? (
-                <>
-                  <Ticket className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
-                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Create your first support ticket to get started</p>
-                  <Button onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Ticket
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Search className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No tickets match your filters</h3>
-                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Try adjusting your search criteria</p>
-                  <Button variant="outline" onClick={clearAllFilters}>
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
-                  </Button>
-                </>
-              )}
-            </div>
-          ) : (
-            <Box sx={{ width: '100%' }}>
-              <ScrollableDataGrid
-                rows={filteredTickets}
-                columns={ticketColumns}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10, page: 0 },
-                  },
-                  sorting: {
-                    sortModel: [{ field: 'createdAt', sort: 'desc' }],
-                  },
-                }}
-                pageSizeOptions={[5, 10, 25, 50]}
-                disableRowSelectionOnClick
-                autoHeight
-              />
-            </Box>
-          )}
-          </CardContent>
-        </Card>
+
+              {/* Tickets Table */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</span>
+                  {getActiveFilterCount() > 0 && (
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      {filteredTickets.length} of {tickets.length}
+                    </span>
+                  )}
+                </CardHeader>
+                <CardContent style={{ paddingTop: 0 }}>
+                  {filteredTickets.length === 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+                      {tickets.length === 0 ? (
+                        <>
+                          <Ticket style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
+                          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>No tickets yet</p>
+                          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>Create your first support ticket to get started</p>
+                          <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                            <Plus className="h-3.5 w-3.5 mr-1.5" />Create Ticket
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Search style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
+                          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>No tickets match your filters</p>
+                          <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                            <X className="h-3.5 w-3.5 mr-1.5" />Clear Filters
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <Box sx={{ width: '100%' }}>
+                      <ScrollableDataGrid
+                        rows={filteredTickets}
+                        columns={ticketColumns}
+                        initialState={{
+                          pagination: { paginationModel: { pageSize: 10, page: 0 } },
+                          sorting: { sortModel: [{ field: 'createdAt', sort: 'desc' }] },
+                        }}
+                        pageSizeOptions={[5, 10, 25, 50]}
+                        disableRowSelectionOnClick
+                        autoHeight
+                      />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
           </>
         ) : (
           /* Asset Register Tab */

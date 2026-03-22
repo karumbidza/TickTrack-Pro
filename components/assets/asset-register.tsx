@@ -587,31 +587,22 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
   }
 
   return (
-    <div className="bg-surface2 p-5">
-      <div className="space-y-5">
-        {/* User Branch Banner */}
-        {userBranches.length > 0 && (
-          <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ backgroundColor: 'var(--blue-bg)', border: '1px solid var(--ds-blue)' }}>
-            <MapPin className="h-5 w-5" style={{ color: 'var(--ds-blue)' }} />
-            <div>
-              <span className="text-sm text-ds-blue">
-                <span className="font-medium">Your Branch{userBranches.length > 1 ? 'es' : ''}:</span>{' '}
-                {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Compact Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="text-3xl" style={{ fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Asset Register</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage your company assets and equipment</p>
+            <h1 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Asset Register</h1>
+            {userBranches.length > 0 && (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, marginTop: 1 }}>
+                {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
+              </p>
+            )}
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm">
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Add Asset
               </Button>
             </DialogTrigger>
@@ -634,119 +625,79 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="stat-number">{stats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="stat-number">{stats.active}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Under Maintenance</CardTitle>
-              <Wrench className="h-4 w-4" style={{ color: 'var(--ds-amber)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="stat-number">{stats.maintenance}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Out of Service</CardTitle>
-              <AlertCircle className="h-4 w-4" style={{ color: 'var(--ds-red)' }} />
-            </CardHeader>
-            <CardContent>
-              <div className="stat-number">{stats.outOfService}</div>
-            </CardContent>
-          </Card>
+        {/* Compact Stats Strip */}
+        <div className="stats-strip">
+          {[
+            { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
+            { label: 'Active', value: stats.active, color: 'var(--green)' },
+            { label: 'Maintenance', value: stats.maintenance, color: 'var(--amber)' },
+            { label: 'Out of Service', value: stats.outOfService, color: 'var(--red)' },
+          ].map((s, i) => (
+            <div key={i} className="stats-strip-item">
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 300, color: s.color, letterSpacing: '-0.025em', lineHeight: 1 }}>{s.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Search and Filter Bar */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <Input
-                  placeholder="Search assets by name, number, location, or serial..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {assetStatuses.map(status => (
-                    <SelectItem key={status} value={status}>
-                      {status.replace('_', ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {isAdmin && (
-                <Button variant="outline" onClick={() => setShowCategoryDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Manage Categories
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Search + Filter Row */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
+            <Input
+              placeholder="Search assets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+              style={{ height: 36, fontSize: 13 }}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger style={{ width: 140, height: 36, fontSize: 13 }}>
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              {assetStatuses.map(status => (
+                <SelectItem key={status} value={status}>{status.replace('_', ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger style={{ width: 160, height: 36, fontSize: 13 }}>
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(category => (
+                <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setShowCategoryDialog(true)} style={{ height: 36 }}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Categories
+            </Button>
+          )}
+        </div>
 
         {/* Assets Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Asset Inventory</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Asset Inventory</span>
           </CardHeader>
-          <CardContent>
+          <CardContent style={{ paddingTop: 0 }}>
             {filteredAssets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+                <FileText style={{ width: 32, height: 32, marginBottom: 12, color: 'var(--text-muted)' }} />
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
                   {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
-                </h3>
-                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
                   {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
                 </p>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Asset
+                <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />Add Asset
                 </Button>
               </div>
             ) : (
