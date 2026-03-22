@@ -290,7 +290,7 @@ export default function InvoiceTrackerPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { className: string; icon: React.ReactNode }> = {
+    const variants: Record<string, { className: string; style: React.CSSProperties; icon: React.ReactNode }> = {
       DRAFT: { className: '', style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <FileText className="h-3 w-3" /> },
       PENDING: { className: '', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <Clock className="h-3 w-3" /> },
       APPROVED: { className: '', style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <CheckCircle className="h-3 w-3" /> },

@@ -778,8 +778,10 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             {/* Image Hover Popup */}
             {hoveredImageAsset && hoveredImageAsset.images && hoveredImageAsset.images.length > 0 && (
               <div
-                className="fixed z-50 rounded-lg shadow-lg p-2 pointer-events-none" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+                className="fixed z-50 rounded-lg shadow-lg p-2 pointer-events-none"
                 style={{
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--border)',
                   left: Math.min(imagePopupPosition.x, window.innerWidth - 340),
                   top: Math.max(10, Math.min(imagePopupPosition.y - 100, window.innerHeight - 350)),
                 }}

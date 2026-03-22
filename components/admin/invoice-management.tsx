@@ -1358,7 +1358,7 @@ export function AdminInvoiceManagement() {
                       {invoiceDetails.rating.comment && (
                         <Card>
                           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Comments</CardTitle></CardHeader>
-                          <CardContent><p {style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.rating.comment}</p></CardContent>
+                          <CardContent><p style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.rating.comment}</p></CardContent>
                         </Card>
                       )}
                     </>
