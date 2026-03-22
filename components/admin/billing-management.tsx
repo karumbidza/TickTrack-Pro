@@ -1,14 +1,30 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Select } from '@/components/ui/select'
-import { Loader2, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Star, Download } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Loader2, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Star, Shield, ArrowRight, X, Check, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
+
+// ============================================
+// TYPES
+// ============================================
 
 interface Subscription {
   id: string
@@ -45,22 +61,231 @@ interface BillingData {
   recentPayments: Payment[]
 }
 
+interface PaymentMethod {
+  id: string
+  label: string
+  icon: string
+  description: string
+  fields: PaymentField[]
+  color: string
+  gradient: string
+}
+
+interface PaymentField {
+  name: string
+  label: string
+  type: 'text' | 'tel' | 'file'
+  placeholder: string
+  maxLength?: number
+  accept?: string
+}
+
+interface Plan {
+  id: string
+  name: string
+  description: string
+  features: string[]
+  pricing: {
+    monthly: { USD: number; ZWL: number }
+    yearly: { USD: number; ZWL: number }
+  }
+  popular?: boolean
+}
+
+type PaymentState = 'idle' | 'processing' | 'success' | 'failed'
+
+// ============================================
+// DYNAMIC PAYMENT METHODS CONFIG
+// Mobile Money (direct push): EcoCash, OneMoney
+// Web Redirect (Paynow checkout): InnBucks, ZIPIT, Visa/Mastercard
+// Manual: Bank Transfer
+// ============================================
+
+// Web redirect payment methods (user redirected to Paynow)
+const webPaymentMethods = ['innbucks', 'zipit', 'visa']
+
+const paymentMethods: PaymentMethod[] = [
+  {
+    id: 'ecocash',
+    label: 'EcoCash',
+    icon: '/payment-logos/ecocash.svg',
+    description: 'Econet Mobile Money',
+    color: 'green',
+    gradient: 'from-green-500 to-green-600',
+    fields: [
+      {
+        name: 'phone',
+        label: 'EcoCash Number',
+        type: 'tel',
+        placeholder: '0771234567',
+        maxLength: 10
+      }
+    ]
+  },
+  {
+    id: 'onemoney',
+    label: 'OneMoney',
+    icon: '/payment-logos/onemoney.svg',
+    description: 'NetOne Mobile Money',
+    color: 'purple',
+    gradient: 'from-purple-500 to-purple-600',
+    fields: [
+      {
+        name: 'phone',
+        label: 'OneMoney Number',
+        type: 'tel',
+        placeholder: '0712345678',
+        maxLength: 10
+      }
+    ]
+  },
+  {
+    id: 'innbucks',
+    label: 'InnBucks',
+    icon: '/payment-logos/innbucks.svg',
+    description: 'InnBucks Wallet',
+    color: 'orange',
+    gradient: 'from-orange-500 to-orange-600',
+    fields: [] // No fields needed - redirects to Paynow
+  },
+  {
+    id: 'zipit',
+    label: 'ZIPIT',
+    icon: '/payment-logos/zipit.svg',
+    description: 'Bank ZIPIT Transfer',
+    color: 'blue',
+    gradient: 'from-blue-500 to-blue-600',
+    fields: [] // No fields needed - redirects to Paynow
+  },
+  {
+    id: 'visa',
+    label: 'Visa/Mastercard',
+    icon: '/payment-logos/visa.svg',
+    description: 'Credit/Debit Card',
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-indigo-600',
+    fields: [] // No fields needed - redirects to Paynow
+  },
+  {
+    id: 'bank_transfer',
+    label: 'Bank Transfer',
+    icon: '/payment-logos/bank_transfer.svg',
+    description: 'Direct Bank Deposit',
+    color: 'slate',
+    gradient: 'from-slate-600 to-slate-700',
+    fields: [
+      {
+        name: 'pop',
+        label: 'Proof of Payment',
+        type: 'file',
+        placeholder: 'Upload receipt',
+        accept: 'image/*,.pdf'
+      }
+    ]
+  }
+]
+
+// ============================================
+// PLANS CONFIG
+// ============================================
+
+const plans: Plan[] = [
+  {
+    id: 'BASIC',
+    name: 'Basic',
+    description: 'Perfect for small teams',
+    features: ['Up to 10 users', 'Basic helpdesk', 'Project management', 'Email support'],
+    pricing: {
+      monthly: { USD: 29, ZWL: 1160 },
+      yearly: { USD: 290, ZWL: 11600 }
+    }
+  },
+  {
+    id: 'PRO',
+    name: 'Pro',
+    description: 'Advanced features for growing businesses',
+    features: ['Up to 50 users', 'Advanced helpdesk', 'Contractor network', 'Invoice management', 'Priority support'],
+    pricing: {
+      monthly: { USD: 79, ZWL: 3160 },
+      yearly: { USD: 790, ZWL: 31600 }
+    },
+    popular: true
+  },
+  {
+    id: 'ENTERPRISE',
+    name: 'Enterprise',
+    description: 'Full-featured solution for large organizations',
+    features: ['Unlimited users', 'Enterprise features', 'White-label options', 'Dedicated support', 'Custom integrations'],
+    pricing: {
+      monthly: { USD: 199, ZWL: 7960 },
+      yearly: { USD: 1990, ZWL: 79600 }
+    }
+  }
+]
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
 export function BillingManagement() {
   const { data: session } = useSession()
+  
+  // Core state
   const [billingData, setBillingData] = useState<BillingData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [upgradeLoading, setUpgradeLoading] = useState(false)
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<string>('ENTERPRISE')
+  
+  // Modal state
+  const [showBillingModal, setShowBillingModal] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [dialogMode, setDialogMode] = useState<'upgrade' | 'renew' | 'advance'>('upgrade')
+  
+  // Selection state
+  const [selectedPlan, setSelectedPlan] = useState<string>('PRO')
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ZWL'>('USD')
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'paynow' | 'bank_transfer'>('paynow')
-  const [mobileProvider, setMobileProvider] = useState<'ecocash' | 'onemoney' | 'telecash'>('ecocash')
-  const [phoneNumber, setPhoneNumber] = useState('')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('ecocash')
+  const [advanceMonths, setAdvanceMonths] = useState(3)
+  
+  // Form state
+  const [formData, setFormData] = useState<Record<string, string>>({})
+  const [popFile, setPopFile] = useState<File | null>(null)
+  
+  // Payment state
+  const [paymentState, setPaymentState] = useState<PaymentState>('idle')
   const [paymentError, setPaymentError] = useState('')
   const [paymentInstructions, setPaymentInstructions] = useState('')
-  const [popFile, setPopFile] = useState<File | null>(null)
-  const [uploadingPop, setUploadingPop] = useState(false)
+
+  // ============================================
+  // COMPUTED VALUES
+  // ============================================
+
+  const currentMethod = useMemo(() => 
+    paymentMethods.find(m => m.id === selectedPaymentMethod) || paymentMethods[0],
+    [selectedPaymentMethod]
+  )
+
+  const currentPlan = useMemo(() => 
+    plans.find(p => p.id === selectedPlan) || plans[1],
+    [selectedPlan]
+  )
+
+  const paymentAmount = useMemo(() => {
+    const plan = plans.find(p => p.id === selectedPlan)
+    if (!plan) return 0
+    
+    const basePrice = selectedBillingCycle === 'yearly' 
+      ? plan.pricing.yearly[selectedCurrency]
+      : plan.pricing.monthly[selectedCurrency]
+    
+    if (dialogMode === 'advance') {
+      return basePrice * advanceMonths
+    }
+    return basePrice
+  }, [selectedPlan, selectedBillingCycle, selectedCurrency, dialogMode, advanceMonths])
+
+  // ============================================
+  // DATA FETCHING
+  // ============================================
 
   useEffect(() => {
     fetchBillingData()
@@ -86,65 +311,144 @@ export function BillingManagement() {
     }
   }
 
-  const handleUpgrade = async () => {
-    if (!selectedPlan) {
-      setPaymentError('Please select a plan')
+  // ============================================
+  // PAYMENT HANDLERS
+  // ============================================
+
+  const validateForm = (): boolean => {
+    const method = currentMethod
+    
+    for (const field of method.fields) {
+      if (field.type === 'tel') {
+        const value = formData[field.name] || ''
+        if (value.length < 9) {
+          setPaymentError(`Please enter a valid ${field.label}`)
+          return false
+        }
+      }
+      if (field.type === 'file' && !popFile) {
+        setPaymentError('Please upload proof of payment')
+        return false
+      }
+    }
+    
+    return true
+  }
+
+  const handleProceed = () => {
+    setPaymentError('')
+    if (!validateForm()) return
+    setShowConfirmDialog(true)
+  }
+
+  const handlePayment = async () => {
+    setPaymentError('')
+    setPaymentInstructions('')
+    setPaymentState('processing')
+    setShowConfirmDialog(false)
+
+    const amount = paymentAmount
+    const description = dialogMode === 'advance' 
+      ? `Pre-payment for ${advanceMonths} months`
+      : dialogMode === 'renew'
+        ? 'Early renewal'
+        : `${selectedPlan} Plan - ${selectedBillingCycle}`
+
+    if (selectedPaymentMethod === 'bank_transfer') {
+      await handleBankTransfer()
       return
     }
 
-    setPaymentError('')
-    setPaymentInstructions('')
-    setUpgradeLoading(true)
+    // Check if this is a web redirect payment method (InnBucks, ZIPIT, Visa)
+    const isWebPayment = webPaymentMethods.includes(selectedPaymentMethod)
 
-    if (selectedPaymentMethod === 'paynow') {
-      // Validate phone number
-      if (!phoneNumber || phoneNumber.length < 9) {
-        setPaymentError('Please enter a valid phone number (e.g., 0771234567)')
-        setUpgradeLoading(false)
-        return
-      }
+    try {
+      // Use different endpoint for web vs mobile payments
+      const endpoint = isWebPayment 
+        ? '/api/billing/paynow/web-initiate'
+        : '/api/billing/paynow/initiate'
 
-      try {
-        const paymentResponse = await fetch('/api/billing/paynow/initiate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            plan: selectedPlan,
-            billingCycle: selectedBillingCycle,
-            currency: selectedCurrency,
-            phone: phoneNumber,
-            method: mobileProvider
-          })
+      const paymentResponse = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          billingCycle: selectedBillingCycle,
+          currency: selectedCurrency,
+          phone: isWebPayment ? undefined : formData.phone,
+          method: selectedPaymentMethod,
+          amount,
+          mode: dialogMode,
+          advanceMonths: dialogMode === 'advance' ? advanceMonths : undefined,
+          description
         })
+      })
 
-        const paymentData = await paymentResponse.json()
+      const paymentData = await paymentResponse.json()
 
-        if (paymentResponse.ok) {
-          // Mobile payment initiated - show instructions
+      if (paymentResponse.ok) {
+        if (paymentData.redirectUrl) {
+          window.location.href = paymentData.redirectUrl
+        } else {
           setPaymentInstructions(paymentData.instructions || 
-            `A payment request has been sent to ${phoneNumber}. Please check your phone and enter your PIN to complete the payment.`)
-          toast.success('Payment request sent to your phone!')
+            `A payment request has been sent to ${formData.phone}. Please check your phone and enter your PIN to complete the payment.`)
           
-          // Start polling for payment status
           if (paymentData.pollUrl) {
             pollPaymentStatus(paymentData.paymentId, paymentData.pollUrl)
           }
-        } else {
-          setPaymentError(paymentData.error || 'Failed to initiate payment')
         }
-      } catch (error) {
-        console.error('Paynow error:', error)
-        setPaymentError('An error occurred. Please try again.')
-      } finally {
-        setUpgradeLoading(false)
+      } else {
+        setPaymentState('failed')
+        setPaymentError(paymentData.error || 'Failed to initiate payment')
       }
-    } else {
-      setUpgradeLoading(false)
+    } catch (error) {
+      console.error('Payment error:', error)
+      setPaymentState('failed')
+      setPaymentError('An error occurred. Please try again.')
+    }
+  }
+
+  const handleBankTransfer = async () => {
+    if (!popFile) {
+      setPaymentState('failed')
+      setPaymentError('Please select a POP file')
+      return
+    }
+
+    try {
+      const formDataObj = new FormData()
+      formDataObj.append('file', popFile)
+      formDataObj.append('plan', selectedPlan)
+      formDataObj.append('billingCycle', selectedBillingCycle)
+      formDataObj.append('currency', selectedCurrency)
+
+      const response = await fetch('/api/billing/bank-transfer/submit-pop', {
+        method: 'POST',
+        body: formDataObj
+      })
+
+      if (response.ok) {
+        setPaymentState('success')
+        toast.success('Payment proof submitted. Admin will review and activate your account soon.')
+        setTimeout(() => {
+          setShowBillingModal(false)
+          resetState()
+          fetchBillingData()
+        }, 3000)
+      } else {
+        const error = await response.json()
+        setPaymentState('failed')
+        setPaymentError(error.error || 'Failed to upload payment proof')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      setPaymentState('failed')
+      setPaymentError('An error occurred. Please try again.')
     }
   }
 
   const pollPaymentStatus = async (paymentId: string, pollUrl: string) => {
-    const maxAttempts = 30 // Poll for up to 5 minutes
+    const maxAttempts = 12 // 12 attempts × 10 seconds = 2 minutes timeout
     let attempts = 0
 
     const poll = async () => {
@@ -154,113 +458,62 @@ export function BillingManagement() {
         const data = await response.json()
 
         if (data.status === 'paid' || data.status === 'success') {
+          setPaymentState('success')
           toast.success('Payment successful! Your subscription is now active.')
-          setShowUpgradeDialog(false)
-          fetchBillingData() // Refresh billing data
+          setTimeout(() => {
+            setShowBillingModal(false)
+            resetState()
+            fetchBillingData()
+          }, 3000)
           return
         } else if (data.status === 'failed' || data.status === 'cancelled') {
+          setPaymentState('failed')
           setPaymentError('Payment was not completed. Please try again.')
           setPaymentInstructions('')
           return
         }
 
-        // Continue polling if still pending
         if (attempts < maxAttempts) {
-          setTimeout(poll, 10000) // Poll every 10 seconds
+          setTimeout(poll, 10000)
         } else {
-          setPaymentInstructions('Payment is still processing. Check your phone for the payment prompt, or try again.')
+          // Timeout after 2 minutes - show timeout state
+          setPaymentState('failed')
+          setPaymentError('Payment timed out. This could be due to insufficient funds, network issues, or the payment was not confirmed on your phone. Please check your mobile money balance and try again.')
+          setPaymentInstructions('')
         }
       } catch (error) {
         console.error('Polling error:', error)
+        if (attempts >= maxAttempts) {
+          setPaymentState('failed')
+          setPaymentError('Unable to verify payment status. Please check your mobile money account and try again.')
+          setPaymentInstructions('')
+        } else {
+          setTimeout(poll, 10000)
+        }
       }
     }
 
-    // Start polling after a short delay
     setTimeout(poll, 5000)
   }
 
-  const handlePopUpload = async () => {
-    if (!popFile || !selectedPlan) {
-      setPaymentError('Please select a POP file')
-      return
-    }
-
+  const resetState = () => {
+    setPaymentState('idle')
     setPaymentError('')
-    setUploadingPop(true)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', popFile)
-      formData.append('plan', selectedPlan)
-      formData.append('billingCycle', selectedBillingCycle)
-      formData.append('currency', selectedCurrency)
-
-      const response = await fetch('/api/billing/bank-transfer/submit-pop', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (response.ok) {
-        setShowUpgradeDialog(false)
-        setPaymentError('')
-        setPopFile(null)
-        toast.success('Payment proof submitted. Admin will review and activate your account soon.')
-      } else {
-        const error = await response.json()
-        setPaymentError(error.error || 'Failed to upload payment proof')
-      }
-    } catch (error) {
-      console.error('Upload error:', error)
-      setPaymentError('An error occurred. Please try again.')
-    } finally {
-      setUploadingPop(false)
-    }
+    setPaymentInstructions('')
+    setFormData({})
+    setPopFile(null)
+    setSelectedPaymentMethod('ecocash')
   }
 
-  const plans = [
-    {
-      id: 'BASIC',
-      name: 'Basic',
-      description: 'Perfect for small teams',
-      features: ['Up to 10 users', 'Basic helpdesk', 'Project management', 'Email support'],
-      pricing: {
-        monthly: { USD: 29, ZWL: 1160 },
-        yearly: { USD: 290, ZWL: 11600 }
-      }
-    },
-    {
-      id: 'PRO',
-      name: 'Pro',
-      description: 'Advanced features for growing businesses',
-      features: ['Up to 50 users', 'Advanced helpdesk', 'Contractor network', 'Invoice management', 'Priority support'],
-      pricing: {
-        monthly: { USD: 79, ZWL: 3160 },
-        yearly: { USD: 790, ZWL: 31600 }
-      },
-      popular: true
-    },
-    {
-      id: 'ENTERPRISE',
-      name: 'Enterprise',
-      description: 'Full-featured solution for large organizations',
-      features: ['Unlimited users', 'Enterprise features', 'White-label options', 'Dedicated support', 'Custom integrations'],
-      pricing: {
-        monthly: { USD: 199, ZWL: 7960 },
-        yearly: { USD: 1990, ZWL: 79600 }
-      }
-    }
-  ]
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE': return 'default'
-      case 'TRIAL': return 'secondary'
-      case 'GRACE': return 'warning' as any
-      case 'READ_ONLY': return 'destructive'
-      case 'SUSPENDED': return 'destructive'
-      default: return 'outline'
-    }
+  const openBillingModal = (mode: 'upgrade' | 'renew' | 'advance') => {
+    setDialogMode(mode)
+    resetState()
+    setShowBillingModal(true)
   }
+
+  // ============================================
+  // UTILITY FUNCTIONS
+  // ============================================
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -277,13 +530,15 @@ export function BillingManagement() {
     })
   }
 
-  const getPaymentStatusBadge = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'success': 'Paid',
-      'pending': 'Pending',
-      'failed': 'Failed'
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE': return 'default'
+      case 'TRIAL': return 'secondary'
+      case 'GRACE': return 'warning' as any
+      case 'READ_ONLY': return 'destructive'
+      case 'SUSPENDED': return 'destructive'
+      default: return 'outline'
     }
-    return statusMap[status] || status
   }
 
   const getDaysRemaining = (endDate: string) => {
@@ -291,10 +546,14 @@ export function BillingManagement() {
     return Math.max(0, days)
   }
 
+  // ============================================
+  // LOADING STATE
+  // ============================================
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--text-muted)' }} />
       </div>
     )
   }
@@ -302,11 +561,11 @@ export function BillingManagement() {
   if (!billingData) {
     return (
       <div className="p-6 text-center">
-        <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900">Unable to load billing information</h3>
-        <p className="text-gray-500 mt-1">Please try again later or contact support.</p>
+        <AlertCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+        <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Unable to load billing information</h3>
+        <p className="mt-1" style={{ color: 'var(--text-muted)' }}>Please try again later or contact support.</p>
         <Button onClick={fetchBillingData} className="mt-4">
-          <Loader2 className="h-4 w-4 mr-2" />
+          <RefreshCw className="h-4 w-4 mr-2" />
           Retry
         </Button>
       </div>
@@ -314,24 +573,28 @@ export function BillingManagement() {
   }
 
   const { subscription, tenant, recentPayments } = billingData
-  const currentPlan = plans.find(p => p.id === subscription?.plan)
+  const subscriptionPlan = plans.find(p => p.id === subscription?.plan)
   const daysRemaining = subscription?.currentPeriodEnd 
     ? getDaysRemaining(subscription.currentPeriodEnd)
     : tenant.trialEndsAt 
       ? getDaysRemaining(tenant.trialEndsAt)
       : 0
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* Current Subscription Status */}
       {subscription && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
+          <Card className="rounded-xl border-border">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Current Plan</p>
-                  <h3 className="text-2xl font-bold">{currentPlan?.name || 'Basic'}</h3>
+                  <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Current Plan</p>
+                  <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{subscriptionPlan?.name || 'Basic'}</h3>
                 </div>
                 <Badge variant={getStatusBadgeVariant(subscription.status)}>
                   {subscription.status}
@@ -340,39 +603,76 @@ export function BillingManagement() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-border">
             <CardContent className="pt-6">
-              <p className="text-sm text-gray-500 mb-2">Next Billing Date</p>
-              <h3 className="text-2xl font-bold">{formatDate(subscription.currentPeriodEnd)}</h3>
-              <p className="text-sm text-gray-600 mt-1">{daysRemaining} days remaining</p>
+              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Next Billing Date</p>
+              <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatDate(subscription.currentPeriodEnd)}</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{daysRemaining} days remaining</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-xl border-border">
             <CardContent className="pt-6">
-              <p className="text-sm text-gray-500 mb-2">Amount Due</p>
-              <h3 className="text-2xl font-bold">{formatCurrency(subscription.amount, subscription.currency)}</h3>
-              <p className="text-sm text-gray-600 mt-1">per {subscription.billingCycle}</p>
+              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Amount Due</p>
+              <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(subscription.amount, subscription.currency)}</h3>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>per {subscription.billingCycle}</p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Trial Ending Warning */}
+      {/* Quick Actions */}
+      {subscription && subscription.status !== 'TRIAL' && (
+        <Card className="rounded-xl border-border">
+          <CardHeader>
+            <CardTitle style={{ color: 'var(--text-primary)' }}>Manage Subscription</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant="outline"
+                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
+                onClick={() => openBillingModal('upgrade')}
+              >
+                <Star className="h-4 w-4 mr-2" />
+                Change Plan
+              </Button>
+              <Button 
+                variant="outline"
+                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
+                onClick={() => openBillingModal('advance')}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Pay in Advance
+              </Button>
+              <Button 
+                variant="outline"
+                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
+                onClick={() => openBillingModal('renew')}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Renew Early
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Trial Warning */}
       {subscription?.status === 'TRIAL' && daysRemaining <= 7 && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="rounded-xl border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="font-medium text-amber-900">Trial Ending Soon</h4>
-                <p className="text-sm text-amber-700 mt-1">
+                <h4 className="font-medium" style={{ color: 'var(--amber)' }}>Trial Ending Soon</h4>
+                <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>
                   Your trial ends in {daysRemaining} days. Upgrade now to keep your data.
                 </p>
               </div>
               <Button 
                 size="sm" 
-                className="bg-amber-600 hover:bg-amber-700"
-                onClick={() => setShowUpgradeDialog(true)}
+                className="bg-amber-bg hover:bg-amber-bg"
+                onClick={() => openBillingModal('upgrade')}
               >
                 Upgrade Now
               </Button>
@@ -382,36 +682,36 @@ export function BillingManagement() {
       )}
 
       {/* Payment History */}
-      <Card>
+      <Card className="rounded-xl border-border">
         <CardHeader>
-          <CardTitle>Payment History</CardTitle>
+          <CardTitle style={{ color: 'var(--text-primary)' }}>Payment History</CardTitle>
         </CardHeader>
         <CardContent>
           {recentPayments.length === 0 ? (
             <div className="text-center py-8">
-              <CreditCard className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-600">No payments yet</p>
+              <CreditCard className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+              <p style={{ color: 'var(--text-secondary)' }}>No payments yet</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 font-medium">Invoice</th>
-                    <th className="text-left py-3 font-medium">Date</th>
-                    <th className="text-left py-3 font-medium">Amount</th>
-                    <th className="text-left py-3 font-medium">Status</th>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Invoice</th>
+                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Date</th>
+                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Amount</th>
+                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentPayments.map((payment) => (
-                    <tr key={payment.id} className="border-b last:border-0">
-                      <td className="py-3">{payment.invoiceNumber || payment.id.slice(0, 8)}</td>
-                      <td className="py-3">{formatDate(payment.createdAt)}</td>
-                      <td className="py-3">{formatCurrency(payment.amount, payment.currency)}</td>
+                    <tr key={payment.id} className="border-b border-border last:border-0">
+                      <td className="py-3" style={{ color: 'var(--text-primary)' }}>{payment.invoiceNumber || payment.id.slice(0, 8)}</td>
+                      <td className="py-3" style={{ color: 'var(--text-secondary)' }}>{formatDate(payment.createdAt)}</td>
+                      <td className="py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(payment.amount, payment.currency)}</td>
                       <td className="py-3">
                         <Badge variant={payment.status === 'success' ? 'default' : payment.status === 'pending' ? 'secondary' : 'destructive'}>
-                          {getPaymentStatusBadge(payment.status)}
+                          {payment.status === 'success' ? 'Paid' : payment.status === 'pending' ? 'Pending' : 'Failed'}
                         </Badge>
                       </td>
                     </tr>
@@ -423,256 +723,378 @@ export function BillingManagement() {
         </CardContent>
       </Card>
 
-      {/* Upgrade Dialog */}
-      <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Upgrade Your Plan</DialogTitle>
-            <DialogDescription>
-              Select a plan and payment method to continue with your subscription upgrade
-            </DialogDescription>
-          </DialogHeader>
+      {/* ============================================ */}
+      {/* STRIPE-STYLE BILLING MODAL */}
+      {/* ============================================ */}
+      <Dialog open={showBillingModal} onOpenChange={setShowBillingModal}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-xl" style={{ backgroundColor: 'var(--surface2)' }}>
+          {/* Success State */}
+          {paymentState === 'success' && (
+            <div className="p-12 text-center">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <Check className="h-10 w-10" style={{ color: 'var(--green)' }} />
+              </div>
+              <h2 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Payment Successful</h2>
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Your subscription has been activated.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Redirecting...</p>
+            </div>
+          )}
 
-          <div className="space-y-6 py-4">
-            {/* Plan Selection */}
-            <div>
-              <label className="text-sm font-medium mb-3 block">Select Plan</label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {plans.map((plan) => {
-                  const price = selectedBillingCycle === 'yearly' 
-                    ? plan.pricing.yearly[selectedCurrency as 'USD' | 'ZWL']
-                    : plan.pricing.monthly[selectedCurrency as 'USD' | 'ZWL']
-                  const isSelected = selectedPlan === plan.id
-                  const isCurrent = subscription?.plan === plan.id
+          {/* Failed State */}
+          {paymentState === 'failed' && (
+            <div className="p-12 text-center">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: 'var(--red-bg)' }}>
+                <AlertTriangle className="h-10 w-10" style={{ color: 'var(--red)' }} />
+              </div>
+              <h2 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Payment Failed</h2>
+              <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{paymentError || 'Something went wrong with your payment.'}</p>
+              <div className="flex gap-3 justify-center">
+                <Button variant="outline" onClick={() => setShowBillingModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  style={{ backgroundColor: 'var(--accent)' }}
+                  onClick={() => {
+                    setPaymentState('idle')
+                    setPaymentError('')
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          )}
 
-                  return (
-                    <div
-                      key={plan.id}
-                      onClick={() => !isCurrent && setSelectedPlan(plan.id)}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                      } ${isCurrent ? 'opacity-60 cursor-not-allowed' : ''}`}
-                    >
-                      <h4 className="font-medium flex items-center justify-between mb-2">
-                        {plan.name}
-                        {plan.popular && <Badge>Popular</Badge>}
-                      </h4>
-                      <p className="text-2xl font-bold mb-2">${price}</p>
-                      <p className="text-xs text-gray-600">{plan.description}</p>
-                      {isCurrent && <Badge variant="outline" className="mt-2">Current Plan</Badge>}
+          {/* Processing State */}
+          {paymentState === 'processing' && (
+            <div className="p-12 text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-6" style={{ color: 'var(--accent)' }} />
+              <h2 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Processing Payment</h2>
+              {paymentInstructions ? (
+                <div className="border rounded-lg p-4 mt-4 text-left" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 mt-0.5" style={{ color: 'var(--green)' }} />
+                    <div>
+                      <p className="font-medium" style={{ color: 'var(--green)' }}>Payment Request Sent!</p>
+                      <p className="text-sm mt-1" style={{ color: 'var(--green)' }}>{paymentInstructions}</p>
                     </div>
-                  )
-                })}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-secondary)' }}>Please wait while we process your payment...</p>
+              )}
             </div>
+          )}
 
-            {/* Billing Cycle */}
-            <div>
-              <label className="text-sm font-medium mb-3 block">Billing Cycle</label>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setSelectedBillingCycle('monthly')}
-                  className={`flex-1 p-3 border rounded-lg transition-all ${
-                    selectedBillingCycle === 'monthly' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-300'
-                  }`}
-                >
-                  <p className="font-medium">Monthly</p>
-                  <p className="text-sm text-gray-600">Pay per month</p>
-                </button>
-                <button
-                  onClick={() => setSelectedBillingCycle('yearly')}
-                  className={`flex-1 p-3 border rounded-lg transition-all ${
-                    selectedBillingCycle === 'yearly' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-300'
-                  }`}
-                >
-                  <p className="font-medium">Yearly</p>
-                  <p className="text-sm text-gray-600">Save 17%</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <label className="text-sm font-medium mb-3 block">Payment Method</label>
-              <div className="space-y-2">
-                <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'paynow' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="paynow"
-                    checked={selectedPaymentMethod === 'paynow'}
-                    onChange={() => setSelectedPaymentMethod('paynow')}
-                    className="mr-3"
-                  />
+          {/* Idle State - Main Form */}
+          {paymentState === 'idle' && (
+            <>
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-border" style={{ backgroundColor: 'var(--surface)' }}>
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Mobile Money</p>
-                    <p className="text-sm text-gray-600">EcoCash, OneMoney, Telecash</p>
+                    <DialogTitle className="text-xl font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {dialogMode === 'upgrade' && 'Complete your subscription'}
+                      {dialogMode === 'advance' && 'Pay in Advance'}
+                      {dialogMode === 'renew' && 'Renew your subscription'}
+                    </DialogTitle>
+                    <DialogDescription className="mt-1" style={{ color: 'var(--text-secondary)' }}>
+                      Plan: {currentPlan.name} – {formatCurrency(paymentAmount, selectedCurrency)} / {selectedBillingCycle}
+                    </DialogDescription>
                   </div>
-                </label>
-                <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${
-                  selectedPaymentMethod === 'bank_transfer' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="bank_transfer"
-                    checked={selectedPaymentMethod === 'bank_transfer'}
-                    onChange={() => setSelectedPaymentMethod('bank_transfer')}
-                    className="mr-3"
-                  />
+                  <button 
+                    onClick={() => setShowBillingModal(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:opacity-70"
+                  >
+                    <X className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                {/* Plan Selection - Only for upgrade mode */}
+                {dialogMode === 'upgrade' && (
                   <div>
-                    <p className="font-medium">Bank Transfer</p>
-                    <p className="text-sm text-gray-600">Direct bank deposit (USD/ZWL)</p>
+                    <Label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-secondary)' }}>Select Plan</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {plans.map((plan) => {
+                        const price = selectedBillingCycle === 'yearly' 
+                          ? plan.pricing.yearly[selectedCurrency]
+                          : plan.pricing.monthly[selectedCurrency]
+                        const isSelected = selectedPlan === plan.id
+
+                        return (
+                          <Card
+                            key={plan.id}
+                            onClick={() => setSelectedPlan(plan.id)}
+                            className={`cursor-pointer transition-all rounded-xl border-2 ${
+                              isSelected ? 'border-border' : 'border-transparent hover:border-border'
+                            }`}
+                            style={isSelected ? { backgroundColor: 'var(--surface)', borderColor: 'var(--accent)' } : { backgroundColor: 'var(--surface)' }}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>{plan.name}</h4>
+                                {plan.popular && <Badge className="bg-indigo-100 text-indigo-700 border-0">Popular</Badge>}
+                              </div>
+                              <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(price, selectedCurrency)}</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{plan.description}</p>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
                   </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Mobile Money Details */}
-            {selectedPaymentMethod === 'paynow' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-3 block">Select Provider</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMobileProvider('ecocash')}
-                      className={`p-3 border rounded-lg text-center transition-all ${
-                        mobileProvider === 'ecocash' 
-                          ? 'border-green-500 bg-green-50' 
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <p className="font-medium text-green-700">EcoCash</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMobileProvider('onemoney')}
-                      className={`p-3 border rounded-lg text-center transition-all ${
-                        mobileProvider === 'onemoney' 
-                          ? 'border-purple-500 bg-purple-50' 
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <p className="font-medium text-purple-700">OneMoney</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMobileProvider('telecash')}
-                      className={`p-3 border rounded-lg text-center transition-all ${
-                        mobileProvider === 'telecash' 
-                          ? 'border-orange-500 bg-orange-50' 
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <p className="font-medium text-orange-700">Telecash</p>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                    placeholder="0771234567"
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    maxLength={10}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Enter your {mobileProvider === 'ecocash' ? 'Econet' : mobileProvider === 'onemoney' ? 'NetOne' : 'Telecel'} number</p>
-                </div>
-              </div>
-            )}
-
-            {/* Bank Transfer POP Upload */}
-            {selectedPaymentMethod === 'bank_transfer' && (
-              <div>
-                <label className="text-sm font-medium mb-3 block">Upload Payment Proof</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setPopFile(e.currentTarget.files?.[0] || null)}
-                    className="hidden"
-                    id="pop-upload"
-                  />
-                  <label htmlFor="pop-upload" className="cursor-pointer">
-                    <p className="font-medium text-gray-900">{popFile?.name || 'Click to upload'}</p>
-                    <p className="text-sm text-gray-600 mt-1">PNG, JPG, or PDF (max 5MB)</p>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {paymentError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-800">{paymentError}</p>
-              </div>
-            )}
-
-            {paymentInstructions && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-green-800">Payment Request Sent!</p>
-                    <p className="text-sm text-green-700 mt-1">{paymentInstructions}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
-              Cancel
-            </Button>
-            {selectedPaymentMethod === 'bank_transfer' ? (
-              <Button 
-                onClick={handlePopUpload} 
-                disabled={uploadingPop || !popFile}
-                className="flex-1"
-              >
-                {uploadingPop ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  'Submit Payment Proof'
                 )}
-              </Button>
-            ) : (
-              <Button 
-                onClick={handleUpgrade} 
-                disabled={upgradeLoading || !!paymentInstructions}
-                className="flex-1"
-              >
-                {upgradeLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending payment request...
-                  </>
-                ) : paymentInstructions ? (
-                  <>
-                    <Clock className="h-4 w-4 mr-2" />
-                    Waiting for payment...
-                  </>
-                ) : (
-                  'Pay Now'
+
+                {/* Advance Payment Months */}
+                {dialogMode === 'advance' && (
+                  <div className="border border-border rounded-xl p-4" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                    <Label className="text-sm font-medium mb-3 block" style={{ color: 'var(--blue)' }}>How many months would you like to pre-pay?</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[3, 6, 12].map((months) => {
+                        const plan = plans.find(p => p.id === selectedPlan)
+                        const monthlyPrice = plan?.pricing.monthly[selectedCurrency] || 0
+                        const totalPrice = monthlyPrice * months
+                        const savings = months === 12 ? Math.round(totalPrice * 0.10) : months === 6 ? Math.round(totalPrice * 0.05) : 0
+                        
+                        return (
+                          <button
+                            key={months}
+                            onClick={() => setAdvanceMonths(months)}
+                            className="p-4 rounded-xl text-center transition-all"
+                            style={{
+                              backgroundColor: 'var(--surface)',
+                              outline: advanceMonths === months ? '2px solid var(--accent)' : 'none'
+                            }}
+                          >
+                            <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{months}</p>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>months</p>
+                            <p className="text-lg font-medium mt-2" style={{ color: 'var(--accent)' }}>{formatCurrency(totalPrice - savings, selectedCurrency)}</p>
+                            {savings > 0 && (
+                              <Badge className="mt-1 border-0" style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)' }}>Save {formatCurrency(savings, selectedCurrency)}</Badge>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
-              </Button>
-            )}
-          </div>
+
+                {/* Billing Cycle */}
+                {dialogMode === 'upgrade' && (
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-secondary)' }}>Billing Cycle</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setSelectedBillingCycle('monthly')}
+                        className="p-4 rounded-xl text-left transition-all"
+                        style={{
+                          backgroundColor: 'var(--surface)',
+                          outline: selectedBillingCycle === 'monthly' ? '2px solid var(--accent)' : '1px solid var(--border)'
+                        }}
+                      >
+                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Monthly</p>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pay each month</p>
+                      </button>
+                      <button
+                        onClick={() => setSelectedBillingCycle('yearly')}
+                        className="p-4 rounded-xl text-left transition-all"
+                        style={{
+                          backgroundColor: 'var(--surface)',
+                          outline: selectedBillingCycle === 'yearly' ? '2px solid var(--accent)' : '1px solid var(--border)'
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Yearly</p>
+                          <Badge className="border-0" style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)' }}>Save 17%</Badge>
+                        </div>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pay annually</p>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Method Selection - Using Tabs */}
+                <div>
+                  <Label className="text-sm font-medium mb-3 block" style={{ color: 'var(--text-secondary)' }}>Payment Method</Label>
+                  <Tabs value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod} className="w-full">
+                    <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto p-1 rounded-xl gap-1" style={{ backgroundColor: 'var(--surface2)' }}>
+                      {paymentMethods.map((method) => (
+                        <TabsTrigger 
+                          key={method.id} 
+                          value={method.id}
+                          className="flex flex-col items-center py-2 px-1 data-[state=active]:bg-[var(--surface)] rounded-lg"
+                        >
+                          <img src={method.icon} alt={method.label} className="w-7 h-7 mb-1" />
+                          <span className="text-[10px] font-medium text-center leading-tight">{method.label}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    {/* Dynamic Payment Form Based on Selected Method */}
+                    {paymentMethods.map((method) => (
+                      <TabsContent key={method.id} value={method.id} className="mt-4">
+                        <Card className="rounded-xl border-border">
+                          <CardContent className="p-4 space-y-4">
+                            <div className="flex items-center gap-3 pb-3 border-b border-border">
+                              <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${method.gradient} flex items-center justify-center overflow-hidden`}>
+                                <img src={method.icon} alt={method.label} className="w-8 h-8" />
+                              </div>
+                              <div>
+                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{method.label}</p>
+                                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{method.description}</p>
+                              </div>
+                              {webPaymentMethods.includes(method.id) && (
+                                <Badge variant="outline" className="ml-auto text-xs">
+                                  Redirects to Paynow
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Dynamic Fields - or info message for web payments */}
+                            {method.fields.length > 0 ? (
+                              method.fields.map((field) => (
+                                <div key={field.name}>
+                                  <Label htmlFor={field.name} className="text-sm font-medium mb-2 block" style={{ color: 'var(--text-secondary)' }}>
+                                    {field.label}
+                                  </Label>
+                                  {field.type === 'file' ? (
+                                    <div className="border-2 border-dashed border-border rounded-xl p-6 text-center transition-colors">
+                                      <input
+                                      type="file"
+                                      accept={field.accept}
+                                      onChange={(e) => setPopFile(e.currentTarget.files?.[0] || null)}
+                                      className="hidden"
+                                      id={field.name}
+                                    />
+                                    <label htmlFor={field.name} className="cursor-pointer">
+                                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{popFile?.name || 'Click to upload'}</p>
+                                      <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>PNG, JPG, or PDF (max 5MB)</p>
+                                    </label>
+                                  </div>
+                                ) : (
+                                  <Input
+                                    id={field.name}
+                                    type={field.type}
+                                    value={formData[field.name] || ''}
+                                    onChange={(e) => setFormData(prev => ({ 
+                                      ...prev, 
+                                      [field.name]: field.type === 'tel' 
+                                        ? e.target.value.replace(/\D/g, '') 
+                                        : e.target.value 
+                                    }))}
+                                    placeholder={field.placeholder}
+                                    maxLength={field.maxLength}
+                                    className="h-12 text-lg rounded-xl border-border"
+                                  />
+                                )}
+                              </div>
+                              ))
+                            ) : (
+                              // Web payment methods - no fields needed, show info
+                              <div className="border rounded-xl p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--border)' }}>
+                                <div className="flex items-start gap-3">
+                                  <ExternalLink className="h-5 w-5 mt-0.5" style={{ color: 'var(--blue)' }} />
+                                  <div>
+                                    <p className="font-medium" style={{ color: 'var(--blue)' }}>Secure Payment via Paynow</p>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--blue)' }}>
+                                      You will be redirected to Paynow&apos;s secure checkout page to complete your payment using {method.label}.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </div>
+
+                {/* Error Display */}
+                {paymentError && (
+                  <div className="p-4 border rounded-xl flex items-start gap-3" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--border)' }}>
+                    <AlertCircle className="h-5 w-5 mt-0.5" style={{ color: 'var(--red)' }} />
+                    <p className="text-sm" style={{ color: 'var(--red)' }}>{paymentError}</p>
+                  </div>
+                )}
+
+                {/* Security Note */}
+                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <Shield className="h-4 w-4" />
+                  <span>Your payment is secured by Paynow. We never store your payment details.</span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-border" style={{ backgroundColor: 'var(--surface)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total due today</p>
+                    <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(paymentAmount, selectedCurrency)}</p>
+                  </div>
+                  <Button 
+                    onClick={handleProceed}
+                    className="h-12 px-8 text-bg font-medium rounded-xl" style={{ backgroundColor: 'var(--accent)' }}
+                  >
+                    Proceed to Pay
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
+
+      {/* ============================================ */}
+      {/* CONFIRMATION ALERT DIALOG */}
+      {/* ============================================ */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="max-w-md rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl text-center">Confirm Payment</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-center space-y-4 pt-4">
+                <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${currentMethod.gradient} flex items-center justify-center mx-auto overflow-hidden`}>
+                  <img src={currentMethod.icon} alt={currentMethod.label} className="w-12 h-12" />
+                </div>
+                <div>
+                  <p className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(paymentAmount, selectedCurrency)}</p>
+                  <p style={{ color: 'var(--text-muted)', marginTop: '0.25rem' }}>to TickTrack Pro</p>
+                </div>
+                <div className="rounded-xl p-4 text-left space-y-2" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: 'var(--text-muted)' }}>Plan</span>
+                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{currentPlan.name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: 'var(--text-muted)' }}>Payment Method</span>
+                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{currentMethod.label}</span>
+                  </div>
+                  {dialogMode === 'advance' && (
+                    <div className="flex justify-between text-sm">
+                      <span style={{ color: 'var(--text-muted)' }}>Duration</span>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{advanceMonths} months</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handlePayment}
+              className={`rounded-xl bg-gradient-to-r ${currentMethod.gradient} hover:opacity-90`}
+            >
+              Pay Now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

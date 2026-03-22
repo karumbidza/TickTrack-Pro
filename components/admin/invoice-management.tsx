@@ -509,14 +509,14 @@ export function AdminInvoiceManagement() {
     }
   }
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeStyle = (status: string): React.CSSProperties => {
     switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800'
-      case 'APPROVED': return 'bg-blue-100 text-blue-800'
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800'
-      case 'REJECTED': return 'bg-red-100 text-red-800'
-      case 'CANCELLED': return 'bg-gray-100 text-gray-600'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'PAID': return { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+      case 'APPROVED': return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+      case 'PENDING': return { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
+      case 'REJECTED': return { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
+      case 'CANCELLED': return { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
+      default: return { backgroundColor: 'var(--surface2)', color: 'var(--text-primary)' }
     }
   }
 
@@ -531,7 +531,7 @@ export function AdminInvoiceManagement() {
   const renderStars = (rating: number) => (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star key={star} className={`h-4 w-4 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+        <Star key={star} className={`h-4 w-4 ${star <= rating ? 'fill-yellow-400 text-ds-amber' : 'text-text-muted'}`} />
       ))}
     </div>
   )
@@ -539,13 +539,13 @@ export function AdminInvoiceManagement() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -553,11 +553,11 @@ export function AdminInvoiceManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-yellow-600">${totalPending.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">{invoices.filter(i => i.status === 'PENDING').length} invoices</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Pending Review</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>${totalPending.toFixed(2)}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{invoices.filter(i => i.status === 'PENDING').length} invoices</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-8 w-8 text-ds-amber" />
             </div>
           </CardContent>
         </Card>
@@ -566,11 +566,11 @@ export function AdminInvoiceManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-blue-600">${totalApproved.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">{invoices.filter(i => i.status === 'APPROVED').length} invoices</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Approved</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--blue)' }}>${totalApproved.toFixed(2)}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{invoices.filter(i => i.status === 'APPROVED').length} invoices</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-blue-600" />
+              <CheckCircle className="h-8 w-8" style={{ color: 'var(--blue)' }} />
             </div>
           </CardContent>
         </Card>
@@ -579,11 +579,11 @@ export function AdminInvoiceManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Paid</p>
-                <p className="text-2xl font-bold text-green-600">${totalPaid.toFixed(2)}</p>
-                <p className="text-xs text-gray-500">{invoices.filter(i => i.status === 'PAID').length} invoices</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Paid</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>${totalPaid.toFixed(2)}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{invoices.filter(i => i.status === 'PAID').length} invoices</p>
               </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
+              <DollarSign className="h-8 w-8 text-ds-green" />
             </div>
           </CardContent>
         </Card>
@@ -592,11 +592,11 @@ export function AdminInvoiceManagement() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Invoices</p>
-                <p className="text-2xl font-bold text-gray-800">{invoices.length}</p>
-                <p className="text-xs text-gray-500">All time</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Invoices</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{invoices.length}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>All time</p>
               </div>
-              <FileText className="h-8 w-8 text-gray-600" />
+              <FileText className="h-8 w-8" style={{ color: 'var(--text-secondary)' }} />
             </div>
           </CardContent>
         </Card>
@@ -627,14 +627,14 @@ export function AdminInvoiceManagement() {
 
       {/* Batch Payment Actions for Approved Tab */}
       {filter === 'approved' && invoices.filter(i => i.status === 'APPROVED').length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Wallet className="h-6 w-6 text-blue-600" />
+                <Wallet className="h-6 w-6" style={{ color: 'var(--blue)' }} />
                 <div>
-                  <p className="font-medium text-blue-900">Batch Payment</p>
-                  <p className="text-sm text-blue-700">
+                  <p className="font-medium" style={{ color: 'var(--blue)' }}>Batch Payment</p>
+                  <p className="text-sm" style={{ color: 'var(--blue)' }}>
                     Select invoices below and process payment with a single Proof of Payment
                   </p>
                 </div>
@@ -649,7 +649,7 @@ export function AdminInvoiceManagement() {
                       Deselect All
                     </Button>
                     <Button 
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-bg hover:bg-green-bg"
                       onClick={() => setShowBatchPaymentDialog(true)}
                     >
                       <CreditCard className="h-4 w-4 mr-2" />
@@ -678,24 +678,25 @@ export function AdminInvoiceManagement() {
               {paymentBatches.map((batch) => (
                 <div key={batch.id} className="border rounded-lg overflow-hidden">
                   <div 
-                    className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer hover:bg-gray-100"
+                    className="flex items-center justify-between p-4 cursor-pointer"
+                  style={{ backgroundColor: 'var(--surface2)' }}
                     onClick={() => setExpandedBatch(expandedBatch === batch.id ? null : batch.id)}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="bg-green-100 p-2 rounded-lg">
-                        <FileText className="h-5 w-5 text-green-600" />
+                      <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                        <FileText className="h-5 w-5" style={{ color: 'var(--green)' }} />
                       </div>
                       <div>
-                        <p className="font-semibold">{batch.batchNumber}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-medium">{batch.batchNumber}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                           {new Date(batch.paymentDate).toLocaleDateString()} • {batch.invoices.length} invoice{batch.invoices.length > 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-xl font-bold text-green-600">${batch.totalAmount.toFixed(2)}</p>
-                        {batch.popReference && <p className="text-sm text-gray-500">Ref: {batch.popReference}</p>}
+                        <p className="text-xl font-medium" style={{ color: 'var(--green)' }}>${batch.totalAmount.toFixed(2)}</p>
+                        {batch.popReference && <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Ref: {batch.popReference}</p>}
                       </div>
                       <MediaHoverPreview 
                         file={{ url: batch.popFileUrl, filename: `POP-${batch.batchNumber}.pdf`, mimeType: 'application/pdf' }}
@@ -710,21 +711,21 @@ export function AdminInvoiceManagement() {
                   </div>
                   
                   {expandedBatch === batch.id && (
-                    <div className="border-t bg-white p-4">
-                      <p className="text-sm font-medium text-gray-600 mb-3">Invoices in this batch:</p>
+                    <div className="border-t p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                      <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>Invoices in this batch:</p>
                       <div className="space-y-2">
                         {batch.invoices.map((inv) => (
-                          <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div key={inv.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
                             <div className="flex items-center gap-3">
                               <div>
                                 <p className="font-medium">{inv.invoiceNumber}</p>
-                                <p className="text-sm text-gray-600">{inv.ticket?.ticketNumber} - {inv.ticket?.title}</p>
+                                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{inv.ticket?.ticketNumber} - {inv.ticket?.title}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-right">
                                 <p className="font-medium">${inv.amount.toFixed(2)}</p>
-                                <p className="text-sm text-gray-500">{inv.contractor?.name}</p>
+                                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{inv.contractor?.name}</p>
                               </div>
                               <Button variant="ghost" size="sm" onClick={() => openDetailModal(inv as Invoice)}>
                                 <Eye className="h-4 w-4" />
@@ -734,7 +735,7 @@ export function AdminInvoiceManagement() {
                         ))}
                       </div>
                       {batch.processedBy && (
-                        <p className="text-xs text-gray-500 mt-3">
+                        <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
                           Processed by: {batch.processedBy.name} ({batch.processedBy.email})
                         </p>
                       )}
@@ -752,7 +753,7 @@ export function AdminInvoiceManagement() {
         <CardContent className="p-0">
           <Table>
             <thead>
-              <tr className="border-b bg-gray-50">
+              <tr className="border-b border-border" style={{ backgroundColor: 'var(--surface2)' }}>
                 {filter === 'approved' && (
                   <th className="text-left p-4 font-medium w-12">
                     <Checkbox 
@@ -773,7 +774,7 @@ export function AdminInvoiceManagement() {
             </thead>
             <tbody>
               {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className={`border-b hover:bg-gray-50 ${selectedInvoiceIds.has(invoice.id) ? 'bg-blue-50' : ''}`}>
+                <tr key={invoice.id} className="border-b border-border" style={selectedInvoiceIds.has(invoice.id) ? { backgroundColor: 'var(--blue-bg)' } : {}}>
                   {filter === 'approved' && (
                     <td className="p-4">
                       <Checkbox 
@@ -785,19 +786,19 @@ export function AdminInvoiceManagement() {
                   <td className="p-4">
                     <div>
                       <div className="font-medium">{invoice.invoiceNumber}</div>
-                      {invoice.hourlyRate && <div className="text-sm text-gray-600">${invoice.hourlyRate}/hr</div>}
+                      {invoice.hourlyRate && <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>${invoice.hourlyRate}/hr</div>}
                     </div>
                   </td>
                   <td className="p-4">
                     <div>
                       <div className="font-medium">{invoice.contractor.name}</div>
-                      <div className="text-sm text-gray-600">{invoice.contractor.email}</div>
+                      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{invoice.contractor.email}</div>
                     </div>
                   </td>
                   <td className="p-4">
                     <div>
                       <div className="font-medium">{invoice.ticket.ticketNumber}</div>
-                      <div className="text-sm text-gray-600 max-w-xs truncate">{invoice.ticket.title}</div>
+                      <div className="text-sm max-w-xs truncate" style={{ color: 'var(--text-secondary)' }}>{invoice.ticket.title}</div>
                     </div>
                   </td>
                   <td className="p-4">
@@ -807,20 +808,19 @@ export function AdminInvoiceManagement() {
                     <div>
                       <div className="font-medium">${invoice.amount.toFixed(2)}</div>
                       {invoice.balance < invoice.amount && (
-                        <div className="text-sm text-green-600">Balance: ${invoice.balance.toFixed(2)}</div>
+                        <div className="text-sm" style={{ color: 'var(--green)' }}>Balance: ${invoice.balance.toFixed(2)}</div>
                       )}
                     </div>
                   </td>
                   <td className="p-4">
-                    <Badge className={getStatusBadgeColor(invoice.status)}>{invoice.status}</Badge>
+                    <Badge style={getStatusBadgeStyle(invoice.status)}>{invoice.status}</Badge>
                   </td>
                   <td className="p-4">
                     <div className="text-sm">{new Date(invoice.createdAt).toLocaleDateString()}</div>
                   </td>
                   <td className="p-4">
-                    <Button 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    <Button
+                      size="sm"
                       onClick={() => openDetailModal(invoice)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
@@ -833,7 +833,7 @@ export function AdminInvoiceManagement() {
           </Table>
           
           {filteredInvoices.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
               <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>No {filter === 'all' ? '' : filter} invoices found.</p>
             </div>
@@ -845,13 +845,13 @@ export function AdminInvoiceManagement() {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
+            <DialogTitle className="flex items-center gap-2 text-ds-red">
               <XCircle className="h-5 w-5" />
               Reject Invoice
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               You are about to reject invoice <strong>{actionInvoice?.invoiceNumber}</strong>. Please provide a reason.
             </p>
             <div>
@@ -872,13 +872,13 @@ export function AdminInvoiceManagement() {
       <Dialog open={showClarificationDialog} onOpenChange={setShowClarificationDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
+            <DialogTitle className="flex items-center gap-2 text-ds-amber">
               <MessageSquare className="h-5 w-5" />
               Request Clarification
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Request additional information from the contractor for invoice <strong>{actionInvoice?.invoiceNumber}</strong>.
             </p>
             <div>
@@ -887,7 +887,7 @@ export function AdminInvoiceManagement() {
             </div>
             <div className="flex justify-end gap-3">
               <Button variant="outline" onClick={() => { setShowClarificationDialog(false); setClarificationRequest(''); setActionInvoice(null) }}>Cancel</Button>
-              <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => actionInvoice && handleClarificationRequest(actionInvoice.id, clarificationRequest)} disabled={processing || !clarificationRequest.trim()}>
+              <Button className="bg-amber-bg hover:bg-amber-bg" onClick={() => actionInvoice && handleClarificationRequest(actionInvoice.id, clarificationRequest)} disabled={processing || !clarificationRequest.trim()}>
                 {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Send Request'}
               </Button>
             </div>
@@ -899,29 +899,29 @@ export function AdminInvoiceManagement() {
       <Dialog open={showBatchPaymentDialog} onOpenChange={setShowBatchPaymentDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
+            <DialogTitle className="flex items-center gap-2 text-ds-green">
               <CreditCard className="h-5 w-5" />
               Process Batch Payment
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Card className="bg-green-50 border-green-200">
+            <Card className="border-border" style={{ backgroundColor: 'var(--green-bg)' }}>
               <CardContent className="p-4">
                 <div className="text-center">
-                  <p className="text-sm text-green-700">Total Amount to Pay</p>
-                  <p className="text-3xl font-bold text-green-600">
+                  <p className="text-sm" style={{ color: 'var(--green)' }}>Total Amount to Pay</p>
+                  <p className="text-3xl font-medium" style={{ color: 'var(--green)' }}>
                     ${invoices.filter(i => selectedInvoiceIds.has(i.id)).reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
                   </p>
-                  <p className="text-sm text-green-700 mt-1">{selectedInvoiceIds.size} invoice{selectedInvoiceIds.size > 1 ? 's' : ''} selected</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--green)' }}>{selectedInvoiceIds.size} invoice{selectedInvoiceIds.size > 1 ? 's' : ''} selected</p>
                 </div>
               </CardContent>
             </Card>
             
             <div className="max-h-40 overflow-y-auto">
-              <p className="text-sm font-medium text-gray-600 mb-2">Invoices to be paid:</p>
+              <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Invoices to be paid:</p>
               <div className="space-y-1">
                 {invoices.filter(i => selectedInvoiceIds.has(i.id)).map(inv => (
-                  <div key={inv.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
+                  <div key={inv.id} className="flex justify-between text-sm p-2 rounded" style={{ backgroundColor: 'var(--surface2)' }}>
                     <span>{inv.invoiceNumber} - {inv.contractor.name}</span>
                     <span className="font-medium">${inv.amount.toFixed(2)}</span>
                   </div>
@@ -979,7 +979,7 @@ export function AdminInvoiceManagement() {
                 Cancel
               </Button>
               <Button 
-                className="bg-green-600 hover:bg-green-700" 
+                className="bg-green-bg hover:bg-green-bg" 
                 onClick={handleBatchPayment}
                 disabled={batchProcessing || !batchPaymentData.popFile}
               >
@@ -1003,7 +1003,7 @@ export function AdminInvoiceManagement() {
                 <FileText className="h-5 w-5" />
                 Invoice Details
                 {invoiceDetails && (
-                  <Badge className={getStatusBadgeColor(invoiceDetails.invoice.status)}>
+                  <Badge style={getStatusBadgeStyle(invoiceDetails.invoice.status)}>
                     {invoiceDetails.invoice.status}
                   </Badge>
                 )}
@@ -1021,7 +1021,7 @@ export function AdminInvoiceManagement() {
                       </Button>
                     </MediaHoverPreview>
                   )}
-                  <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
+                  <Button size="sm" variant="default" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
                     <Download className="h-4 w-4 mr-1" />
                     Summary PDF
                   </Button>
@@ -1032,7 +1032,7 @@ export function AdminInvoiceManagement() {
           
           {detailsLoading ? (
             <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
             </div>
           ) : invoiceDetails ? (
             <ScrollArea className="h-[70vh]">
@@ -1048,29 +1048,29 @@ export function AdminInvoiceManagement() {
                 <TabsContent value="invoice" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600">Invoice Number</CardTitle></CardHeader>
-                      <CardContent><p className="text-xl font-bold">{invoiceDetails.invoice.invoiceNumber}</p></CardContent>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Invoice Number</CardTitle></CardHeader>
+                      <CardContent><p className="text-xl font-medium">{invoiceDetails.invoice.invoiceNumber}</p></CardContent>
                     </Card>
                     <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600">Status</CardTitle></CardHeader>
-                      <CardContent><Badge className={`text-lg ${getStatusBadgeColor(invoiceDetails.invoice.status)}`}>{invoiceDetails.invoice.status}</Badge></CardContent>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Status</CardTitle></CardHeader>
+                      <CardContent><Badge className="text-lg" style={getStatusBadgeStyle(invoiceDetails.invoice.status)}>{invoiceDetails.invoice.status}</Badge></CardContent>
                     </Card>
                   </div>
                   
-                  <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+                  <Card className="border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
                     <CardContent className="p-6">
                       <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
-                          <p className="text-sm text-gray-600">Amount</p>
-                          <p className="text-2xl font-bold text-blue-600">${invoiceDetails.invoice.amount.toFixed(2)}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Amount</p>
+                          <p className="text-2xl font-medium" style={{ color: 'var(--blue)' }}>${invoiceDetails.invoice.amount.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Paid</p>
-                          <p className="text-2xl font-bold text-green-600">${invoiceDetails.invoice.paidAmount.toFixed(2)}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Paid</p>
+                          <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>${invoiceDetails.invoice.paidAmount.toFixed(2)}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Balance</p>
-                          <p className="text-2xl font-bold text-amber-600">${invoiceDetails.invoice.balance.toFixed(2)}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Balance</p>
+                          <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>${invoiceDetails.invoice.balance.toFixed(2)}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -1078,17 +1078,17 @@ export function AdminInvoiceManagement() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     {invoiceDetails.invoice.hoursWorked && (
-                      <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Hours Worked</p><p className="font-semibold">{invoiceDetails.invoice.hoursWorked} hours</p></CardContent></Card>
+                      <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Hours Worked</p><p className="font-medium">{invoiceDetails.invoice.hoursWorked} hours</p></CardContent></Card>
                     )}
                     {invoiceDetails.invoice.hourlyRate && (
-                      <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Hourly Rate</p><p className="font-semibold">${invoiceDetails.invoice.hourlyRate}/hr</p></CardContent></Card>
+                      <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Hourly Rate</p><p className="font-medium">${invoiceDetails.invoice.hourlyRate}/hr</p></CardContent></Card>
                     )}
                   </div>
                   
                   {invoiceDetails.invoice.workDescription && (
                     <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600">Work Description</CardTitle></CardHeader>
-                      <CardContent><p className="text-gray-800 whitespace-pre-wrap">{invoiceDetails.invoice.workDescription}</p></CardContent>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Work Description</CardTitle></CardHeader>
+                      <CardContent><p className="whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{invoiceDetails.invoice.workDescription}</p></CardContent>
                     </Card>
                   )}
                   
@@ -1097,7 +1097,7 @@ export function AdminInvoiceManagement() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-blue-600" />
+                            <FileText className="h-5 w-5" style={{ color: 'var(--blue)' }} />
                             <span className="font-medium">Invoice Document</span>
                           </div>
                           <MediaHoverPreview 
@@ -1114,19 +1114,19 @@ export function AdminInvoiceManagement() {
                   )}
                   
                   {(invoiceDetails.invoice.clarificationRequest || invoiceDetails.invoice.rejectionReason) && (
-                    <Card className="border-amber-200 bg-amber-50">
+                    <Card className="border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--amber)' }}>
                           <AlertCircle className="h-4 w-4" />
                           {invoiceDetails.invoice.rejectionReason ? 'Rejection Reason' : 'Clarification Request'}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-amber-900">{invoiceDetails.invoice.rejectionReason || invoiceDetails.invoice.clarificationRequest}</p>
+                        <p style={{ color: 'var(--amber)' }}>{invoiceDetails.invoice.rejectionReason || invoiceDetails.invoice.clarificationRequest}</p>
                         {invoiceDetails.invoice.clarificationResponse && (
-                          <div className="mt-4 p-3 bg-white rounded-lg">
-                            <p className="text-sm text-gray-600 mb-1">Contractor Response:</p>
-                            <p className="text-gray-800">{invoiceDetails.invoice.clarificationResponse}</p>
+                          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
+                            <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Contractor Response:</p>
+                            <p style={{ color: 'var(--text-primary)' }}>{invoiceDetails.invoice.clarificationResponse}</p>
                           </div>
                         )}
                       </CardContent>
@@ -1134,19 +1134,19 @@ export function AdminInvoiceManagement() {
                   )}
                   
                   {invoiceDetails.invoice.status === 'PENDING' && (
-                    <Card className="border-blue-200 bg-blue-50">
+                    <Card className="border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-800">Actions</CardTitle>
+                        <CardTitle className="text-sm font-medium" style={{ color: 'var(--blue)' }}>Actions</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="flex gap-3">
-                          <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusUpdate(invoiceDetails.invoice.id, 'APPROVED')} disabled={processing}>
+                          <Button className="flex-1 bg-green-bg hover:bg-green-bg" onClick={() => handleStatusUpdate(invoiceDetails.invoice.id, 'APPROVED')} disabled={processing}>
                             <Check className="h-4 w-4 mr-2" />Approve Invoice
                           </Button>
-                          <Button variant="outline" className="flex-1 text-amber-600 border-amber-600 hover:bg-amber-50" onClick={() => { setActionInvoice({ id: invoiceDetails.invoice.id, invoiceNumber: invoiceDetails.invoice.invoiceNumber } as Invoice); setShowClarificationDialog(true) }}>
+                          <Button variant="outline" className="flex-1 text-ds-amber border-amber-600 hover:bg-amber-bg" onClick={() => { setActionInvoice({ id: invoiceDetails.invoice.id, invoiceNumber: invoiceDetails.invoice.invoiceNumber } as Invoice); setShowClarificationDialog(true) }}>
                             <MessageSquare className="h-4 w-4 mr-2" />Request Clarification
                           </Button>
-                          <Button variant="outline" className="flex-1 text-red-600 border-red-600 hover:bg-red-50" onClick={() => { setActionInvoice({ id: invoiceDetails.invoice.id, invoiceNumber: invoiceDetails.invoice.invoiceNumber } as Invoice); setShowRejectDialog(true) }}>
+                          <Button variant="outline" className="flex-1 text-ds-red border-red-600 hover:bg-red-bg" onClick={() => { setActionInvoice({ id: invoiceDetails.invoice.id, invoiceNumber: invoiceDetails.invoice.invoiceNumber } as Invoice); setShowRejectDialog(true) }}>
                             <X className="h-4 w-4 mr-2" />Reject Invoice
                           </Button>
                         </div>
@@ -1155,13 +1155,13 @@ export function AdminInvoiceManagement() {
                   )}
                   
                   {invoiceDetails.invoice.status === 'APPROVED' && (
-                    <Card className="border-blue-200 bg-blue-50">
+                    <Card className="border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <CheckCircle className="h-6 w-6 text-blue-600" />
+                          <CheckCircle className="h-6 w-6" style={{ color: 'var(--blue)' }} />
                           <div>
-                            <p className="font-medium text-blue-900">Invoice Approved</p>
-                            <p className="text-sm text-blue-700">
+                            <p className="font-medium" style={{ color: 'var(--blue)' }}>Invoice Approved</p>
+                            <p className="text-sm" style={{ color: 'var(--blue)' }}>
                               This invoice is approved and awaiting payment. Use the &quot;Approved&quot; tab to process batch payments with a single Proof of Payment.
                             </p>
                           </div>
@@ -1171,13 +1171,13 @@ export function AdminInvoiceManagement() {
                   )}
                   
                   {invoiceDetails.invoice.status === 'PAID' && (
-                    <Card className="border-green-200 bg-green-50">
+                    <Card className="border-border" style={{ backgroundColor: 'var(--green-bg)' }}>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <DollarSign className="h-6 w-6 text-green-600" />
+                          <DollarSign className="h-6 w-6" style={{ color: 'var(--green)' }} />
                           <div>
-                            <p className="font-medium text-green-900">Invoice Paid</p>
-                            <p className="text-sm text-green-700">
+                            <p className="font-medium" style={{ color: 'var(--green)' }}>Invoice Paid</p>
+                            <p className="text-sm" style={{ color: 'var(--green)' }}>
                               Payment processed on {invoiceDetails.invoice.paidDate ? new Date(invoiceDetails.invoice.paidDate).toLocaleDateString() : 'N/A'}
                             </p>
                           </div>
@@ -1191,19 +1191,19 @@ export function AdminInvoiceManagement() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-blue-600" />
+                        <FileText className="h-5 w-5" style={{ color: 'var(--blue)' }} />
                         Work Description
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       {invoiceDetails.invoice.workDescription ? (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
+                          <p className="whitespace-pre-wrap leading-relaxed" style={{ color: 'var(--text-primary)' }}>
                             {invoiceDetails.invoice.workDescription}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-gray-500 italic">No work description provided by contractor.</p>
+                        <p className="italic" style={{ color: 'var(--text-muted)' }}>No work description provided by contractor.</p>
                       )}
                     </CardContent>
                   </Card>
@@ -1211,10 +1211,10 @@ export function AdminInvoiceManagement() {
                   {invoiceDetails.invoice.description && (
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">Brief Description</CardTitle>
+                        <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Brief Description</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-gray-700">{invoiceDetails.invoice.description}</p>
+                        <p style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.invoice.description}</p>
                       </CardContent>
                     </Card>
                   )}
@@ -1222,17 +1222,17 @@ export function AdminInvoiceManagement() {
                   {invoiceDetails.invoice.notes && (
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-600">Additional Notes</CardTitle>
+                        <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Additional Notes</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-gray-700">{invoiceDetails.invoice.notes}</p>
+                        <p style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.invoice.notes}</p>
                       </CardContent>
                     </Card>
                   )}
                   
-                  <Card className="border-blue-200">
+                  <Card className="border-border">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-blue-800">Download Documents</CardTitle>
+                      <CardTitle className="text-sm font-medium" style={{ color: 'var(--blue)' }}>Download Documents</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex gap-3">
@@ -1247,12 +1247,12 @@ export function AdminInvoiceManagement() {
                             </Button>
                           </MediaHoverPreview>
                         )}
-                        <Button variant="default" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
+                        <Button variant="default" className="flex-1" onClick={() => downloadSummary(invoiceDetails.invoice.id, 'pdf')}>
                           <Download className="h-4 w-4 mr-2" />
                           Summary PDF
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                         The Summary PDF contains complete job details for accounting records.
                       </p>
                     </CardContent>
@@ -1261,37 +1261,37 @@ export function AdminInvoiceManagement() {
                 
                 <TabsContent value="ticket" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Ticket Number</p><p className="font-semibold text-lg">{invoiceDetails.ticket.ticketNumber}</p></CardContent></Card>
-                    <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Status</p><Badge>{invoiceDetails.ticket.status}</Badge></CardContent></Card>
+                    <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Ticket Number</p><p className="font-medium text-lg">{invoiceDetails.ticket.ticketNumber}</p></CardContent></Card>
+                    <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Status</p><Badge>{invoiceDetails.ticket.status}</Badge></CardContent></Card>
                   </div>
                   
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base">{invoiceDetails.ticket.title}</CardTitle></CardHeader>
-                    <CardContent><p className="text-gray-700">{invoiceDetails.ticket.description}</p></CardContent>
+                    <CardContent><p style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.ticket.description}</p></CardContent>
                   </Card>
                   
                   <div className="grid grid-cols-3 gap-4">
-                    <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Type</p><p className="font-medium">{invoiceDetails.ticket.type?.replace(/_/g, ' ') || 'N/A'}</p></CardContent></Card>
-                    <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Priority</p><Badge>{invoiceDetails.ticket.priority}</Badge></CardContent></Card>
-                    <Card><CardContent className="p-4"><p className="text-sm text-gray-600">Location</p><p className="font-medium flex items-center gap-1"><MapPin className="h-4 w-4" />{invoiceDetails.ticket.location || 'N/A'}</p></CardContent></Card>
+                    <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Type</p><p className="font-medium">{invoiceDetails.ticket.type?.replace(/_/g, ' ') || 'N/A'}</p></CardContent></Card>
+                    <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Priority</p><Badge>{invoiceDetails.ticket.priority}</Badge></CardContent></Card>
+                    <Card><CardContent className="p-4"><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Location</p><p className="font-medium flex items-center gap-1"><MapPin className="h-4 w-4" />{invoiceDetails.ticket.location || 'N/A'}</p></CardContent></Card>
                   </div>
                   
                   <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2"><User className="h-4 w-4" />Reporter</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}><User className="h-4 w-4" />Reporter</CardTitle></CardHeader>
                     <CardContent>
-                      <p className="font-semibold">{invoiceDetails.ticket.reporter.name}</p>
-                      <p className="text-sm text-gray-600">{invoiceDetails.ticket.reporter.email}</p>
+                      <p className="font-medium">{invoiceDetails.ticket.reporter.name}</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.ticket.reporter.email}</p>
                     </CardContent>
                   </Card>
                   
                   {invoiceDetails.ticket.asset && (
                     <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600">Asset Information</CardTitle></CardHeader>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Asset Information</CardTitle></CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-3 gap-4">
-                          <div><p className="text-sm text-gray-600">Name</p><p className="font-medium">{invoiceDetails.ticket.asset.name}</p></div>
-                          <div><p className="text-sm text-gray-600">Asset Number</p><p className="font-medium">{invoiceDetails.ticket.asset.assetNumber}</p></div>
-                          <div><p className="text-sm text-gray-600">Location</p><p className="font-medium">{invoiceDetails.ticket.asset.location}</p></div>
+                          <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Name</p><p className="font-medium">{invoiceDetails.ticket.asset.name}</p></div>
+                          <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Asset Number</p><p className="font-medium">{invoiceDetails.ticket.asset.assetNumber}</p></div>
+                          <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Location</p><p className="font-medium">{invoiceDetails.ticket.asset.location}</p></div>
                         </div>
                       </CardContent>
                     </Card>
@@ -1303,15 +1303,15 @@ export function AdminInvoiceManagement() {
                     <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" />Contractor Information</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div><p className="text-sm text-gray-600">Name</p><p className="font-semibold text-lg">{invoiceDetails.contractor.name}</p></div>
-                        <div><p className="text-sm text-gray-600">Email</p><p className="font-medium">{invoiceDetails.contractor.email}</p></div>
-                        {invoiceDetails.contractor.companyName && <div><p className="text-sm text-gray-600">Company</p><p className="font-medium">{invoiceDetails.contractor.companyName}</p></div>}
-                        {invoiceDetails.contractor.phone && <div><p className="text-sm text-gray-600">Phone</p><p className="font-medium">{invoiceDetails.contractor.phone}</p></div>}
+                        <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Name</p><p className="font-medium text-lg">{invoiceDetails.contractor.name}</p></div>
+                        <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Email</p><p className="font-medium">{invoiceDetails.contractor.email}</p></div>
+                        {invoiceDetails.contractor.companyName && <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Company</p><p className="font-medium">{invoiceDetails.contractor.companyName}</p></div>}
+                        {invoiceDetails.contractor.phone && <div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Phone</p><p className="font-medium">{invoiceDetails.contractor.phone}</p></div>}
                       </div>
                       
                       {invoiceDetails.contractor.specializations && invoiceDetails.contractor.specializations.length > 0 && (
                         <div>
-                          <p className="text-sm text-gray-600 mb-2">Specializations</p>
+                          <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Specializations</p>
                           <div className="flex flex-wrap gap-2">
                             {invoiceDetails.contractor.specializations.map((spec, index) => (
                               <Badge key={index} variant="outline">{spec}</Badge>
@@ -1326,30 +1326,30 @@ export function AdminInvoiceManagement() {
                 <TabsContent value="rating" className="space-y-4 mt-4">
                   {invoiceDetails.rating ? (
                     <>
-                      <Card className="bg-gradient-to-r from-yellow-50 to-amber-50">
+                      <Card className="border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
                         <CardContent className="p-6 text-center">
-                          <p className="text-sm text-gray-600 mb-2">Overall Rating</p>
+                          <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Overall Rating</p>
                           <div className="flex justify-center mb-2">{renderStars(invoiceDetails.rating.overall)}</div>
-                          <p className="text-2xl font-bold text-amber-600">{invoiceDetails.rating.overall}/5</p>
+                          <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>{invoiceDetails.rating.overall}/5</p>
                         </CardContent>
                       </Card>
                       
                       <div className="grid grid-cols-3 gap-4">
-                        <Card><CardContent className="p-4 text-center"><p className="text-sm text-gray-600 mb-2">Punctuality</p>{renderStars(invoiceDetails.rating.punctuality)}</CardContent></Card>
-                        <Card><CardContent className="p-4 text-center"><p className="text-sm text-gray-600 mb-2">Customer Service</p>{renderStars(invoiceDetails.rating.customerService)}</CardContent></Card>
-                        <Card><CardContent className="p-4 text-center"><p className="text-sm text-gray-600 mb-2">Workmanship</p>{renderStars(invoiceDetails.rating.workmanship)}</CardContent></Card>
+                        <Card><CardContent className="p-4 text-center"><p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Punctuality</p>{renderStars(invoiceDetails.rating.punctuality)}</CardContent></Card>
+                        <Card><CardContent className="p-4 text-center"><p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Customer Service</p>{renderStars(invoiceDetails.rating.customerService)}</CardContent></Card>
+                        <Card><CardContent className="p-4 text-center"><p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Workmanship</p>{renderStars(invoiceDetails.rating.workmanship)}</CardContent></Card>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4">
-                        <Card className={invoiceDetails.rating.ppeCompliant ? 'bg-green-50' : 'bg-red-50'}>
+                        <Card style={{ backgroundColor: invoiceDetails.rating.ppeCompliant ? 'var(--green-bg)' : 'var(--red-bg)' }}>
                           <CardContent className="p-4 flex items-center gap-2">
-                            {invoiceDetails.rating.ppeCompliant ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
+                            {invoiceDetails.rating.ppeCompliant ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--green)' }} /> : <XCircle className="h-5 w-5" style={{ color: 'var(--red)' }} />}
                             <span className="font-medium">PPE Compliant</span>
                           </CardContent>
                         </Card>
-                        <Card className={invoiceDetails.rating.followedSiteProcedures ? 'bg-green-50' : 'bg-red-50'}>
+                        <Card style={{ backgroundColor: invoiceDetails.rating.followedSiteProcedures ? 'var(--green-bg)' : 'var(--red-bg)' }}>
                           <CardContent className="p-4 flex items-center gap-2">
-                            {invoiceDetails.rating.followedSiteProcedures ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
+                            {invoiceDetails.rating.followedSiteProcedures ? <CheckCircle className="h-5 w-5" style={{ color: 'var(--green)' }} /> : <XCircle className="h-5 w-5" style={{ color: 'var(--red)' }} />}
                             <span className="font-medium">Followed Site Procedures</span>
                           </CardContent>
                         </Card>
@@ -1357,14 +1357,14 @@ export function AdminInvoiceManagement() {
                       
                       {invoiceDetails.rating.comment && (
                         <Card>
-                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-gray-600">Comments</CardTitle></CardHeader>
-                          <CardContent><p className="text-gray-700">{invoiceDetails.rating.comment}</p></CardContent>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Comments</CardTitle></CardHeader>
+                          <CardContent><p {style={{ color: 'var(--text-secondary)' }}>{invoiceDetails.rating.comment}</p></CardContent>
                         </Card>
                       )}
                     </>
                   ) : (
                     <Card>
-                      <CardContent className="p-8 text-center text-gray-500">
+                      <CardContent className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>
                         <Star className="h-12 w-12 mx-auto mb-3 opacity-30" />
                         <p>No rating has been submitted for this job yet.</p>
                       </CardContent>
@@ -1374,7 +1374,7 @@ export function AdminInvoiceManagement() {
               </Tabs>
             </ScrollArea>
           ) : (
-            <div className="text-center py-8 text-gray-500">Failed to load invoice details</div>
+            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>Failed to load invoice details</div>
           )}
         </DialogContent>
       </Dialog>

@@ -91,13 +91,13 @@ export function FileUpload({
   return (
     <div className={className}>
       {selectedFile ? (
-        <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+        <div className="border border-gray-300 rounded-lg p-4 bg-surface2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <File className="h-8 w-8 text-blue-500" />
+              <File className="h-8 w-8 text-ds-blue" />
               <div>
-                <p className="font-medium text-gray-900">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                <p className="font-medium text-text-primary">{selectedFile.name}</p>
+                <p className="text-sm text-text-muted">{formatFileSize(selectedFile.size)}</p>
               </div>
             </div>
             <Button
@@ -105,7 +105,7 @@ export function FileUpload({
               variant="outline"
               size="sm"
               onClick={onFileRemove}
-              className="text-red-600 hover:text-red-700"
+              className="text-ds-red hover:text-ds-red"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -115,9 +115,9 @@ export function FileUpload({
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             dragActive
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-blue-500 bg-blue-bg'
               : error
-              ? 'border-red-300 bg-red-50'
+              ? 'border-red-300 bg-red-bg'
               : 'border-gray-300 hover:border-gray-400'
           }`}
           onDragEnter={handleDrag}
@@ -125,13 +125,13 @@ export function FileUpload({
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          <Upload className={`mx-auto h-12 w-12 ${error ? 'text-red-400' : 'text-gray-400'}`} />
+          <Upload className={`mx-auto h-12 w-12 ${error ? 'text-ds-red' : 'text-text-muted'}`} />
           <div className="mt-4">
             <label htmlFor="file-upload" className="cursor-pointer">
-              <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+              <span className="text-sm font-medium text-ds-blue hover:text-ds-blue">
                 Upload a file
               </span>
-              <span className="text-sm text-gray-500"> or drag and drop</span>
+              <span className="text-sm text-text-muted"> or drag and drop</span>
             </label>
             <input
               id="file-upload"
@@ -142,11 +142,11 @@ export function FileUpload({
               className="sr-only"
             />
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-text-muted mt-2">
             {accept.replace(/\./g, '').toUpperCase()} up to {maxSize}MB
           </p>
           {error && (
-            <p className="text-sm text-red-600 mt-2">{error}</p>
+            <p className="text-sm text-ds-red mt-2">{error}</p>
           )}
         </div>
       )}

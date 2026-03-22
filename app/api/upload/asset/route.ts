@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { uploadToR2, isR2Configured, validateFileType, validateFileSize } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads (100MB for videos)
+export const maxDuration = 300 // 5 minutes timeout for large uploads
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +13,13 @@ export async function POST(request: NextRequest) {
     
     if (!session?.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if R2 is configured
+    if (!isR2Configured()) {
+      return NextResponse.json({ 
+        message: 'Cloud storage not configured. Please contact administrator.' 
+      }, { status: 500 })
     }
 
     const formData = await request.formData()
@@ -21,44 +30,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No files uploaded' }, { status: 400 })
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'assets')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
     const uploadedUrls: string[] = []
     const errors: string[] = []
 
     for (const file of files) {
       try {
         // Validate file type (images only)
-        if (!file.type.startsWith('image/')) {
+        if (!validateFileType(file.type, ['image/'])) {
           errors.push(`${file.name}: Only image files are allowed`)
           continue
         }
 
         // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        if (!validateFileSize(file.size, 10)) {
           errors.push(`${file.name}: File size exceeds 10MB limit`)
           continue
         }
 
-        // Generate unique filename
-        const timestamp = Date.now()
-        const randomSuffix = Math.random().toString(36).substring(2, 8)
-        const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^.]*$/, '')
-        const fileName = `${assetId || 'temp'}-${timestamp}-${randomSuffix}-${sanitizedName}.${extension}`
-        const filePath = join(uploadsDir, fileName)
-
-        // Write file
+        // Get file buffer
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
-        await writeFile(filePath, buffer)
 
-        // Add to uploaded URLs
-        uploadedUrls.push(`/uploads/assets/${fileName}`)
+        // Generate filename with asset ID prefix
+        const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\.[^.]*$/, '')
+        const fileName = `${assetId || 'temp'}-${sanitizedName}.${extension}`
+
+        // Upload to R2
+        const result = await uploadToR2(buffer, fileName, 'assets', file.type)
+
+        if (result.success && result.url) {
+          uploadedUrls.push(result.url)
+        } else {
+          errors.push(`${file.name}: ${result.error || 'Upload failed'}`)
+        }
       } catch (fileError) {
         console.error(`Error uploading file ${file.name}:`, fileError)
         errors.push(`${file.name}: Upload failed`)

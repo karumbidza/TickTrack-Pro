@@ -89,29 +89,33 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
   const currentTicket = ticketDetails || ticket
   const attachments = currentTicket.attachments || []
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      OPEN: 'bg-blue-100 text-blue-800',
-      ASSIGNED: 'bg-yellow-100 text-yellow-800',
-      IN_PROGRESS: 'bg-orange-100 text-orange-800',
-      ON_SITE: 'bg-purple-100 text-purple-800',
-      AWAITING_APPROVAL: 'bg-indigo-100 text-indigo-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CLOSED: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800'
+  const getStatusStyle = (status: string): React.CSSProperties => {
+    const styles: Record<string, React.CSSProperties> = {
+      OPEN: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ASSIGNED: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      IN_PROGRESS: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      ON_SITE: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_APPROVAL: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      COMPLETED: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      CLOSED: { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' },
+      CANCELLED: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return styles[status] || { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' }
   }
+  // Keep old name for backward compat
+  const getStatusColor = (status: string) => ''
 
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-800',
-      MEDIUM: 'bg-yellow-100 text-yellow-800',
-      HIGH: 'bg-orange-100 text-orange-800',
-      CRITICAL: 'bg-red-100 text-red-800'
+  const getPriorityStyle = (priority: string): React.CSSProperties => {
+    const styles: Record<string, React.CSSProperties> = {
+      LOW: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      MEDIUM: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      HIGH: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      CRITICAL: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
     }
-    return colors[priority] || 'bg-gray-100 text-gray-800'
+    return styles[priority] || { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' }
   }
+  // Keep old name for backward compat
+  const getPriorityColor = (priority: string) => ''
 
   const canApproveCompletion = currentTicket.status === 'AWAITING_APPROVAL'
   const canRate = currentTicket.status === 'COMPLETED'
@@ -178,7 +182,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <span>{ticket.title}</span>
-              <Badge className={getStatusColor(ticket.status)}>
+              <Badge style={getStatusStyle(ticket.status)}>
                 {ticket.status.replace('_', ' ')}
               </Badge>
             </DialogTitle>
@@ -186,35 +190,35 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
           
           <div className="space-y-6">
             {/* Ticket Details */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Created</span>
+                  <Clock className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Created</span>
                   <span className="text-sm font-medium">
                     {new Date(ticket.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">Type</span>
+                  <Calendar className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Type</span>
                   <span className="text-sm font-medium">{ticket.type}</span>
                 </div>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Priority</span>
-                  <Badge className={getPriorityColor(ticket.priority)}>
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Priority</span>
+                  <Badge style={getPriorityStyle(ticket.priority)}>
                     {ticket.priority}
                   </Badge>
                 </div>
                 
                 {ticket.assignedTo && (
                   <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">Assigned to</span>
+                    <User className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Assigned to</span>
                     <span className="text-sm font-medium">{ticket.assignedTo.name}</span>
                   </div>
                 )}
@@ -223,9 +227,9 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
 
             {/* Description */}
             <div>
-              <h3 className="text-lg font-semibold mb-2">Description</h3>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-700 whitespace-pre-wrap">{currentTicket.description}</p>
+              <h3 className="text-lg font-medium mb-2">Description</h3>
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
+                <p className="whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{currentTicket.description}</p>
               </div>
             </div>
 
@@ -245,7 +249,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
             {canChat && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold flex items-center space-x-2">
+                  <h3 className="text-lg font-medium flex items-center space-x-2">
                     <MessageSquare className="h-5 w-5" />
                     <span>Communication</span>
                     {ticket._count.messages > 0 && (
@@ -317,13 +321,13 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center text-red-600">
+            <DialogTitle className="flex items-center text-ds-red">
               <AlertTriangle className="h-5 w-5 mr-2" />
               Cancel Ticket
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p style={{ color: 'var(--text-secondary)' }}>
               Are you sure you want to cancel this ticket? This action cannot be undone.
             </p>
             <div>

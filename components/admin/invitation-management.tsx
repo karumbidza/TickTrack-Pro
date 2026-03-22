@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -291,18 +291,13 @@ export function InvitationManagement({ user }: { user: any }) {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>
-      case 'accepted':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Accepted</Badge>
-      case 'expired':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Expired</Badge>
-      case 'cancelled':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Cancelled</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
+    const styles: Record<string, React.CSSProperties> = {
+      pending: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber)' },
+      accepted: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)', borderColor: 'var(--blue)' },
+      expired: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)', borderColor: 'var(--border)' },
+      cancelled: { backgroundColor: 'var(--red-bg)', color: 'var(--red)', borderColor: 'var(--red)' },
     }
+    return <Badge variant="outline" style={styles[status] || {}}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>
   }
 
   const pendingCount = pendingUsers.length
@@ -320,8 +315,8 @@ export function InvitationManagement({ user }: { user: any }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">User Invitations</h2>
-          <p className="text-muted-foreground">Invite users and manage pending approvals</p>
+          <h2 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>User Invitations</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Invite users and manage pending approvals</p>
         </div>
         <Button onClick={() => setShowInviteDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -334,12 +329,12 @@ export function InvitationManagement({ user }: { user: any }) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-100 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-600" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--amber-bg)' }}>
+                <Clock className="h-6 w-6" style={{ color: 'var(--amber)' }} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pendingInvitesCount}</p>
-                <p className="text-sm text-muted-foreground">Pending Invitations</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{pendingInvitesCount}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pending Invitations</p>
               </div>
             </div>
           </CardContent>
@@ -347,12 +342,12 @@ export function InvitationManagement({ user }: { user: any }) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <UserCheck className="h-6 w-6 text-blue-600" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                <UserCheck className="h-6 w-6" style={{ color: 'var(--blue)' }} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pendingCount}</p>
-                <p className="text-sm text-muted-foreground">Awaiting Approval</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{pendingCount}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Awaiting Approval</p>
               </div>
             </div>
           </CardContent>
@@ -360,12 +355,12 @@ export function InvitationManagement({ user }: { user: any }) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <CheckCircle className="h-6 w-6" style={{ color: 'var(--green)' }} />
               </div>
               <div>
-                <p className="text-2xl font-bold">{invitations.filter(i => i.status === 'accepted').length}</p>
-                <p className="text-sm text-muted-foreground">Accepted Invitations</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{invitations.filter(i => i.status === 'accepted').length}</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Accepted Invitations</p>
               </div>
             </div>
           </CardContent>
@@ -407,8 +402,8 @@ export function InvitationManagement({ user }: { user: any }) {
                   {invitations.map((invitation) => (
                     <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-4">
-                        <div className="p-2 bg-gray-100 rounded-full">
-                          <Mail className="h-5 w-5 text-gray-600" />
+                        <div className="p-2 rounded-full" style={{ backgroundColor: 'var(--surface2)' }}>
+                          <Mail className="h-5 w-5" style={{ color: 'var(--text-secondary)' }} />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -422,7 +417,7 @@ export function InvitationManagement({ user }: { user: any }) {
                             Invited by {invitation.invitedBy.name} • {formatDistanceToNow(new Date(invitation.createdAt), { addSuffix: true })}
                           </p>
                           {invitation.status === 'pending' && (
-                            <p className="text-xs text-amber-600">
+                            <p className="text-xs" style={{ color: 'var(--amber)' }}>
                               Expires {formatDistanceToNow(new Date(invitation.expiresAt), { addSuffix: true })}
                             </p>
                           )}
@@ -442,7 +437,7 @@ export function InvitationManagement({ user }: { user: any }) {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-red-600"
+                              style={{ color: 'var(--red)' }}
                               onClick={() => handleCancelInvite(invitation.id)}
                             >
                               <XCircle className="h-4 w-4 mr-1" />
@@ -481,10 +476,10 @@ export function InvitationManagement({ user }: { user: any }) {
               ) : (
                 <div className="space-y-4">
                   {pendingUsers.map((pendingUser) => (
-                    <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg bg-yellow-50/50">
+                    <div key={pendingUser.id} className="flex items-center justify-between p-4 border rounded-lg" style={{ backgroundColor: 'var(--amber-bg)' }}>
                       <div className="flex items-center gap-4">
-                        <div className="p-2 bg-yellow-100 rounded-full">
-                          <UserCheck className="h-5 w-5 text-yellow-600" />
+                        <div className="p-2 rounded-full" style={{ backgroundColor: 'var(--amber-bg)' }}>
+                          <UserCheck className="h-5 w-5" style={{ color: 'var(--amber)' }} />
                         </div>
                         <div>
                           <p className="font-medium">{pendingUser.name}</p>
@@ -511,7 +506,7 @@ export function InvitationManagement({ user }: { user: any }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-600"
+                          style={{ color: 'var(--red)' }}
                           onClick={() => {
                             setSelectedUser(pendingUser)
                             setShowRejectDialog(true)
@@ -606,10 +601,10 @@ export function InvitationManagement({ user }: { user: any }) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="font-medium">{selectedUser?.name}</p>
-              <p className="text-sm text-muted-foreground">{selectedUser?.email}</p>
-              <p className="text-sm text-muted-foreground">{selectedUser?.phone}</p>
+            <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--surface2)' }}>
+              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedUser?.name}</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{selectedUser?.email}</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{selectedUser?.phone}</p>
             </div>
 
             <div>
@@ -700,12 +695,12 @@ export function InvitationManagement({ user }: { user: any }) {
               Are you sure you want to reject {selectedUser?.name}'s request? This will delete their pending account and notify them via email.
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4">
+          <div className="border rounded-lg p-4 my-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <AlertCircle className="h-5 w-5 mt-0.5" style={{ color: 'var(--red)' }} />
               <div>
-                <p className="font-medium text-red-800">This action cannot be undone</p>
-                <p className="text-sm text-red-600">The user will need a new invitation to try again.</p>
+                <p className="font-medium" style={{ color: 'var(--red)' }}>This action cannot be undone</p>
+                <p className="text-sm" style={{ color: 'var(--red)' }}>The user will need a new invitation to try again.</p>
               </div>
             </div>
           </div>

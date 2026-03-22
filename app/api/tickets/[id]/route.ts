@@ -3,8 +3,13 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { writeFile, mkdir, unlink } from 'fs/promises'
+import { unlink } from 'fs/promises'
 import path from 'path'
+import { uploadToR2, isR2Configured, deleteFromR2, getKeyFromUrl } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads (100MB for videos)
+export const maxDuration = 300 // 5 minutes timeout for large uploads
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
@@ -201,10 +206,19 @@ export async function PATCH(
       for (const attachmentId of deleteAttachments) {
         const attachment = ticket.attachments.find(a => a.id === attachmentId)
         if (attachment) {
-          // Delete file from filesystem
+          // Delete file from R2 or filesystem
           try {
-            const filePath = path.join(process.cwd(), 'public', attachment.url)
-            await unlink(filePath)
+            if (attachment.url.startsWith('http')) {
+              // R2 URL - delete from R2
+              const key = getKeyFromUrl(attachment.url)
+              if (key) {
+                await deleteFromR2(key)
+              }
+            } else {
+              // Local file - delete from filesystem
+              const filePath = path.join(process.cwd(), 'public', attachment.url)
+              await unlink(filePath)
+            }
           } catch (e) {
             // File might not exist, continue anyway
             logger.warn(`Could not delete file: ${attachment.url}`)
@@ -216,21 +230,21 @@ export async function PATCH(
     }
 
     // Handle new file uploads
-    if (files.length > 0) {
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'tickets', ticketId)
-      await mkdir(uploadDir, { recursive: true })
-
+    if (files.length > 0 && isR2Configured()) {
       for (const file of files) {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
         
-        // Generate unique filename
-        const timestamp = Date.now()
+        // Generate safe filename
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-        const filename = `${timestamp}-${safeName}`
-        const filepath = path.join(uploadDir, filename)
         
-        await writeFile(filepath, buffer)
+        // Upload to R2
+        const result = await uploadToR2(buffer, safeName, `tickets/${ticketId}`, file.type)
+        
+        if (!result.success || !result.url) {
+          logger.error(`Failed to upload file ${file.name} to R2: ${result.error}`)
+          continue
+        }
         
         // Determine file type
         let fileType = 'document'
@@ -241,9 +255,9 @@ export async function PATCH(
         // Create attachment record
         await prisma.attachment.create({
           data: {
-            filename,
+            filename: result.key || safeName,
             originalName: file.name,
-            url: `/uploads/tickets/${ticketId}/${filename}`,
+            url: result.url,
             mimeType: file.type,
             size: file.size,
             type: fileType,

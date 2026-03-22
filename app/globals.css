@@ -1,76 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Design system colour tokens */
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e2e0d8;
+    --border-strong: #c8c6bc;
+    --text-primary: #1a1916;
+    --text-secondary: #6b6860;
+    --text-muted: #9e9c94;
+    --accent: #2a2825;
+    --tag-bg: #eceae3;
+    --tag-text: #4a4843;
+    --green: #2d6a4f;
+    --green-bg: #e8f5ee;
+    --amber: #92400e;
+    --amber-bg: #fef3c7;
+    --blue: #1e40af;
+    --blue-bg: #dbeafe;
+    --red: #991b1b;
+    --red-bg: #fee2e2;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    /* Shadcn compatibility (these feed `border-border`, `bg-background`, etc.) */
+    --background: var(--bg);
+    --foreground: var(--text-primary);
+    --card: var(--surface);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--accent);
+    --primary-foreground: var(--bg);
+    --secondary: var(--surface2);
+    --secondary-foreground: var(--text-primary);
+    --muted: var(--surface2);
+    --muted-foreground: var(--text-secondary);
+    --accent-ui: var(--surface2);
+    --accent-foreground: var(--text-primary);
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --input: var(--border);
+    --ring: var(--accent);
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --bg: #111110;
+    --surface: #1c1b19;
+    --surface2: #252421;
+    --border: #2e2d2a;
+    --border-strong: #3d3c38;
+    --text-primary: #f0efe9;
+    --text-secondary: #9e9c94;
+    --text-muted: #6b6860;
+    --accent: #f0efe9;
+    --tag-bg: #252421;
+    --tag-text: #c8c6bc;
+    --green: #6ee7b7;
+    --green-bg: #064e3b;
+    --amber: #fcd34d;
+    --amber-bg: #78350f;
+    --blue: #93c5fd;
+    --blue-bg: #1e3a5f;
+    --red: #fca5a5;
+    --red-bg: #7f1d1d;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--bg);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+  }
+
+  h1 { letter-spacing: -0.04em; }
+  h2 { letter-spacing: -0.03em; }
+
+  strong {
+    font-weight: 500;
+  }
+
+  code, pre, kbd, samp {
+    font-family: 'DM Mono', monospace;
+  }
+
+  input, textarea, select, button {
+    font-family: 'DM Sans', sans-serif;
+  }
+}
+
+/* Utility classes for the design system */
+@layer utilities {
+  .font-mono-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .font-mono-sm {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .stat-number {
+    font-weight: 300;
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+
+  .ds-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .ds-card-lg {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  .ds-btn-primary {
+    background-color: var(--accent);
+    color: var(--bg);
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 14px;
+    border: none;
+  }
+
+  .ds-btn-ghost {
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  .ds-input {
+    height: 40px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-size: 14px;
+    padding: 0 12px;
+  }
+
+  .ds-input:focus {
+    outline: none;
+    border-color: var(--border-strong);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .badge-mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+
+  .badge-green {
+    background-color: var(--green-bg);
+    color: var(--green);
+  }
+
+  .badge-amber {
+    background-color: var(--amber-bg);
+    color: var(--amber);
+  }
+
+  .badge-blue {
+    background-color: var(--blue-bg);
+    color: var(--blue);
+  }
+
+  .badge-red {
+    background-color: var(--red-bg);
+    color: var(--red);
+  }
+
+  .badge-neutral {
+    background-color: var(--tag-bg);
+    color: var(--tag-text);
   }
 }

@@ -103,7 +103,6 @@ export function UserManagement({ user }: UserManagementProps) {
     email: '',
     phone: '',
     role: 'END_USER',
-    password: '',
     branchIds: [] as string[]
   })
   
@@ -200,18 +199,13 @@ export function UserManagement({ user }: UserManagementProps) {
   }
 
   const handleCreateUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.phone || !newUser.password) {
+    if (!newUser.name || !newUser.email || !newUser.phone) {
       toast.error('Please fill in all required fields including phone number')
       return
     }
 
     if (newUser.branchIds.length === 0) {
       toast.error('Please select at least one branch')
-      return
-    }
-
-    if (newUser.password.length < 6) {
-      toast.error('Password must be at least 6 characters')
       return
     }
 
@@ -224,9 +218,9 @@ export function UserManagement({ user }: UserManagementProps) {
       })
 
       if (response.ok) {
-        toast.success('User created successfully')
+        toast.success('User created successfully. An activation email has been sent.')
         setShowCreateDialog(false)
-        setNewUser({ name: '', email: '', phone: '', role: 'END_USER', password: '', branchIds: [] })
+        setNewUser({ name: '', email: '', phone: '', role: 'END_USER', branchIds: [] })
         fetchUsers()
       } else {
         const error = await response.json()
@@ -382,24 +376,24 @@ export function UserManagement({ user }: UserManagementProps) {
     return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
   }
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleBadgeStyle = (role: string): React.CSSProperties => {
     switch (role) {
       case 'TENANT_ADMIN':
-        return 'bg-purple-100 text-purple-800'
+        return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
       case 'IT_ADMIN':
-        return 'bg-blue-100 text-blue-800'
+        return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
       case 'SALES_ADMIN':
-        return 'bg-green-100 text-green-800'
+        return { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
       case 'RETAIL_ADMIN':
-        return 'bg-orange-100 text-orange-800'
+        return { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
       case 'MAINTENANCE_ADMIN':
-        return 'bg-yellow-100 text-yellow-800'
+        return { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
       case 'PROJECTS_ADMIN':
-        return 'bg-cyan-100 text-cyan-800'
+        return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
       case 'END_USER':
-        return 'bg-gray-100 text-gray-800'
+        return { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
       default:
-        return 'bg-gray-100 text-gray-800'
+        return { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
     }
   }
 
@@ -462,7 +456,7 @@ export function UserManagement({ user }: UserManagementProps) {
             <span 
               style={{ 
                 fontSize: '0.875rem',
-                fontWeight: 700,
+                fontWeight: 500,
                 color: '#1976d2',
                 minWidth: '24px'
               }}
@@ -470,8 +464,8 @@ export function UserManagement({ user }: UserManagementProps) {
               {initials}
             </span>
             <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
-              <p className="font-medium text-gray-900 text-sm truncate">{userData.name || 'No Name'}</p>
-              <p className="text-xs text-gray-500 truncate">{userData.email}</p>
+              <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{userData.name || 'No Name'}</p>
+              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{userData.email}</p>
             </Box>
           </Box>
         )
@@ -526,7 +520,7 @@ export function UserManagement({ user }: UserManagementProps) {
                 )}
               </>
             ) : (
-              <span className="text-xs text-gray-400">No branches</span>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No branches</span>
             )}
           </Box>
         )
@@ -567,7 +561,7 @@ export function UserManagement({ user }: UserManagementProps) {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<UserData>) => (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -595,10 +589,10 @@ export function UserManagement({ user }: UserManagementProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading users...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent)' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading users...</p>
         </div>
       </div>
     )
@@ -620,7 +614,7 @@ export function UserManagement({ user }: UserManagementProps) {
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { if (menuUser) handleSendActivationEmail(menuUser); handleMenuClose(); }}>
-            <ListItemIcon><Mail className="h-4 w-4 text-blue-500" /></ListItemIcon>
+            <ListItemIcon><Mail className="h-4 w-4 text-ds-blue" /></ListItemIcon>
             <ListItemText>Send Activation Email</ListItemText>
           </MenuItem>
           <MenuItem onClick={() => { if (menuUser) handleResetPassword(menuUser); handleMenuClose(); }}>
@@ -631,12 +625,12 @@ export function UserManagement({ user }: UserManagementProps) {
           <MenuItem onClick={() => { if (menuUser) handleToggleActive(menuUser); handleMenuClose(); }}>
             {menuUser?.isActive ? (
               <>
-                <ListItemIcon><XCircle className="h-4 w-4 text-red-500" /></ListItemIcon>
+                <ListItemIcon><XCircle className="h-4 w-4 text-ds-red" /></ListItemIcon>
                 <ListItemText sx={{ color: 'error.main' }}>Deactivate</ListItemText>
               </>
             ) : (
               <>
-                <ListItemIcon><CheckCircle className="h-4 w-4 text-green-500" /></ListItemIcon>
+                <ListItemIcon><CheckCircle className="h-4 w-4 text-ds-green" /></ListItemIcon>
                 <ListItemText sx={{ color: 'success.main' }}>Activate</ListItemText>
               </>
             )}
@@ -646,8 +640,8 @@ export function UserManagement({ user }: UserManagementProps) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-            <p className="text-gray-600">Manage users and department admins</p>
+            <h1 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>Users</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Manage users and department admins</p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -701,15 +695,11 @@ export function UserManagement({ user }: UserManagementProps) {
                   <p className="text-xs text-muted-foreground mt-1">For SMS notifications</p>
                 </div>
                 
-                <div>
-                  <Label htmlFor="password">Password *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Min 6 characters"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  />
+                <div className="rounded-md p-3 border" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--accent)' }}>
+                  <p className="text-sm" style={{ color: 'var(--blue)' }}>
+                    <Mail className="inline h-4 w-4 mr-1" />
+                    An activation email will be sent to the user. They will set their own password.
+                  </p>
                 </div>
 
                 <div>
@@ -734,7 +724,7 @@ export function UserManagement({ user }: UserManagementProps) {
                         <SelectItem key={role.value} value={role.value}>
                           <div>
                             <p className="font-medium">{role.label}</p>
-                            <p className="text-xs text-gray-500">{role.description}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{role.description}</p>
                           </div>
                         </SelectItem>
                       ))}
@@ -747,7 +737,7 @@ export function UserManagement({ user }: UserManagementProps) {
                   <Label>Assign Branches *</Label>
                   <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
                     {branches.length === 0 ? (
-                      <p className="text-sm text-gray-500">No branches available. Create branches first.</p>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No branches available. Create branches first.</p>
                     ) : (
                       branches.map((branch) => {
                         const isHQ = branch.isHeadOffice
@@ -786,7 +776,7 @@ export function UserManagement({ user }: UserManagementProps) {
                                 )}
                               </div>
                               {isHQ && isAdminRole && isSelected && (
-                                <p className="text-xs text-blue-600 mt-0.5">Auto-selects all branches</p>
+                                <p className="text-xs mt-0.5" style={{ color: 'var(--accent)' }}>Auto-selects all branches</p>
                               )}
                             </Label>
                           </div>
@@ -795,7 +785,7 @@ export function UserManagement({ user }: UserManagementProps) {
                     )}
                   </div>
                   {newUser.branchIds.length > 0 && (
-                    <p className="text-xs text-gray-600">{newUser.branchIds.length} branch(es) selected</p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{newUser.branchIds.length} branch(es) selected</p>
                   )}
                 </div>
                 
@@ -819,7 +809,7 @@ export function UserManagement({ user }: UserManagementProps) {
             <DialogHeader>
               <DialogTitle>Invite User</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
               Send an invitation email to a new user. They will be able to create their account after accepting.
             </p>
             <div className="space-y-4">
@@ -887,37 +877,37 @@ export function UserManagement({ user }: UserManagementProps) {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              <div className="text-2xl font-medium">{users.length}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Admins</CardTitle>
-              <Shield className="h-4 w-4 text-purple-500" />
+              <Shield className="h-4 w-4 text-text-secondary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{adminCount}</div>
+              <div className="text-2xl font-medium">{adminCount}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">End Users</CardTitle>
-              <User className="h-4 w-4 text-blue-500" />
+              <User className="h-4 w-4 text-ds-blue" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{endUserCount}</div>
+              <div className="text-2xl font-medium">{endUserCount}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-ds-green" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.filter(u => u.isActive).length}</div>
+              <div className="text-2xl font-medium">{users.filter(u => u.isActive).length}</div>
             </CardContent>
           </Card>
         </div>
@@ -927,7 +917,7 @@ export function UserManagement({ user }: UserManagementProps) {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   placeholder="Search by name or email..."
                   value={searchQuery}
@@ -955,11 +945,11 @@ export function UserManagement({ user }: UserManagementProps) {
           <CardContent className="pt-6">
             {filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Users className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                   {searchQuery || roleFilter !== 'all' ? 'No users found' : 'No users yet'}
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                   {searchQuery || roleFilter !== 'all' ? 'Try a different search or filter' : 'Add your first user to get started'}
                 </p>
                 {!searchQuery && roleFilter === 'all' && (
@@ -1056,9 +1046,9 @@ export function UserManagement({ user }: UserManagementProps) {
               {/* Branch Selection */}
               <div>
                 <Label>Assigned Branches</Label>
-                <p className="text-xs text-gray-500 mb-2">
-                  {editUser.role.includes('ADMIN') 
-                    ? 'Admins at Head Office get access to all branches' 
+                <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                  {editUser.role.includes('ADMIN')
+                    ? 'Admins at Head Office get access to all branches'
                     : 'Select the branch(es) this user can access'}
                 </p>
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
@@ -1097,7 +1087,7 @@ export function UserManagement({ user }: UserManagementProps) {
                   ))}
                 </div>
                 {editUser.branchIds.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">At least one branch required</p>
+                  <p className="text-xs text-ds-red mt-1">At least one branch required</p>
                 )}
               </div>
 
@@ -1107,7 +1097,7 @@ export function UserManagement({ user }: UserManagementProps) {
                   id="edit-isActive"
                   checked={editUser.isActive}
                   onChange={(e) => setEditUser({...editUser, isActive: e.target.checked})}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="edit-isActive">Account Active</Label>
               </div>
@@ -1131,7 +1121,7 @@ export function UserManagement({ user }: UserManagementProps) {
               <DialogTitle>Reset Password</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p style={{ color: 'var(--text-secondary)' }}>
                 Reset password for <strong>{selectedUser?.name || selectedUser?.email}</strong>
               </p>
               

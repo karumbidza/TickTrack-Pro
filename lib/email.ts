@@ -541,6 +541,91 @@ export async function sendWelcomeEmail(
   await sendEmail(email, `Welcome to TickTrack Pro - Your Login Credentials`, htmlContent)
 }
 
+// Send user activation email (for admin-created users to set their own password)
+export async function sendUserActivationEmail(
+  email: string, 
+  name: string, 
+  tenantName: string,
+  branches: string[],
+  activationLink: string
+): Promise<void> {
+  console.log('📧 USER ACTIVATION EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Activation Link: ${activationLink}`)
+
+  if (!isEmailConfigured()) {
+    console.log('   ⚠️ Email not configured')
+    return
+  }
+
+  const branchList = branches.length > 0 ? branches.join(', ') : 'All Branches'
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1a365d; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
+        .info-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; border: 2px solid #3b82f6; }
+        .label { font-weight: bold; color: #64748b; font-size: 12px; text-transform: uppercase; }
+        .value { font-size: 16px; margin-top: 5px; padding: 10px; background: #f1f5f9; border-radius: 4px; }
+        .button { display: inline-block; background: #3b82f6; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin-top: 20px; font-weight: bold; }
+        .button:hover { background: #2563eb; }
+        .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
+        .warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 12px; margin-top: 20px; color: #92400e; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Welcome to TickTrack Pro!</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">${tenantName}</p>
+        </div>
+        
+        <div class="content">
+          <p>Hello ${name},</p>
+          <p>Your account has been created on TickTrack Pro. To get started, you need to activate your account and set your password.</p>
+          
+          <div class="info-box">
+            <h3 style="margin-top: 0; color: #1a365d;">Your Account Details</h3>
+            <div style="margin: 10px 0;">
+              <div class="label">Email Address</div>
+              <div class="value">${email}</div>
+            </div>
+            <div style="margin: 10px 0;">
+              <div class="label">Assigned Branch(es)</div>
+              <div class="value">${branchList}</div>
+            </div>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="${activationLink}" class="button" style="color: white;">Activate My Account</a>
+          </div>
+          
+          <div class="warning">
+            <strong>⏰ Important:</strong> This activation link expires in 48 hours. If you don't activate your account in time, please contact your administrator for a new link.
+          </div>
+          
+          <p style="margin-top: 20px; font-size: 14px; color: #64748b;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <span style="word-break: break-all; color: #3b82f6;">${activationLink}</span>
+          </p>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail(email, `Activate Your TickTrack Pro Account - ${tenantName}`, htmlContent)
+}
+
 // Send password reset email
 export async function sendPasswordResetEmail(
   email: string, 
@@ -1083,6 +1168,287 @@ export async function sendUserInvitationEmail(
   await sendEmail(
     email,
     `You're Invited to Join ${tenantName} - TickTrack Pro`,
+    htmlContent
+  )
+}
+// ============================================
+// TRIAL MANAGEMENT EMAILS
+// ============================================
+
+/**
+ * Send trial started email with expiry date and payment reminder
+ */
+export async function sendTrialStartedEmail(
+  email: string,
+  name: string,
+  companyName: string,
+  trialEndsAt: Date,
+  selectedPlan: string
+): Promise<void> {
+  console.log('📧 TRIAL STARTED EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Company: ${companyName}`)
+  console.log(`   Trial Ends: ${trialEndsAt.toISOString()}`)
+
+  if (!isEmailConfigured()) {
+    console.log('   ⚠️ Email not configured')
+    return
+  }
+
+  const expiryDate = trialEndsAt.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
+        .trial-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #22c55e; text-align: center; }
+        .warning-box { background: #fef3c7; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f59e0b; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
+        .highlight { color: #059669; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🎉 Welcome to TickTrack Pro!</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Your 14-Day Free Trial Has Started</p>
+        </div>
+        
+        <div class="content">
+          <p>Hello <strong>${name}</strong>,</p>
+          <p>Congratulations! Your company <strong>${companyName}</strong> is now set up on TickTrack Pro with a <span class="highlight">14-day free trial</span> of the <strong>${selectedPlan}</strong> plan.</p>
+          
+          <div class="trial-box">
+            <h2 style="color: #059669; margin: 0 0 15px 0;">📅 Trial Details</h2>
+            <p style="margin: 5px 0;"><strong>Plan:</strong> ${selectedPlan}</p>
+            <p style="margin: 5px 0;"><strong>Trial Period:</strong> 14 Days</p>
+            <p style="margin: 5px 0; font-size: 18px;"><strong>Expires:</strong> <span style="color: #dc2626;">${expiryDate}</span></p>
+          </div>
+          
+          <h3>What's Included in Your Trial:</h3>
+          <ul>
+            <li>✅ Full access to all ${selectedPlan} features</li>
+            <li>✅ Unlimited ticket management</li>
+            <li>✅ Contractor network access</li>
+            <li>✅ Real-time chat & notifications</li>
+            <li>✅ Reporting & analytics</li>
+          </ul>
+          
+          <div class="warning-box">
+            <strong>⚠️ Important Payment Reminder</strong><br>
+            To continue using TickTrack Pro after your trial, please process your payment by <strong>${expiryDate}</strong>. Your account will be locked if payment is not received by this date.
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXTAUTH_URL || 'https://tick-trackpro.com'}/auth/signin" class="button" style="color: white;">Sign In to TickTrack Pro →</a>
+          </div>
+          
+          <p style="text-align: center; margin-top: 15px;">
+            <a href="${process.env.NEXTAUTH_URL || 'https://tick-trackpro.com'}/billing" style="color: #3b82f6; text-decoration: underline;">View Billing & Subscribe</a>
+          </p>
+          
+          <p>If you have any questions, feel free to reach out to our support team.</p>
+          <p>Best regards,<br><strong>The TickTrack Pro Team</strong></p>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
+          <p>You're receiving this because you signed up for TickTrack Pro.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail(
+    email,
+    `🎉 Your 14-Day Trial Has Started - ${companyName}`,
+    htmlContent
+  )
+}
+
+/**
+ * Send trial reminder email (for mid-trial and urgent reminders)
+ */
+export async function sendTrialReminderEmail(
+  email: string,
+  name: string,
+  companyName: string,
+  trialEndsAt: Date,
+  daysRemaining: number
+): Promise<void> {
+  console.log('📧 TRIAL REMINDER EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Days Remaining: ${daysRemaining}`)
+
+  if (!isEmailConfigured()) {
+    console.log('   ⚠️ Email not configured')
+    return
+  }
+
+  const expiryDate = trialEndsAt.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+
+  const isUrgent = daysRemaining <= 2
+  const headerColor = isUrgent ? '#dc2626' : '#f59e0b'
+  const headerText = isUrgent ? '⚠️ Urgent: Trial Expiring Soon!' : '⏰ Trial Reminder'
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: ${headerColor}; color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
+        .countdown { background: ${isUrgent ? '#fef2f2' : '#fefce8'}; padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid ${headerColor}; text-align: center; }
+        .countdown-number { font-size: 48px; font-weight: bold; color: ${headerColor}; }
+        .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>${headerText}</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">${companyName}</p>
+        </div>
+        
+        <div class="content">
+          <p>Hello <strong>${name}</strong>,</p>
+          <p>This is a reminder that your TickTrack Pro trial for <strong>${companyName}</strong> is ending soon.</p>
+          
+          <div class="countdown">
+            <p style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Time Remaining</p>
+            <div class="countdown-number">${daysRemaining}</div>
+            <p style="margin: 0; font-size: 18px;">Day${daysRemaining === 1 ? '' : 's'} Left</p>
+            <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">Expires: ${expiryDate}</p>
+          </div>
+          
+          ${isUrgent ? `
+          <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
+            <strong>🚨 Action Required:</strong> Your account will be locked when the trial expires. Subscribe now to avoid any interruption.
+          </div>
+          ` : ''}
+          
+          <p>To continue enjoying all TickTrack Pro features, please subscribe before your trial ends.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXTAUTH_URL || 'https://tick-trackpro.com'}/billing" class="button" style="color: white;">Subscribe Now →</a>
+          </div>
+          
+          <p>Best regards,<br><strong>The TickTrack Pro Team</strong></p>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail(
+    email,
+    `${isUrgent ? '🚨' : '⏰'} ${daysRemaining} Day${daysRemaining === 1 ? '' : 's'} Left on Your Trial - ${companyName}`,
+    htmlContent
+  )
+}
+
+/**
+ * Send trial expired email (account locked notification)
+ */
+export async function sendTrialExpiredEmail(
+  email: string,
+  name: string,
+  companyName: string
+): Promise<void> {
+  console.log('📧 TRIAL EXPIRED EMAIL:')
+  console.log(`   Email: ${email}`)
+  console.log(`   Company: ${companyName}`)
+
+  if (!isEmailConfigured()) {
+    console.log('   ⚠️ Email not configured')
+    return
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc2626; color: white; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none; }
+        .locked-box { background: #fef2f2; padding: 25px; margin: 25px 0; border-radius: 12px; border: 2px solid #dc2626; text-align: center; }
+        .button { display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; padding: 25px; color: #64748b; font-size: 12px; background: #f8fafc; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0; border-top: none; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🔒 Trial Expired</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Your account has been locked</p>
+        </div>
+        
+        <div class="content">
+          <p>Hello <strong>${name}</strong>,</p>
+          <p>Your 14-day free trial for <strong>${companyName}</strong> has expired and your account is now locked.</p>
+          
+          <div class="locked-box">
+            <h2 style="color: #dc2626; margin: 0 0 15px 0;">🔒 Account Locked</h2>
+            <p>You can no longer access TickTrack Pro features.</p>
+            <p style="font-size: 14px; color: #666;">Your data is safe and will be available once you subscribe.</p>
+          </div>
+          
+          <h3>To Unlock Your Account:</h3>
+          <ol>
+            <li>Click the button below to go to billing</li>
+            <li>Choose your subscription plan</li>
+            <li>Complete payment</li>
+            <li>Your account will be unlocked immediately</li>
+          </ol>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.NEXTAUTH_URL || 'https://tick-trackpro.com'}/billing" class="button" style="color: white;">Subscribe & Unlock Account →</a>
+          </div>
+          
+          <p>If you have any questions or need assistance, please contact our support team.</p>
+          <p>Best regards,<br><strong>The TickTrack Pro Team</strong></p>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await sendEmail(
+    email,
+    `🔒 Your Trial Has Expired - ${companyName}`,
     htmlContent
   )
 }

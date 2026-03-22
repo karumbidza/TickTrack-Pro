@@ -22,26 +22,22 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
 
-  // Step 1: Request OTP
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       })
-
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.message || 'Failed to send OTP')
       }
-
       setStep('method')
-      setSuccess('Account found! Choose how you\'d like to receive your OTP.')
+      setSuccess("Account found! Choose how you'd like to receive your OTP.")
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process request')
     } finally {
@@ -49,27 +45,19 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // Step 2: Send OTP via selected method
   const handleSendOTP = async () => {
     setLoading(true)
     setError('')
-
     try {
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          method,
-          phone: method === 'sms' ? phone : undefined
-        })
+        body: JSON.stringify({ email, method, phone: method === 'sms' ? phone : undefined })
       })
-
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.message || `Failed to send OTP via ${method}`)
       }
-
       setStep('otp')
       setSuccess(`OTP sent to your ${method}. It expires in 10 minutes.`)
     } catch (err) {
@@ -79,40 +67,22 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // Step 3: Verify OTP and reset password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
-    }
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      setLoading(false)
-      return
-    }
-
+    if (password !== confirmPassword) { setError('Passwords do not match'); setLoading(false); return }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); setLoading(false); return }
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          otp,
-          password
-        })
+        body: JSON.stringify({ email, otp, password })
       })
-
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.message || 'Failed to reset password')
       }
-
       setStep('success')
       setTimeout(() => router.push('/auth/signin'), 3000)
     } catch (err) {
@@ -122,256 +92,151 @@ export default function ForgotPasswordPage() {
     }
   }
 
+  const stepLabels: Record<string, string> = {
+    email: 'Enter your email to get started',
+    method: 'Choose how to receive your OTP',
+    otp: 'Enter the code and create a new password',
+    reset: 'Create your new password',
+    success: 'Your password has been reset successfully',
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ backgroundColor: 'var(--bg)' }}>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-8"
+        style={{ maxWidth: 420, width: '100%' }}
       >
         {/* Logo */}
-        <div className="text-center">
-          <Link href="/" className="flex items-center justify-center gap-2">
-            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-              <Ticket className="h-6 w-6 text-white" />
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Ticket className="h-5 w-5" style={{ color: 'var(--bg)' }} />
             </div>
           </Link>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            {step === 'success' ? 'Password Reset' : 'Forgot Password?'}
+          <p className="section-label mt-4 mb-2">{step === 'success' ? 'Password Reset' : 'Forgot Password'}</p>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
+            {step === 'success' ? 'All done!' : 'Reset your password'}
           </h2>
-          <p className="mt-2 text-gray-600">
-            {step === 'email' && 'Enter your email to get started'}
-            {step === 'method' && 'Choose how to receive your OTP'}
-            {step === 'otp' && 'Enter the code and create a new password'}
-            {step === 'reset' && 'Create your new password'}
-            {step === 'success' && 'Your password has been reset successfully'}
-          </p>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{stepLabels[step]}</p>
         </div>
 
-        {/* Error Message */}
+        {/* Alert messages */}
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3 text-red-700 bg-red-50 border border-red-200 p-4 rounded-xl"
-          >
-            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            <span className="text-sm">{error}</span>
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 8, backgroundColor: 'var(--red-bg)', marginBottom: 20 }}>
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--red)' }} />
+            <span style={{ fontSize: 13, color: 'var(--red)' }}>{error}</span>
           </motion.div>
         )}
 
-        {/* Success Message */}
         {success && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-3 text-green-700 bg-green-50 border border-green-200 p-4 rounded-xl"
-          >
-            <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            <span className="text-sm">{success}</span>
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 8, backgroundColor: 'var(--green-bg)', marginBottom: 20 }}>
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--green)' }} />
+            <span style={{ fontSize: 13, color: 'var(--green)' }}>{success}</span>
           </motion.div>
         )}
 
-        {/* Step 1: Email */}
-        {step === 'email' && (
-          <form onSubmit={handleRequestOTP} className="space-y-6">
-            <div>
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email Address
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="mt-1 h-12"
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full h-12 font-medium"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Checking email...
-                </>
-              ) : (
-                'Continue'
-              )}
-            </Button>
-          </form>
-        )}
-
-        {/* Step 2: Choose method */}
-        {step === 'method' && (
-          <div className="space-y-4">
-            <div
-              onClick={() => setMethod('email')}
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                method === 'email'
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Mail className={`h-5 w-5 ${method === 'email' ? 'text-blue-600' : 'text-gray-400'}`} />
-                <div>
-                  <p className="font-medium text-gray-900">Email</p>
-                  <p className="text-sm text-gray-600">{email}</p>
-                </div>
+        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '1.5rem' }}>
+          {/* Step 1: Email */}
+          {step === 'email' && (
+            <form onSubmit={handleRequestOTP} className="space-y-5">
+              <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" type="email" required value={email}
+                  onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="mt-1.5" />
               </div>
-            </div>
+              <Button type="submit" className="w-full gap-2" disabled={loading}>
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Checking email...</> : 'Continue'}
+              </Button>
+            </form>
+          )}
 
-            <div
-              onClick={() => setMethod('sms')}
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                method === 'sms'
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <MessageSquare className={`h-5 w-5 ${method === 'sms' ? 'text-blue-600' : 'text-gray-400'}`} />
-                <div>
-                  <p className="font-medium text-gray-900">SMS</p>
-                  {method === 'sms' ? (
-                    <Input
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="mt-2 h-10"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-600">Enter your phone number</p>
-                  )}
+          {/* Step 2: Choose method */}
+          {step === 'method' && (
+            <div className="space-y-3">
+              {[
+                { id: 'email' as const, icon: Mail, label: 'Email', sub: email },
+                { id: 'sms' as const, icon: MessageSquare, label: 'SMS', sub: 'Enter your phone number' },
+              ].map(({ id, icon: Icon, label, sub }) => (
+                <div key={id} onClick={() => setMethod(id)} style={{
+                  padding: 16, borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
+                  border: method === id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                  backgroundColor: method === id ? 'var(--surface2)' : 'var(--surface)',
+                }}>
+                  <div className="flex items-start gap-3">
+                    <Icon className="h-4 w-4 mt-0.5" style={{ color: method === id ? 'var(--text-primary)' : 'var(--text-muted)' }} />
+                    <div>
+                      <p style={{ fontWeight: 500, fontSize: 14, color: 'var(--text-primary)', marginBottom: 2 }}>{label}</p>
+                      {id === 'sms' && method === 'sms' ? (
+                        <Input type="tel" placeholder="+1 (555) 000-0000" value={phone}
+                          onChange={(e) => setPhone(e.target.value)} className="mt-2" onClick={(e) => e.stopPropagation()} />
+                      ) : (
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>{sub}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              ))}
+              <Button onClick={handleSendOTP} className="w-full gap-2" disabled={loading || (method === 'sms' && !phone)}>
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" />Sending OTP...</> : `Send OTP via ${method.toUpperCase()}`}
+              </Button>
+            </div>
+          )}
+
+          {/* Step 3: OTP & Password Reset */}
+          {step === 'otp' && (
+            <form onSubmit={handleResetPassword} className="space-y-5">
+              <div>
+                <Label htmlFor="otp">OTP Code</Label>
+                <Input id="otp" type="text" placeholder="000000" maxLength={6} value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="mt-1.5 text-center font-mono tracking-widest" style={{ fontSize: 20 }} />
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Check your {method} for the 6-digit code</p>
               </div>
-            </div>
+              <div>
+                <Label htmlFor="password">New Password</Label>
+                <Input id="password" type="password" value={password}
+                  onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" className="mt-1.5" />
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Must contain uppercase, lowercase, number, and special character
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input id="confirmPassword" type="password" value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm your password" className="mt-1.5" />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading || !otp || !password || !confirmPassword}>
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Resetting password...</> : 'Reset Password'}
+              </Button>
+            </form>
+          )}
 
-            <Button
-              onClick={handleSendOTP}
-              className="w-full h-12 font-medium"
-              disabled={loading || (method === 'sms' && !phone)}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending OTP...
-                </>
-              ) : (
-                `Send OTP via ${method.toUpperCase()}`
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* Step 3: OTP & Password Reset */}
-        {step === 'otp' && (
-          <form onSubmit={handleResetPassword} className="space-y-6">
-            <div>
-              <Label htmlFor="otp" className="text-sm font-medium text-gray-700">
-                Enter OTP Code
-              </Label>
-              <Input
-                id="otp"
-                type="text"
-                placeholder="000000"
-                maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className="mt-1 h-12 text-center text-2xl tracking-widest font-semibold"
-              />
-              <p className="text-xs text-gray-500 mt-2">Check your {method} for the 6-digit code</p>
-            </div>
-
-            <div>
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                New Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="mt-1 h-12"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Must contain uppercase, lowercase, number, and special character
+          {/* Step 4: Success */}
+          {step === 'success' && (
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} style={{ textAlign: 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle2 className="h-6 w-6" style={{ color: 'var(--green)' }} />
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>
+                Your password has been reset successfully. Redirecting to sign in...
               </p>
-            </div>
+              <Button onClick={() => router.push('/auth/signin')} variant="outline" className="w-full">
+                Go to Sign In
+              </Button>
+            </motion.div>
+          )}
+        </div>
 
-            <div>
-              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                Confirm Password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm your password"
-                className="mt-1 h-12"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-12 font-medium"
-              disabled={loading || !otp || !password || !confirmPassword}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Resetting password...
-                </>
-              ) : (
-                'Reset Password'
-              )}
-            </Button>
-          </form>
-        )}
-
-        {/* Step 4: Success */}
-        {step === 'success' && (
-          <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            className="text-center space-y-4"
-          >
-            <div className="flex justify-center">
-              <div className="rounded-full bg-green-100 p-4">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-            </div>
-            <p className="text-gray-600">
-              Your password has been reset successfully. Redirecting to sign in...
-            </p>
-            <Button
-              onClick={() => router.push('/auth/signin')}
-              variant="outline"
-              className="w-full"
-            >
-              Go to Sign In
-            </Button>
-          </motion.div>
-        )}
-
-        {/* Back to sign in */}
         {step !== 'success' && (
-          <Link
-            href="/auth/signin"
-            className="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Sign In
-          </Link>
+          <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+            <Link href="/auth/signin" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', textDecoration: 'none' }}>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Sign In
+            </Link>
+          </div>
         )}
       </motion.div>
     </div>

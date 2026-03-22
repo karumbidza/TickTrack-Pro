@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
 import { logger } from '@/lib/logger'
+
+// Route segment config for large file uploads (100MB for videos)
+export const maxDuration = 300 // 5 minutes timeout for large uploads
+export const dynamic = 'force-dynamic'
 
 // GET - Fetch messages for a ticket
 export async function GET(
@@ -230,22 +233,23 @@ export async function POST(
       }
     })
 
-    // Handle file uploads
+    // Handle file uploads to R2
     const attachments: any[] = []
-    if (uploadedFiles.length > 0) {
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'messages', message.id)
-      await mkdir(uploadsDir, { recursive: true })
-
+    if (uploadedFiles.length > 0 && isR2Configured()) {
       for (const file of uploadedFiles) {
         try {
           const bytes = await file.arrayBuffer()
           const buffer = Buffer.from(bytes)
           
-          const timestamp = Date.now()
-          const safeFilename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          const filePath = path.join(uploadsDir, safeFilename)
+          const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
           
-          await writeFile(filePath, buffer)
+          // Upload to R2
+          const result = await uploadToR2(buffer, safeFilename, `messages/${message.id}`, file.type || 'application/octet-stream')
+          
+          if (!result.success || !result.url) {
+            logger.error(`Failed to upload file ${file.name} to R2: ${result.error}`)
+            continue
+          }
           
           const getAttachmentType = (mimeType: string): string => {
             if (mimeType.startsWith('image/')) return 'image'
@@ -256,9 +260,9 @@ export async function POST(
 
           const attachment = await prisma.attachment.create({
             data: {
-              filename: safeFilename,
+              filename: result.key || safeFilename,
               originalName: file.name,
-              url: `/uploads/messages/${message.id}/${safeFilename}`,
+              url: result.url,
               mimeType: file.type || 'application/octet-stream',
               type: getAttachmentType(file.type || 'application/octet-stream'),
               size: file.size,

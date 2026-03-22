@@ -273,7 +273,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`h-4 w-4 ${star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+            className={`h-4 w-4 ${star <= rating ? 'text-ds-amber fill-yellow-400' : 'text-text-muted'}`}
           />
         ))}
       </div>
@@ -452,26 +452,27 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
     {
       field: 'contractor',
       headerName: 'Contractor',
-      flex: 1.2,
-      minWidth: 180,
+      flex: 1.5,
+      minWidth: 220,
       renderCell: (params: GridRenderCellParams<Contractor>) => {
         const contractor = params.row
         const initials = contractor.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, width: '100%', height: '100%' }}>
             <span 
               style={{ 
                 fontSize: '0.875rem',
-                fontWeight: 700,
-                color: '#1976d2',
-                minWidth: '24px'
+                fontWeight: 500,
+                color: 'var(--ds-blue)',
+                minWidth: '24px',
+                flexShrink: 0
               }}
             >
               {initials}
             </span>
-            <Box sx={{ overflow: 'hidden', textAlign: 'left' }}>
-              <p className="font-medium text-gray-900 text-sm leading-tight truncate">{contractor.name}</p>
-              <p className="text-xs text-gray-500 truncate">{contractor.email}</p>
+            <Box sx={{ overflow: 'hidden', textAlign: 'center', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <p className="font-medium text-sm leading-tight truncate" style={{ maxWidth: '100%', color: 'var(--text-primary)' }}>{contractor.name}</p>
+              <p className="text-xs truncate" style={{ maxWidth: '100%', color: 'var(--text-muted)' }}>{contractor.email}</p>
             </Box>
           </Box>
         )
@@ -489,7 +490,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         
         if (cats.length === 0) {
           return (
-            <span className="text-gray-400 text-xs italic">No categories</span>
+            <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>No categories</span>
           )
         }
         
@@ -549,29 +550,29 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
             title={
               hasRatings ? (
                 <Box sx={{ p: 0.5 }}>
-                  <Box sx={{ fontWeight: 600, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.2)', pb: 0.5 }}>
+                  <Box sx={{ fontWeight: 500, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.15)', pb: 0.5 }}>
                     Rating Breakdown ({stats.totalRatings} review{stats.totalRatings > 1 ? 's' : ''})
                   </Box>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: '0.8rem' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <span>Punctuality:</span>
-                      <span style={{ fontWeight: 600 }}>{stats.avgPunctuality}/5</span>
+                      <span style={{ fontWeight: 500 }}>{stats.avgPunctuality}/5</span>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <span>Customer Service:</span>
-                      <span style={{ fontWeight: 600 }}>{stats.avgCustomerService}/5</span>
+                      <span style={{ fontWeight: 500 }}>{stats.avgCustomerService}/5</span>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <span>Workmanship:</span>
-                      <span style={{ fontWeight: 600 }}>{stats.avgWorkmanship}/5</span>
+                      <span style={{ fontWeight: 500 }}>{stats.avgWorkmanship}/5</span>
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.5, pt: 0.5, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.5, pt: 0.5, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
                       <span>PPE Compliance:</span>
-                      <span style={{ fontWeight: 600 }}>{stats.ppeComplianceRate}%</span>
+                      <span style={{ fontWeight: 500 }}>{stats.ppeComplianceRate}%</span>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                       <span>Procedures:</span>
-                      <span style={{ fontWeight: 600 }}>{stats.procedureComplianceRate}%</span>
+                      <span style={{ fontWeight: 500 }}>{stats.procedureComplianceRate}%</span>
                     </Box>
                   </Box>
                 </Box>
@@ -594,11 +595,11 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
               }}
               onClick={() => handleViewRatings(contractor)}
             >
-              <span className={`text-lg font-bold ${hasRatings ? 'text-primary-600' : 'text-gray-400'}`}>
+              <span className="text-lg font-medium" style={{ color: hasRatings ? 'var(--accent)' : 'var(--text-muted)' }}>
                 {rating}
               </span>
               {hasRatings && (
-                <span className="text-xs text-gray-500 ml-1">({stats.totalRatings})</span>
+                <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>({stats.totalRatings})</span>
               )}
             </Box>
           </Tooltip>
@@ -614,9 +615,9 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Contractor>) => (
         params.row.hourlyRate ? (
-          <span className="font-semibold text-gray-700 text-xs">${params.row.hourlyRate}/hr</span>
+          <span className="font-medium text-xs" style={{ color: 'var(--text-secondary)' }}>${params.row.hourlyRate}/hr</span>
         ) : (
-          <span className="text-gray-400 text-xs">-</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
         )
       ),
     },
@@ -633,7 +634,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
           size="small"
           color={params.row.isAvailable ? 'success' : 'warning'}
           sx={{ 
-            fontWeight: 600,
+            fontWeight: 500,
             fontSize: '0.7rem',
             height: 22
           }}
@@ -648,7 +649,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Contractor>) => (
-        <span className="font-semibold text-gray-700 text-sm">{params.row.totalJobs || 0}</span>
+        <span className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>{params.row.totalJobs || 0}</span>
       ),
     },
     {
@@ -674,10 +675,10 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading contractors...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent)' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading contractors...</p>
         </div>
       </div>
     )
@@ -706,12 +707,12 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
           <MenuItem onClick={() => { if (menuContractor) handleToggleActive(menuContractor); handleMenuClose(); }}>
             {menuContractor?.isActive ? (
               <>
-                <ListItemIcon><XCircle className="h-4 w-4 text-red-500" /></ListItemIcon>
+                <ListItemIcon><XCircle className="h-4 w-4 text-ds-red" /></ListItemIcon>
                 <ListItemText sx={{ color: 'error.main' }}>Deactivate</ListItemText>
               </>
             ) : (
               <>
-                <ListItemIcon><CheckCircle className="h-4 w-4 text-green-500" /></ListItemIcon>
+                <ListItemIcon><CheckCircle className="h-4 w-4 text-ds-green" /></ListItemIcon>
                 <ListItemText sx={{ color: 'success.main' }}>Activate</ListItemText>
               </>
             )}
@@ -721,8 +722,8 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contractors</h1>
-            <p className="text-gray-600">Manage contractor accounts and invitations</p>
+            <h1 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>Contractors</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Manage contractor accounts and invitations</p>
           </div>
           
           <div className="flex space-x-3">
@@ -742,24 +743,25 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   {generatedLink ? (
                     // Show the generated link for copying
                     <>
-                      <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                      <div className="flex items-center gap-2 p-3 border rounded-lg" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--green)' }} />
                         <div>
-                          <p className="font-medium text-green-800">Invitation Sent Successfully!</p>
-                          <p className="text-sm text-green-600">Email sent to {inviteEmail}</p>
+                          <p className="font-medium" style={{ color: 'var(--green)' }}>Invitation Sent Successfully!</p>
+                          <p className="text-sm" style={{ color: 'var(--green)' }}>Email sent to {inviteEmail}</p>
                         </div>
                       </div>
                       
                       <div>
                         <Label>Registration Link</Label>
-                        <p className="text-xs text-gray-500 mb-2">
+                        <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
                           You can also share this link directly with the contractor
                         </p>
                         <div className="flex gap-2">
                           <Input
                             value={generatedLink}
                             readOnly
-                            className="text-sm font-mono bg-gray-50"
+                            className="text-sm font-mono"
+                            style={{ backgroundColor: 'var(--surface2)' }}
                           />
                           <Button
                             variant="outline"
@@ -790,8 +792,8 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   ) : (
                     // Show the invite form
                     <>
-                      <p className="text-sm text-gray-600">
-                        Send a registration link to the contractor's email. They will complete their KYC registration 
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        Send a registration link to the contractor's email. They will complete their KYC registration
                         and you'll be able to review their application before approving them.
                       </p>
                       
@@ -814,7 +816,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                           value={inviteEmail}
                           onChange={(e) => setInviteEmail(e.target.value)}
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                           A unique registration link will be sent to this email
                         </p>
                       </div>
@@ -887,7 +889,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                       value={newContractor.phone}
                       onChange={(e) => setNewContractor({...newContractor, phone: e.target.value})}
                     />
-                    <p className="text-xs text-gray-500 mt-1">International format (e.g., +263...)</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format (e.g., +263...)</p>
                   </div>
                   <div>
                     <Label htmlFor="secondaryPhone">Secondary Phone (Optional)</Label>
@@ -901,7 +903,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   A default password will be generated and shown after creation.
                   You can assign service categories after creating the contractor.
                 </p>
@@ -942,37 +944,37 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
               <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{contractors.length}</div>
+              <div className="text-2xl font-medium">{contractors.length}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Available</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-ds-green" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{contractors.filter(c => c.isAvailable).length}</div>
+              <div className="text-2xl font-medium">{contractors.filter(c => c.isAvailable).length}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-blue-500" />
+              <CheckCircle className="h-4 w-4 text-ds-blue" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{contractors.filter(c => c.isActive).length}</div>
+              <div className="text-2xl font-medium">{contractors.filter(c => c.isActive).length}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-ds-amber" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-medium">
                 {contractors.filter(c => c.rating && c.rating > 0).length > 0
                   ? (contractors.reduce((sum, c) => sum + (c.rating || 0), 0) / contractors.filter(c => c.rating && c.rating > 0).length).toFixed(1)
                   : 'N/A'
@@ -986,7 +988,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
               <Input
                 placeholder="Search contractors by name, email, or specialty..."
                 value={searchQuery}
@@ -1002,11 +1004,11 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
           <CardContent className="pt-6">
             {filteredContractors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <User className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <User className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                   {searchQuery ? 'No contractors found' : 'No contractors yet'}
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                   {searchQuery ? 'Try a different search term' : 'Add your first contractor to get started'}
                 </p>
                 {!searchQuery && (
@@ -1097,7 +1099,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                     value={editContractor.phone}
                     onChange={(e) => setEditContractor({...editContractor, phone: e.target.value})}
                   />
-                  <p className="text-xs text-gray-500 mt-1">International format</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format</p>
                 </div>
                 <div>
                   <Label htmlFor="edit-secondaryPhone">Secondary Phone</Label>
@@ -1117,12 +1119,12 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   <Wrench className="h-4 w-4" />
                   Service Categories
                 </Label>
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
                   Select the categories this contractor can be assigned to
                 </p>
                 <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto">
                   {allCategories.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-2">
+                    <p className="text-sm text-center py-2" style={{ color: 'var(--text-muted)' }}>
                       No categories available
                     </p>
                   ) : (
@@ -1130,11 +1132,8 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                       {allCategories.map((category) => (
                         <div 
                           key={category.id}
-                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                            selectedCategoryIds.includes(category.id) 
-                              ? 'border-blue-500 bg-blue-50' 
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
+                          className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors border-border"
+                          style={selectedCategoryIds.includes(category.id) ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
                           onClick={() => {
                             setSelectedCategoryIds(prev => 
                               prev.includes(category.id)
@@ -1145,13 +1144,13 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                         >
                           <div 
                             className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
-                            style={{ 
-                              borderColor: selectedCategoryIds.includes(category.id) ? '#3b82f6' : '#d1d5db',
-                              backgroundColor: selectedCategoryIds.includes(category.id) ? '#3b82f6' : 'transparent'
+                            style={{
+                              borderColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'var(--border)',
+                              backgroundColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'transparent'
                             }}
                           >
                             {selectedCategoryIds.includes(category.id) && (
-                              <CheckCircle className="h-3 w-3 text-white" />
+                              <CheckCircle className="h-3 w-3 text-bg" />
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -1168,7 +1167,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   {selectedCategoryIds.length} of {allCategories.length} selected
                 </p>
               </div>
@@ -1179,7 +1178,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   id="edit-isActive"
                   checked={editContractor.isActive}
                   onChange={(e) => setEditContractor({...editContractor, isActive: e.target.checked})}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <Label htmlFor="edit-isActive">Account Active</Label>
               </div>
@@ -1203,7 +1202,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
               <DialogTitle>Reset Password</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p style={{ color: 'var(--text-secondary)' }}>
                 Reset password for <strong>{selectedContractor?.name}</strong> ({selectedContractor?.email})
               </p>
               
@@ -1243,24 +1242,24 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
             {selectedContractor && (
               <div className="space-y-6">
                 {/* Rating Summary */}
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="text-4xl font-bold text-gray-900">
+                      <div className="text-4xl font-medium" style={{ color: 'var(--text-primary)' }}>
                         {selectedContractor.rating?.toFixed(1) || 'N/A'}
                       </div>
                       <div>
                         {renderStars(Math.round(selectedContractor.rating || 0))}
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                           Based on {contractorRatings.length} review{contractorRatings.length !== 1 ? 's' : ''}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">
+                      <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>
                         {selectedContractor.totalJobs || 0}
                       </div>
-                      <p className="text-sm text-gray-500">Total Jobs</p>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Jobs</p>
                     </div>
                   </div>
 
@@ -1268,32 +1267,32 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   {contractorRatings.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
                       <div className="text-center">
-                        <Clock className="h-5 w-5 mx-auto text-blue-500 mb-1" />
-                        <div className="text-lg font-semibold">
+                        <Clock className="h-5 w-5 mx-auto text-ds-blue mb-1" />
+                        <div className="text-lg font-medium">
                           {(contractorRatings.reduce((sum, r) => sum + r.punctualityRating, 0) / contractorRatings.length).toFixed(1)}
                         </div>
-                        <p className="text-xs text-gray-500">Punctuality</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</p>
                       </div>
                       <div className="text-center">
                         <Heart className="h-5 w-5 mx-auto text-pink-500 mb-1" />
-                        <div className="text-lg font-semibold">
+                        <div className="text-lg font-medium">
                           {(contractorRatings.reduce((sum, r) => sum + r.customerServiceRating, 0) / contractorRatings.length).toFixed(1)}
                         </div>
-                        <p className="text-xs text-gray-500">Service</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</p>
                       </div>
                       <div className="text-center">
-                        <Wrench className="h-5 w-5 mx-auto text-orange-500 mb-1" />
-                        <div className="text-lg font-semibold">
+                        <Wrench className="h-5 w-5 mx-auto text-ds-amber mb-1" />
+                        <div className="text-lg font-medium">
                           {(contractorRatings.reduce((sum, r) => sum + r.workmanshipRating, 0) / contractorRatings.length).toFixed(1)}
                         </div>
-                        <p className="text-xs text-gray-500">Workmanship</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</p>
                       </div>
                       <div className="text-center">
-                        <Shield className="h-5 w-5 mx-auto text-green-500 mb-1" />
-                        <div className="text-lg font-semibold">
+                        <Shield className="h-5 w-5 mx-auto text-ds-green mb-1" />
+                        <div className="text-lg font-medium">
                           {Math.round((contractorRatings.filter(r => r.ppeCompliant).length / contractorRatings.length) * 100)}%
                         </div>
-                        <p className="text-xs text-gray-500">PPE Compliant</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PPE Compliant</p>
                       </div>
                     </div>
                   )}
@@ -1301,17 +1300,17 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
 
                 {/* Individual Ratings */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Individual Reviews</h4>
+                  <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Individual Reviews</h4>
                   <ScrollArea className="h-[300px]">
                     {ratingsLoading ? (
                       <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="text-gray-500 mt-2">Loading ratings...</p>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: 'var(--accent)' }}></div>
+                        <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Loading ratings...</p>
                       </div>
                     ) : contractorRatings.length === 0 ? (
                       <div className="text-center py-8">
-                        <Star className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500">No ratings yet</p>
+                        <Star className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                        <p style={{ color: 'var(--text-muted)' }}>No ratings yet</p>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -1319,10 +1318,10 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                           <div key={rating.id} className="border rounded-lg p-4">
                             <div className="flex items-start justify-between mb-2">
                               <div>
-                                <p className="font-medium text-gray-900">
+                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                                   {rating.ticket?.title || 'Job'}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                   {rating.ticket?.ticketNumber} • {new Date(rating.createdAt).toLocaleDateString()}
                                 </p>
                               </div>
@@ -1333,33 +1332,33 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                             
                             <div className="grid grid-cols-4 gap-2 text-xs mb-2">
                               <div className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3 text-gray-400" />
+                                <Clock className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
                                 <span>{rating.punctualityRating}/5</span>
                               </div>
                               <div className="flex items-center space-x-1">
-                                <Heart className="h-3 w-3 text-gray-400" />
+                                <Heart className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
                                 <span>{rating.customerServiceRating}/5</span>
                               </div>
                               <div className="flex items-center space-x-1">
-                                <Wrench className="h-3 w-3 text-gray-400" />
+                                <Wrench className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
                                 <span>{rating.workmanshipRating}/5</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 {rating.ppeCompliant ? (
-                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                  <CheckCircle className="h-3 w-3 text-ds-green" />
                                 ) : (
-                                  <XCircle className="h-3 w-3 text-red-500" />
+                                  <XCircle className="h-3 w-3 text-ds-red" />
                                 )}
                                 <span>PPE</span>
                               </div>
                             </div>
 
                             {rating.comment && (
-                              <p className="text-sm text-gray-600 italic">"{rating.comment}"</p>
+                              <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>"{rating.comment}"</p>
                             )}
-                            
+
                             {rating.user && (
-                              <p className="text-xs text-gray-400 mt-2">
+                              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                                 — {rating.user.name || rating.user.email}
                               </p>
                             )}

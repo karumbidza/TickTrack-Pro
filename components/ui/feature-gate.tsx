@@ -36,12 +36,12 @@ interface TenantLimits {
   ticketUsage: { current: number, limit: number }
 }
 
-export function FeatureGate({ 
-  feature, 
-  plan, 
-  children, 
+export function FeatureGate({
+  feature,
+  plan,
+  children,
   fallback,
-  showUpgradePrompt = true 
+  showUpgradePrompt = true
 }: FeatureGateProps) {
   const { data: session } = useSession()
   const [hasAccess, setHasAccess] = useState<boolean | null>(null)
@@ -74,7 +74,7 @@ export function FeatureGate({
   }
 
   if (hasAccess === null) {
-    return <div className="animate-pulse bg-gray-200 rounded h-8" />
+    return <div className="animate-pulse rounded-lg h-8" style={{ backgroundColor: 'var(--surface2)' }} />
   }
 
   if (hasAccess) {
@@ -91,8 +91,6 @@ export function FeatureGate({
 
   const getRequiredPlan = () => {
     if (plan) return plan
-
-    // Determine required plan based on feature
     switch (feature) {
       case 'hasContractorNetwork':
       case 'hasInvoiceManagement':
@@ -113,51 +111,41 @@ export function FeatureGate({
 
   return (
     <>
-      <Card className="border-dashed border-2 border-gray-300 bg-gray-50">
+      <Card style={{ borderStyle: 'dashed', borderColor: 'var(--border-strong)', backgroundColor: 'var(--surface2)' }}>
         <CardContent className="flex items-center justify-center p-6">
           <div className="text-center">
             <div className="mb-4">
               {isTrialExpired ? (
-                <AlertTriangle className="h-12 w-12 mx-auto text-red-500" />
+                <AlertTriangle className="h-12 w-12 mx-auto" style={{ color: 'var(--ds-red)' }} />
               ) : requiredPlan === 'ENTERPRISE' ? (
-                <Crown className="h-12 w-12 mx-auto text-purple-500" />
+                <Crown className="h-12 w-12 mx-auto" style={{ color: 'var(--ds-amber)' }} />
               ) : (
-                <Zap className="h-12 w-12 mx-auto text-blue-500" />
+                <Zap className="h-12 w-12 mx-auto" style={{ color: 'var(--ds-blue)' }} />
               )}
             </div>
-            
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+
+            <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               {isTrialExpired ? 'Trial Expired' : `${requiredPlan} Feature`}
             </h3>
-            
-            <p className="text-gray-600 mb-4">
-              {isTrialExpired 
+
+            <p className="mb-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {isTrialExpired
                 ? 'Your trial has expired. Upgrade to continue using TickTrack Pro.'
                 : `This feature requires the ${requiredPlan} plan or higher.`
               }
             </p>
 
             <div className="flex gap-3 justify-center">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setShowUpgradeDialog(true)}
               >
                 <Lock className="h-4 w-4 mr-2" />
                 View Plans
               </Button>
-              
-              <Button 
-                size="sm"
-                className={
-                  isTrialExpired 
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : requiredPlan === 'ENTERPRISE'
-                    ? 'bg-purple-600 hover:bg-purple-700'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }
-                asChild
-              >
+
+              <Button size="sm" asChild>
                 <Link href="/billing">
                   {isTrialExpired ? 'Reactivate Account' : 'Upgrade Now'}
                 </Link>
@@ -173,11 +161,11 @@ export function FeatureGate({
           <DialogHeader>
             <DialogTitle>Upgrade Required</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             <div className="text-center">
-              <p className="text-gray-600">
-                {isTrialExpired 
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                {isTrialExpired
                   ? 'Your trial has expired. Choose a plan to continue using TickTrack Pro.'
                   : `To access this feature, you need the ${requiredPlan} plan or higher.`
                 }
@@ -186,10 +174,10 @@ export function FeatureGate({
 
             {/* Current Plan Info */}
             {tenantLimits && (
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium">Current Plan</h4>
+                    <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Current Plan</h4>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary">{tenantLimits.plan}</Badge>
                       <Badge variant={tenantLimits.status === 'TRIAL' ? 'default' : 'outline'}>
@@ -198,8 +186,8 @@ export function FeatureGate({
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">Users</p>
-                    <p className="font-medium">
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Users</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                       {tenantLimits.userUsage.current}
                       {tenantLimits.userUsage.limit > 0 && `/${tenantLimits.userUsage.limit}`}
                     </p>
@@ -211,22 +199,24 @@ export function FeatureGate({
             {/* Plan Comparison */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {['BASIC', 'PRO', 'ENTERPRISE'].map((planName) => (
-                <div 
+                <div
                   key={planName}
-                  className={`border rounded-lg p-4 ${
-                    planName === requiredPlan ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                  }`}
+                  className="rounded-lg p-4"
+                  style={{
+                    border: planName === requiredPlan ? '2px solid var(--accent)' : '1px solid var(--border)',
+                    backgroundColor: planName === requiredPlan ? 'var(--surface2)' : 'var(--surface)',
+                  }}
                 >
                   <div className="text-center">
-                    <h5 className="font-semibold">{planName}</h5>
+                    <h5 className="font-medium" style={{ color: 'var(--text-primary)' }}>{planName}</h5>
                     {planName === requiredPlan && (
                       <Badge className="mt-1">Required</Badge>
                     )}
                     <div className="mt-2">
-                      <span className="text-lg font-bold">
+                      <span className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                         ${planName === 'BASIC' ? '29' : planName === 'PRO' ? '79' : '199'}
                       </span>
-                      <span className="text-gray-600 text-sm">/month</span>
+                      <span className="text-sm" style={{ color: 'var(--text-muted)' }}>/month</span>
                     </div>
                   </div>
                 </div>
@@ -251,16 +241,16 @@ export function FeatureGate({
 }
 
 // Usage limit component for displaying current usage
-export function UsageLimitDisplay({ 
-  type, 
-  current, 
-  limit, 
-  className = '' 
-}: { 
+export function UsageLimitDisplay({
+  type,
+  current,
+  limit,
+  className = ''
+}: {
   type: 'users' | 'tickets'
   current: number
   limit: number
-  className?: string 
+  className?: string
 }) {
   const percentage = limit > 0 ? (current / limit) * 100 : 0
   const isNearLimit = percentage >= 80
@@ -269,30 +259,27 @@ export function UsageLimitDisplay({
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex justify-between text-sm">
-        <span className="capitalize">{type} this month</span>
-        <span className={`font-medium ${isNearLimit ? 'text-orange-600' : 'text-gray-900'}`}>
+        <span className="capitalize" style={{ color: 'var(--text-secondary)' }}>{type} this month</span>
+        <span className="font-medium" style={{ color: isNearLimit ? 'var(--ds-amber)' : 'var(--text-primary)' }}>
           {current}{limit > 0 && `/${limit}`}
         </span>
       </div>
-      
+
       {limit > 0 && (
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className={`h-2 rounded-full transition-all duration-300 ${
-              isAtLimit 
-                ? 'bg-red-500' 
-                : isNearLimit 
-                ? 'bg-orange-500' 
-                : 'bg-blue-500'
-            }`}
-            style={{ width: `${Math.min(100, percentage)}%` }}
+        <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--surface2)' }}>
+          <div
+            className="h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${Math.min(100, percentage)}%`,
+              backgroundColor: isAtLimit ? 'var(--ds-red)' : isNearLimit ? 'var(--ds-amber)' : 'var(--ds-blue)',
+            }}
           />
         </div>
       )}
-      
+
       {isAtLimit && (
-        <p className="text-xs text-red-600">
-          You've reached your {type} limit. 
+        <p className="text-xs" style={{ color: 'var(--ds-red)' }}>
+          You've reached your {type} limit.{' '}
           <Link href="/billing" className="underline ml-1">
             Upgrade to continue
           </Link>

@@ -72,31 +72,31 @@ function PaymentReturnContent() {
   const getStatusIcon = () => {
     switch (status) {
       case 'checking':
-        return <Loader2 className="h-20 w-20 text-blue-500 animate-spin mx-auto" />
+        return <Loader2 className="h-20 w-20 animate-spin mx-auto" style={{ color: 'var(--ds-blue)' }} />
       case 'success':
         return (
           <div className="relative inline-flex mx-auto">
-            <div className="absolute inset-0 bg-green-100 rounded-full scale-150 opacity-50 animate-pulse"></div>
-            <CheckCircle className="relative h-20 w-20 text-green-500" />
+            <div className="absolute inset-0 rounded-full scale-150 opacity-50 animate-pulse" style={{ backgroundColor: 'var(--green-bg)' }}></div>
+            <CheckCircle className="relative h-20 w-20" style={{ color: 'var(--green)' }} />
           </div>
         )
       case 'failed':
-        return <XCircle className="h-20 w-20 text-red-500 mx-auto" />
+        return <XCircle className="h-20 w-20 mx-auto" style={{ color: 'var(--ds-red)' }} />
       case 'pending':
-        return <AlertCircle className="h-20 w-20 text-yellow-500 mx-auto" />
+        return <AlertCircle className="h-20 w-20 mx-auto" style={{ color: 'var(--ds-amber)' }} />
       default:
-        return <AlertCircle className="h-20 w-20 text-gray-400 mx-auto" />
+        return <AlertCircle className="h-20 w-20 mx-auto" style={{ color: 'var(--text-muted)' }} />
     }
   }
 
   const getStatusBadge = () => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-green-100 text-green-800">Payment Successful</Badge>
+        return <Badge style={{ backgroundColor: 'var(--green-bg)', color: 'var(--green)' }}>Payment Successful</Badge>
       case 'failed':
         return <Badge variant="destructive">Payment Failed</Badge>
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Processing</Badge>
+        return <Badge style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>Processing</Badge>
       case 'checking':
         return <Badge variant="secondary">Verifying...</Badge>
       default:
@@ -105,7 +105,7 @@ function PaymentReturnContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center pb-4">
           <div className="mb-4">
@@ -120,9 +120,9 @@ function PaymentReturnContent() {
         <CardContent className="space-y-6">
           {/* Status Message */}
           <div className="text-center">
-            <p className="text-lg text-gray-700">{message}</p>
+            <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>{message}</p>
             {reference && (
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
                 Reference: <span className="font-mono">{reference}</span>
               </p>
             )}
@@ -130,8 +130,8 @@ function PaymentReturnContent() {
 
           {/* Success State */}
           {status === 'success' && (
-            <div className="space-y-4 bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="space-y-2 text-sm text-green-800">
+            <div className="space-y-4 border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--border)' }}>
+              <div className="space-y-2 text-sm" style={{ color: 'var(--green)' }}>
                 <p className="font-medium">✓ Payment processed successfully</p>
                 <p className="font-medium">✓ Subscription activated</p>
                 <p className="font-medium">✓ Invoice will be sent to your email</p>
@@ -141,7 +141,7 @@ function PaymentReturnContent() {
 
           {/* Failed State */}
           {status === 'failed' && (
-            <div className="space-y-3 bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+            <div className="space-y-3 border rounded-lg p-4 text-sm" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--border)', color: 'var(--red)' }}>
               <p className="font-medium">Common reasons for payment failure:</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Insufficient funds in mobile money account</li>
@@ -155,7 +155,7 @@ function PaymentReturnContent() {
 
           {/* Pending State */}
           {status === 'pending' && (
-            <div className="space-y-3 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            <div className="space-y-3 border rounded-lg p-4 text-sm" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--border)', color: 'var(--amber)' }}>
               <p className="font-medium">What happens next?</p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>Your payment is being verified</li>
@@ -242,9 +242,9 @@ function PaymentReturnContent() {
 
           {/* Help Text */}
           <div className="text-center pt-4 border-t">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Need help? Contact support at{' '}
-              <a href="mailto:billing@ticktrackpro.com" className="text-blue-600 hover:underline">
+              <a href="mailto:billing@ticktrackpro.com" style={{ color: 'var(--accent)' }} className="hover:underline">
                 billing@ticktrackpro.com
               </a>
             </p>
@@ -258,11 +258,11 @@ function PaymentReturnContent() {
 export default function PaymentReturnPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
         <Card className="w-full max-w-lg">
           <CardContent className="p-12 text-center">
-            <Loader2 className="h-16 w-16 mx-auto text-blue-500 animate-spin mb-4" />
-            <p className="text-gray-600">Loading...</p>
+            <Loader2 className="h-16 w-16 mx-auto animate-spin mb-4" style={{ color: 'var(--ds-blue)' }} />
+            <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
           </CardContent>
         </Card>
       </div>

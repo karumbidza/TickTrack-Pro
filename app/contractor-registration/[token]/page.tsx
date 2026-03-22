@@ -482,20 +482,20 @@ export default function ContractorRegistrationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
       </div>
     )
   }
 
   if (!valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="max-w-md w-full">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
+        <Card className="max-w-md w-full border border-border" style={{ backgroundColor: 'var(--surface)' }}>
           <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Link</h1>
-            <p className="text-gray-600">{error}</p>
+            <AlertCircle className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--red)' }} />
+            <h1 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Invalid Link</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
           </CardContent>
         </Card>
       </div>
@@ -515,7 +515,7 @@ export default function ContractorRegistrationPage() {
   }) => (
     <div className="space-y-2">
       <Label htmlFor={id}>
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span style={{ color: 'var(--red)' }}>*</span>}
       </Label>
       <div className="flex items-center gap-2">
         <Input
@@ -535,15 +535,15 @@ export default function ContractorRegistrationPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen py-8" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
           {tenant?.logo && (
             <img src={tenant.logo} alt={tenant.name} className="h-16 mx-auto mb-4" />
           )}
-          <h1 className="text-3xl font-bold text-gray-900">Contractor Registration</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Contractor Registration</h1>
+          <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>
             Complete your KYC verification for {tenant?.name}
           </p>
         </div>
@@ -560,21 +560,21 @@ export default function ContractorRegistrationPage() {
                 <button
                   key={step.id}
                   onClick={() => setCurrentStep(step.id)}
-                  className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
-                    isActive 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : isCompleted 
-                        ? 'text-green-600' 
-                        : 'text-gray-400'
-                  }`}
+                  className="flex flex-col items-center p-2 rounded-lg transition-colors"
+                  style={isActive
+                    ? { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+                    : isCompleted
+                      ? { color: 'var(--green)' }
+                      : { color: 'var(--text-muted)' }}
                 >
-                  <div className={`p-2 rounded-full mb-1 ${
-                    isActive 
-                      ? 'bg-blue-600 text-white' 
-                      : isCompleted 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-gray-200'
-                  }`}>
+                  <div
+                    className="p-2 rounded-full mb-1"
+                    style={isActive
+                      ? { backgroundColor: 'var(--accent)', color: 'var(--bg)' }
+                      : isCompleted
+                        ? { backgroundColor: 'var(--green)', color: 'var(--bg)' }
+                        : { backgroundColor: 'var(--surface2)' }}
+                  >
                     {isCompleted ? <CheckCircle className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                   </div>
                   <span className="text-xs font-medium">{step.title}</span>
@@ -605,7 +605,7 @@ export default function ContractorRegistrationPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Registered Company Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="companyName">Registered Company Name <span style={{ color: 'var(--red)' }}>*</span></Label>
                     <Input
                       id="companyName"
                       value={formData.companyName}
@@ -625,7 +625,7 @@ export default function ContractorRegistrationPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="physicalAddress">Physical Address <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="physicalAddress">Physical Address <span style={{ color: 'var(--red)' }}>*</span></Label>
                   <Textarea
                     id="physicalAddress"
                     value={formData.physicalAddress}
@@ -637,7 +637,7 @@ export default function ContractorRegistrationPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="companyEmail">Company Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="companyEmail">Company Email <span style={{ color: 'var(--red)' }}>*</span></Label>
                     <Input
                       id="companyEmail"
                       type="email"
@@ -647,7 +647,7 @@ export default function ContractorRegistrationPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="companyPhone">Company Phone <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="companyPhone">Company Phone <span style={{ color: 'var(--red)' }}>*</span></Label>
                     <Input
                       id="companyPhone"
                       value={formData.companyPhone}
@@ -664,7 +664,7 @@ export default function ContractorRegistrationPage() {
             {/* Step 2: Company Documents */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                   Please upload certified copies of your company registration documents.
                 </p>
                 
@@ -695,7 +695,7 @@ export default function ContractorRegistrationPage() {
             {/* Step 3: Directors Information */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   Add all directors and shareholders of the company.
                 </p>
                 
@@ -708,7 +708,7 @@ export default function ContractorRegistrationPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeDirector(index)}
-                          className="text-red-500 hover:text-red-700"
+                          style={{ color: 'var(--red)' }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -717,7 +717,7 @@ export default function ContractorRegistrationPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Full Name <span className="text-red-500">*</span></Label>
+                        <Label>Full Name <span style={{ color: 'var(--red)' }}>*</span></Label>
                         <Input
                           value={director.fullName}
                           onChange={(e) => updateDirector(index, 'fullName', e.target.value)}
@@ -791,7 +791,7 @@ export default function ContractorRegistrationPage() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">Upload a clear copy of National ID or Passport (PDF, JPG, PNG)</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Upload a clear copy of National ID or Passport (PDF, JPG, PNG)</p>
                       </div>
                     </div>
                   </Card>
@@ -807,7 +807,7 @@ export default function ContractorRegistrationPage() {
             {/* Step 4: Banking Information */}
             {currentStep === 4 && (
               <div className="space-y-6">
-                <p className="text-sm text-gray-600">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   Add your company's bank account details. You can add multiple accounts for different currencies.
                 </p>
                 
@@ -817,7 +817,7 @@ export default function ContractorRegistrationPage() {
                       <div className="flex items-center gap-2">
                         <h4 className="font-medium">Bank Account {index + 1}</h4>
                         {bank.isPrimary && (
-                          <Badge className="bg-blue-500">Primary</Badge>
+                          <Badge style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>Primary</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -835,7 +835,7 @@ export default function ContractorRegistrationPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeBankAccount(index)}
-                            className="text-red-500 hover:text-red-700"
+                            style={{ color: 'var(--red)' }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -845,7 +845,7 @@ export default function ContractorRegistrationPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Bank Name <span className="text-red-500">*</span></Label>
+                        <Label>Bank Name <span style={{ color: 'var(--red)' }}>*</span></Label>
                         <Input
                           value={bank.bankName}
                           onChange={(e) => updateBankAccount(index, 'bankName', e.target.value)}
@@ -861,7 +861,7 @@ export default function ContractorRegistrationPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Account Name <span className="text-red-500">*</span></Label>
+                        <Label>Account Name <span style={{ color: 'var(--red)' }}>*</span></Label>
                         <Input
                           value={bank.accountName}
                           onChange={(e) => updateBankAccount(index, 'accountName', e.target.value)}
@@ -869,7 +869,7 @@ export default function ContractorRegistrationPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Account Number <span className="text-red-500">*</span></Label>
+                        <Label>Account Number <span style={{ color: 'var(--red)' }}>*</span></Label>
                         <Input
                           value={bank.accountNumber}
                           onChange={(e) => updateBankAccount(index, 'accountNumber', e.target.value)}
@@ -911,7 +911,7 @@ export default function ContractorRegistrationPage() {
                             {bank.proofDocument.name.substring(0, 20)}...
                           </Badge>
                         )}
-                        <p className="text-xs text-gray-500">Bank letter or statement header</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Bank letter or statement header</p>
                       </div>
                     </div>
                   </Card>
@@ -1026,8 +1026,8 @@ export default function ContractorRegistrationPage() {
                 </div>
                 
                 <div className="space-y-3">
-                  <Label>Service Categories <span className="text-red-500">*</span></Label>
-                  <p className="text-sm text-gray-500">Select all categories you can service</p>
+                  <Label>Service Categories <span style={{ color: 'var(--red)' }}>*</span></Label>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Select all categories you can service</p>
                   
                   {categories.length === 0 ? (
                     <Box sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -1054,8 +1054,8 @@ export default function ContractorRegistrationPage() {
                                 size="small"
                               />
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Category</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>Category</TableCell>
+                            <TableCell sx={{ fontWeight: 500 }}>Description</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1126,7 +1126,7 @@ export default function ContractorRegistrationPage() {
                   )}
                   
                   {selectedCategories.length === 0 && (
-                    <p className="text-sm text-red-500">Please select at least one category</p>
+                    <p className="text-sm" style={{ color: 'var(--red)' }}>Please select at least one category</p>
                   )}
                 </div>
                 
@@ -1187,8 +1187,8 @@ export default function ContractorRegistrationPage() {
             {/* Step 9: Declarations */}
             {currentStep === 9 && (
               <div className="space-y-6">
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium">Compliance Declarations</h4>
+                <div className="space-y-4 p-4 rounded-lg border border-border" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Compliance Declarations</h4>
                   
                   <div className="flex items-start space-x-2">
                     <Checkbox
@@ -1246,7 +1246,7 @@ export default function ContractorRegistrationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="authorizedSignatoryName">
-                      Authorized Signatory Name <span className="text-red-500">*</span>
+                      Authorized Signatory Name <span style={{ color: 'var(--red)' }}>*</span>
                     </Label>
                     <Input
                       id="authorizedSignatoryName"
@@ -1257,7 +1257,7 @@ export default function ContractorRegistrationPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="authorizedSignatoryPosition">
-                      Position <span className="text-red-500">*</span>
+                      Position <span style={{ color: 'var(--red)' }}>*</span>
                     </Label>
                     <Input
                       id="authorizedSignatoryPosition"
@@ -1296,7 +1296,7 @@ export default function ContractorRegistrationPage() {
                 <Button 
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="bg-green-600 hover:bg-green-700"
+                  style={{ backgroundColor: 'var(--green)', color: 'var(--bg)' }}
                 >
                   {submitting ? (
                     <>

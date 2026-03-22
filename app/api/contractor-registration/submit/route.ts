@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { logger } from '@/lib/logger'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 // POST - Submit KYC form
 export async function POST(request: NextRequest) {
@@ -33,22 +36,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Invitation already used' }, { status: 400 })
     }
 
-    // Helper function to save uploaded file
+    // Helper function to upload file to R2
     async function saveFile(file: File | null, folder: string): Promise<string | null> {
       if (!file || file.size === 0) return null
       
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'kyc', folder)
-      await mkdir(uploadsDir, { recursive: true })
+      if (!isR2Configured()) {
+        logger.error('R2 storage is not configured')
+        return null
+      }
       
-      const timestamp = Date.now()
-      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-      const filename = `${timestamp}_${safeName}`
-      const filepath = path.join(uploadsDir, filename)
-      
-      const bytes = await file.arrayBuffer()
-      await writeFile(filepath, Buffer.from(bytes))
-      
-      return `/uploads/kyc/${folder}/${filename}`
+      try {
+        const bytes = await file.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+        
+        const result = await uploadToR2(buffer, safeName, `kyc/${folder}`, file.type || 'application/octet-stream')
+        
+        if (!result.success || !result.url) {
+          logger.error(`Failed to upload ${file.name} to R2: ${result.error}`)
+          return null
+        }
+        
+        return result.url
+      } catch (error) {
+        logger.error(`Error uploading file ${file.name}:`, error)
+        return null
+      }
     }
 
     // Extract form data

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -140,6 +140,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [cancelLoading, setCancelLoading] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
+  const [editUploadProgress, setEditUploadProgress] = useState(0)
+  const [isEditUploading, setIsEditUploading] = useState(false)
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
@@ -171,6 +173,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
   const [typeFilter, setTypeFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const [assignedFilter, setAssignedFilter] = useState('all')
+  const [showClosedTickets, setShowClosedTickets] = useState(false)
 
   // Auto-refresh interval (30 seconds)
   const refreshInterval = 30
@@ -196,7 +199,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
 
   useEffect(() => {
     applyFilters()
-  }, [tickets, searchTerm, statusFilter, priorityFilter, typeFilter, dateFilter, assignedFilter])
+  }, [tickets, searchTerm, statusFilter, priorityFilter, typeFilter, dateFilter, assignedFilter, showClosedTickets])
 
   const fetchUserTickets = async () => {
     try {
@@ -212,6 +215,11 @@ export function UserDashboard({ user }: UserDashboardProps) {
 
   const applyFilters = () => {
     let filtered = tickets
+
+    // Hide closed tickets by default (unless showClosedTickets is true or filtering by CLOSED status)
+    if (!showClosedTickets && statusFilter !== 'CLOSED') {
+      filtered = filtered.filter(ticket => ticket.status !== 'CLOSED')
+    }
 
     // Search filter
     if (searchTerm) {
@@ -291,30 +299,30 @@ export function UserDashboard({ user }: UserDashboardProps) {
     return count
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      OPEN: 'bg-blue-100 text-blue-800',
-      ASSIGNED: 'bg-yellow-100 text-yellow-800',
-      IN_PROGRESS: 'bg-orange-100 text-orange-800',
-      ON_SITE: 'bg-purple-100 text-purple-800',
-      AWAITING_DESCRIPTION: 'bg-amber-100 text-amber-800',
-      AWAITING_WORK_APPROVAL: 'bg-indigo-100 text-indigo-800',
-      AWAITING_APPROVAL: 'bg-indigo-100 text-indigo-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CLOSED: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800'
+  const getStatusColor = (status: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      OPEN: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      ASSIGNED: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      IN_PROGRESS: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ON_SITE: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_DESCRIPTION: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      AWAITING_WORK_APPROVAL: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_APPROVAL: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      COMPLETED: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      CLOSED: { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' },
+      CANCELLED: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return colors[status] || { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' }
   }
 
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-800',
-      MEDIUM: 'bg-yellow-100 text-yellow-800',
-      HIGH: 'bg-orange-100 text-orange-800',
-      CRITICAL: 'bg-red-100 text-red-800'
+  const getPriorityColor = (priority: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      LOW: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      MEDIUM: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      HIGH: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
+      CRITICAL: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
     }
-    return colors[priority] || 'bg-gray-100 text-gray-800'
+    return colors[priority] || { backgroundColor: 'var(--tag-bg)', color: 'var(--tag-text)' }
   }
 
   const getStatusIcon = (status: string) => {
@@ -513,6 +521,9 @@ export function UserDashboard({ user }: UserDashboardProps) {
     }
 
     setEditLoading(true)
+    setIsEditUploading(editMediaFiles.length > 0)
+    setEditUploadProgress(0)
+    
     try {
       // Create FormData to handle file uploads
       const formData = new FormData()
@@ -539,29 +550,65 @@ export function UserDashboard({ user }: UserDashboardProps) {
         formData.append('files', file)
       })
 
-      const response = await fetch(`/api/tickets/${selectedTicket.id}`, {
-        method: 'PATCH',
-        body: formData
+      // Use XMLHttpRequest for upload progress
+      const result = await new Promise<{success: boolean, data?: any, error?: string}>((resolve) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100)
+            setEditUploadProgress(percent)
+          }
+        })
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve({ success: true, data })
+            } catch {
+              resolve({ success: false, error: 'Invalid response' })
+            }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText)
+              resolve({ success: false, error: error.error || 'Failed to update ticket' })
+            } catch {
+              resolve({ success: false, error: `Failed to update ticket (${xhr.status})` })
+            }
+          }
+        })
+        
+        xhr.addEventListener('error', () => {
+          resolve({ success: false, error: 'Network error during upload' })
+        })
+        
+        xhr.addEventListener('abort', () => {
+          resolve({ success: false, error: 'Upload cancelled' })
+        })
+        
+        xhr.open('PATCH', `/api/tickets/${selectedTicket.id}`)
+        xhr.send(formData)
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
+      if (result.success && result.data) {
         alert('Ticket updated successfully')
         setShowEditDialog(false)
         setEditMediaFiles([])
         setAttachmentsToDelete([])
         fetchUserTickets()
         // Update selected ticket with new data
-        setSelectedTicket({ ...selectedTicket, ...data.ticket })
+        setSelectedTicket({ ...selectedTicket, ...result.data.ticket })
       } else {
-        alert(data.error || 'Failed to update ticket')
+        alert(result.error || 'Failed to update ticket')
       }
     } catch (error) {
       console.error('Failed to update ticket:', error)
       alert('Failed to update ticket')
     } finally {
       setEditLoading(false)
+      setIsEditUploading(false)
+      setEditUploadProgress(0)
     }
   }
 
@@ -613,7 +660,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         <Box sx={{ py: 1, textAlign: 'left', width: '100%' }}>
-          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{params.row.title}</p>
         </Box>
       ),
     },
@@ -625,7 +672,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
       align: 'left',
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <span className="text-xs font-mono text-gray-600">
+        <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
           {params.row.id.slice(0, 8).toUpperCase()}
         </span>
       ),
@@ -659,7 +706,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
               },
             }}
           >
-            <p className="text-xs text-gray-600 truncate cursor-pointer text-left" style={{ maxWidth: '100%' }}>
+            <p className="text-xs truncate cursor-pointer text-left" style={{ maxWidth: '100%', color: 'var(--text-secondary)' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -767,9 +814,9 @@ export function UserDashboard({ user }: UserDashboardProps) {
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
         params.row.assignedTo ? (
-          <span className="text-xs truncate">{params.row.assignedTo.name || params.row.assignedTo.email}</span>
+          <span className="text-xs truncate" style={{ color: 'var(--text-primary)' }}>{params.row.assignedTo.name || params.row.assignedTo.email}</span>
         ) : (
-          <span className="text-xs text-gray-400">Not assigned</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Not assigned</span>
         )
       ),
     },
@@ -781,7 +828,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
       align: 'left',
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketSummary>) => (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -810,23 +857,23 @@ export function UserDashboard({ user }: UserDashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent)' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading your dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 p-3 sm:p-5">
+    <div className="p-3 sm:p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-4 sm:space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back, {user.name || 'User'}</h1>
-            <p className="text-sm sm:text-base text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>Welcome back, {user.name || 'User'}</h1>
+            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
               {user.role === 'END_USER' ? 'Manage your tickets and assets' : 
                user.role === 'TENANT_ADMIN' ? 'Manage company tickets and projects' :
                user.role === 'CONTRACTOR' ? 'View assigned tickets and projects' :
@@ -846,7 +893,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-border">
           <nav className="-mb-px flex space-x-8">
             {/* Only show My Tickets tab for END_USER */}
             {user.role === 'END_USER' && (
@@ -854,9 +901,10 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 onClick={() => setActiveTab('tickets')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'tickets'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-border'
+                    : 'border-transparent hover:border-border'
                 }`}
+                style={activeTab === 'tickets' ? { color: 'var(--accent)' } : { color: 'var(--text-secondary)' }}
               >
                 <div className="flex items-center space-x-2">
                   <Ticket className="h-4 w-4" />
@@ -867,16 +915,17 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 </div>
               </button>
             )}
-            
+
             {/* Asset Register tab for END_USER */}
             {user.role === 'END_USER' && (
               <button
                 onClick={() => setActiveTab('assets')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'assets'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-border'
+                    : 'border-transparent hover:border-border'
                 }`}
+                style={activeTab === 'assets' ? { color: 'var(--accent)' } : { color: 'var(--text-secondary)' }}
               >
                 <div className="flex items-center space-x-2">
                   <Package className="h-4 w-4" />
@@ -898,7 +947,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   <div className="flex items-center space-x-4">
                     {/* Search */}
                     <div className="flex-1 relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                       <Input
                         placeholder="Search tickets..."
                         value={searchTerm}
@@ -911,7 +960,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 <Button
                   variant="outline"
                   onClick={() => setShowFilters(!showFilters)}
-                  className={getActiveFilterCount() > 0 ? 'border-blue-500 bg-blue-50' : ''}
+                  style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
@@ -936,7 +985,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   {/* Status Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Status</label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any status" />
@@ -957,7 +1006,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                   {/* Priority Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Priority</label>
                     <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any priority" />
@@ -974,7 +1023,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                   {/* Type Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Type</label>
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any type" />
@@ -993,7 +1042,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                   {/* Date Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
+                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Created</label>
                     <Select value={dateFilter} onValueChange={setDateFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any time" />
@@ -1010,7 +1059,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                   {/* Assignment Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
+                    <label className="block font-mono mb-1" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Assignment</label>
                     <Select value={assignedFilter} onValueChange={setAssignedFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any assignment" />
@@ -1022,6 +1071,26 @@ export function UserDashboard({ user }: UserDashboardProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* Show Closed Tickets Toggle */}
+                  <div className="flex items-center justify-between col-span-full pt-2 border-t border-border">
+                    <div>
+                      <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Show Closed Tickets</label>
+                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Closed tickets are hidden by default</p>
+                    </div>
+                    <button
+                      onClick={() => setShowClosedTickets(!showClosedTickets)}
+                      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                      style={{ backgroundColor: showClosedTickets ? 'var(--accent)' : 'var(--surface2)' }}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full transition-transform ${
+                          showClosedTickets ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                        style={{ backgroundColor: 'var(--surface)' }}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1032,41 +1101,41 @@ export function UserDashboard({ user }: UserDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
-              <Ticket className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Tickets</CardTitle>
+              <Ticket className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.total}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Open</CardTitle>
-              <Ticket className="h-4 w-4 text-blue-500" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Open</CardTitle>
+              <Ticket className="h-4 w-4" style={{ color: 'var(--blue)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.open}</div>
+              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.open}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-              <Clock className="h-4 w-4 text-orange-500" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>In Progress</CardTitle>
+              <Clock className="h-4 w-4" style={{ color: 'var(--amber)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.inProgress}</div>
+              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.inProgress}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Completed</CardTitle>
+              <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.completed}</div>
+              <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{stats.completed}</div>
             </CardContent>
           </Card>
         </div>
@@ -1077,7 +1146,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
             <CardTitle className="flex items-center justify-between">
               <span>My Tickets</span>
               {getActiveFilterCount() > 0 && (
-                <span className="text-sm font-normal text-gray-500">
+                <span className="text-sm font-normal" style={{ color: 'var(--text-secondary)' }}>
                   Showing {filteredTickets.length} of {tickets.length} tickets
                 </span>
               )}
@@ -1088,9 +1157,9 @@ export function UserDashboard({ user }: UserDashboardProps) {
             <div className="flex flex-col items-center justify-center py-12">
               {tickets.length === 0 ? (
                 <>
-                  <Ticket className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets yet</h3>
-                  <p className="text-gray-600 mb-4">Create your first support ticket to get started</p>
+                  <Ticket className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
+                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Create your first support ticket to get started</p>
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Ticket
@@ -1098,9 +1167,9 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 </>
               ) : (
                 <>
-                  <Search className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets match your filters</h3>
-                  <p className="text-gray-600 mb-4">Try adjusting your search criteria</p>
+                  <Search className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No tickets match your filters</h3>
+                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Try adjusting your search criteria</p>
                   <Button variant="outline" onClick={clearAllFilters}>
                     <X className="h-4 w-4 mr-2" />
                     Clear Filters
@@ -1142,7 +1211,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
             </CardHeader>
             <CardContent className="text-center py-8">
               <div className="space-y-4">
-                <div className="text-gray-600">
+                <div style={{ color: 'var(--text-secondary)' }}>
                   As an admin, you should use the dedicated admin sections to manage tickets and company resources.
                 </div>
                 <div className="flex justify-center space-x-4">
@@ -1168,16 +1237,16 @@ export function UserDashboard({ user }: UserDashboardProps) {
               <div className="space-y-6">
                 {/* Ticket Info */}
                 <div>
-                  <h3 className="text-lg font-semibold">{selectedTicket.title}</h3>
-                  <p className="text-gray-600 mt-2">{selectedTicket.description}</p>
+                  <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>{selectedTicket.title}</h3>
+                  <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.description}</p>
                 </div>
                 
                 {/* Status and Priority */}
                 <div className="flex flex-wrap gap-2">
-                  <Badge className={getStatusColor(selectedTicket.status)}>
+                  <Badge style={{ ...getStatusColor(selectedTicket.status), fontFamily: 'DM Mono, monospace', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {formatStatus(selectedTicket.status)}
                   </Badge>
-                  <Badge className={getPriorityColor(selectedTicket.priority)}>
+                  <Badge style={{ ...getPriorityColor(selectedTicket.priority), fontFamily: 'DM Mono, monospace', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {selectedTicket.priority}
                   </Badge>
                   <Badge variant="outline">{selectedTicket.type?.replace(/_/g, ' ')}</Badge>
@@ -1186,35 +1255,35 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 {/* Dates */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Created:</span>
-                    <span className="ml-2">{new Date(selectedTicket.createdAt).toLocaleString()}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Created:</span>
+                    <span className="ml-2" style={{ color: 'var(--text-primary)' }}>{new Date(selectedTicket.createdAt).toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Last Updated:</span>
-                    <span className="ml-2">{new Date(selectedTicket.updatedAt).toLocaleString()}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Last Updated:</span>
+                    <span className="ml-2" style={{ color: 'var(--text-primary)' }}>{new Date(selectedTicket.updatedAt).toLocaleString()}</span>
                   </div>
                 </div>
                 
                 {/* Contractor Info */}
                 {selectedTicket.assignedTo && (
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <h4 className="font-medium mb-3 flex items-center">
+                  <div className="rounded-lg p-4 border border-border" style={{ backgroundColor: 'var(--surface2)' }}>
+                    <h4 className="font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
                       <Wrench className="h-4 w-4 mr-2" />
                       Assigned Contractor
                     </h4>
                     <div className="grid gap-2 text-sm">
                       <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2 text-gray-400" />
-                        <span className="font-medium">{selectedTicket.assignedTo.name || 'Contractor'}</span>
+                        <User className="h-4 w-4 mr-2" style={{ color: 'var(--text-muted)' }} />
+                        <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedTicket.assignedTo.name || 'Contractor'}</span>
                       </div>
                       <div className="flex items-center">
-                        <User className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{selectedTicket.assignedTo.email}</span>
+                        <User className="h-4 w-4 mr-2" style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ color: 'var(--text-secondary)' }}>{selectedTicket.assignedTo.email}</span>
                       </div>
                       {selectedTicket.assignedTo.phone && (
                         <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                          <span>{selectedTicket.assignedTo.phone}</span>
+                          <Phone className="h-4 w-4 mr-2" style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ color: 'var(--text-secondary)' }}>{selectedTicket.assignedTo.phone}</span>
                         </div>
                       )}
                     </div>
@@ -1224,14 +1293,14 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 {/* Location */}
                 {selectedTicket.location && (
                   <div className="flex items-center text-sm">
-                    <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                    <span>{selectedTicket.location}</span>
+                    <MapPin className="h-4 w-4 mr-2" style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>{selectedTicket.location}</span>
                   </div>
                 )}
 
                 {/* Attachments Section */}
                 {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
-                  <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="rounded-lg p-4 border border-border" style={{ backgroundColor: 'var(--surface2)' }}>
                     <MediaViewer 
                       files={selectedTicket.attachments}
                       title="Attachments"
@@ -1256,19 +1325,19 @@ export function UserDashboard({ user }: UserDashboardProps) {
 
                 {/* Status Info Messages */}
                 {selectedTicket.status === 'PROCESSING' && (
-                  <div className="text-sm text-yellow-600 bg-yellow-50 px-4 py-2 rounded-lg">
+                  <div className="text-sm px-4 py-2 rounded-lg" style={{ color: 'var(--amber)', backgroundColor: 'var(--amber-bg)' }}>
                     Waiting for contractor to accept the job
                   </div>
                 )}
 
                 {/* Waiting for contractor to submit work description */}
                 {selectedTicket.status === 'AWAITING_DESCRIPTION' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <h4 className="font-medium text-amber-800 mb-2 flex items-center">
+                  <div className="rounded-lg p-4 border" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                    <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
                       <Clock className="h-5 w-5 mr-2" />
                       Waiting for Work Description
                     </h4>
-                    <p className="text-sm text-amber-700">
+                    <p className="text-sm" style={{ color: 'var(--amber)' }}>
                       You&apos;ve marked the job as complete. The contractor is now required to provide a description of the work done before you can close the ticket.
                     </p>
                   </div>
@@ -1276,23 +1345,23 @@ export function UserDashboard({ user }: UserDashboardProps) {
 
                 {/* Work Description Approval Required */}
                 {selectedTicket.status === 'AWAITING_WORK_APPROVAL' && selectedTicket.workDescription && (
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                    <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
+                  <div className="rounded-lg p-4 border border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                    <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
                       <FileText className="h-5 w-5 mr-2" />
                       Review Work Description
                     </h4>
-                    <p className="text-sm text-indigo-700 mb-3">
+                    <p className="text-sm mb-3" style={{ color: 'var(--blue)' }}>
                       The contractor has submitted a description of the work performed. Please review and approve or reject.
                     </p>
-                    <div className="bg-white border border-indigo-100 rounded p-3 mb-4">
-                      <p className="text-sm font-medium text-gray-700 mb-1">Work Description:</p>
-                      <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedTicket.workDescription}</p>
+                    <div className="rounded p-3 mb-4 border border-border" style={{ backgroundColor: 'var(--surface)' }}>
+                      <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>Work Description:</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         onClick={() => handleWorkApproval(true)}
                         disabled={workApprovalLoading}
-                        className="bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve
@@ -1341,10 +1410,10 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                     {/* Confirm On-Site button when contractor has accepted */}
                     {selectedTicket.status === 'ACCEPTED' && (
-                      <Button 
-                        onClick={() => handleUpdateTicketStatus('ON_SITE')} 
+                      <Button
+                        onClick={() => handleUpdateTicketStatus('ON_SITE')}
                         disabled={statusUpdateLoading}
-                        className="bg-purple-600 hover:bg-purple-700"
+                        style={{ backgroundColor: 'var(--blue)', color: '#fff' }}
                       >
                         <MapPin className="h-4 w-4 mr-2" />
                         Confirm Contractor On-Site
@@ -1353,22 +1422,22 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                     {/* Mark Completed button when contractor is on site - triggers work description request */}
                     {selectedTicket.status === 'ON_SITE' && (
-                      <Button 
-                        onClick={() => handleUpdateTicketStatus('AWAITING_DESCRIPTION')} 
+                      <Button
+                        onClick={() => handleUpdateTicketStatus('AWAITING_DESCRIPTION')}
                         disabled={statusUpdateLoading}
-                        className="bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Mark Job Completed
                       </Button>
                     )}
-                    
+
                     {/* Also allow marking complete from IN_PROGRESS */}
                     {selectedTicket.status === 'IN_PROGRESS' && (
-                      <Button 
-                        onClick={() => handleUpdateTicketStatus('AWAITING_DESCRIPTION')} 
+                      <Button
+                        onClick={() => handleUpdateTicketStatus('AWAITING_DESCRIPTION')}
                         disabled={statusUpdateLoading}
-                        className="bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Mark Job Completed
@@ -1377,12 +1446,12 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   
                     {/* Close Ticket & Rate button when job is completed (work approved) */}
                     {selectedTicket.status === 'COMPLETED' && (
-                      <Button 
+                      <Button
                         onClick={() => {
                           setShowViewModal(false)
                           setShowRatingModal(true)
                         }}
-                        className="bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                       >
                         <Star className="h-4 w-4 mr-2" />
                         Close Ticket & Rate Contractor
@@ -1390,7 +1459,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     )}
                   
                     {selectedTicket.status === 'CLOSED' && (
-                      <div className="text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-lg">
+                      <div className="text-sm px-4 py-2 rounded-lg" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>
                         Ticket closed
                       </div>
                     )}
@@ -1405,14 +1474,14 @@ export function UserDashboard({ user }: UserDashboardProps) {
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center text-blue-600">
+              <DialogTitle className="flex items-center" style={{ color: 'var(--accent)' }}>
                 <Pencil className="h-5 w-5 mr-2" />
                 Edit Ticket
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div>
-                <Label htmlFor="editTitle">Title <span className="text-red-500">*</span></Label>
+                <Label htmlFor="editTitle">Title <span className="text-ds-red">*</span></Label>
                 <Input
                   id="editTitle"
                   value={editFormData.title}
@@ -1493,7 +1562,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                   * Changing asset will update the category automatically
                 </p>
               </div>
@@ -1541,22 +1610,22 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     {existingAttachments
                       .filter(att => !attachmentsToDelete.includes(att.id))
                       .map((attachment) => (
-                        <div key={attachment.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border">
+                        <div key={attachment.id} className="flex items-center justify-between p-2 rounded-lg border border-border" style={{ backgroundColor: 'var(--surface2)' }}>
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {attachment.mimeType?.startsWith('image/') ? (
-                              <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                              <ImageIcon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--blue)' }} />
                             ) : attachment.mimeType?.startsWith('video/') ? (
-                              <Video className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                              <Video className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
                             ) : (
-                              <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                            )}
+                              <FileText className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+)}
                             <span className="text-sm truncate">{attachment.originalName || attachment.filename}</span>
                           </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                            className="text-ds-red hover:text-ds-red hover:bg-red-bg flex-shrink-0"
                             onClick={() => setAttachmentsToDelete([...attachmentsToDelete, attachment.id])}
                           >
                             <X className="h-4 w-4" />
@@ -1565,7 +1634,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                       ))}
                   </div>
                   {attachmentsToDelete.length > 0 && (
-                    <p className="text-xs text-orange-600 mt-1">
+                    <p className="text-xs mt-1" style={{ color: 'var(--amber)' }}>
                       {attachmentsToDelete.length} file(s) will be removed on save
                     </p>
                   )}
@@ -1583,10 +1652,14 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
                     onChange={(e) => {
                       const files = Array.from(e.target.files || [])
-                      const maxSize = 10 * 1024 * 1024 // 10MB
+                      const maxImageSize = 10 * 1024 * 1024 // 10MB for images/docs
+                      const maxVideoSize = 100 * 1024 * 1024 // 100MB for videos
                       const validFiles = files.filter(file => {
+                        const isVideo = file.type.startsWith('video/')
+                        const maxSize = isVideo ? maxVideoSize : maxImageSize
                         if (file.size > maxSize) {
-                          alert(`File ${file.name} is too large. Maximum size is 10MB.`)
+                          const maxSizeMB = isVideo ? '100' : '10'
+                          alert(`File ${file.name} is too large. Maximum size is ${maxSizeMB}MB.`)
                           return false
                         }
                         return true
@@ -1606,26 +1679,26 @@ export function UserDashboard({ user }: UserDashboardProps) {
                     Choose Files
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Images, Videos, Audio, PDFs (Max 10MB per file)
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Images, Audio, PDFs (Max 10MB) | Videos (Max 100MB)
                 </p>
                 
                 {/* New files to upload */}
                 {editMediaFiles.length > 0 && (
                   <div className="mt-2 space-y-2">
-                    <Label className="text-sm text-green-600">New files to add:</Label>
+                    <Label className="text-sm" style={{ color: 'var(--green)' }}>New files to add:</Label>
                     {editMediaFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded-lg border border-green-200">
+                      <div key={index} className="flex items-center justify-between p-2 rounded-lg border border-border" style={{ backgroundColor: 'var(--green-bg)' }}>
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           {file.type.startsWith('image/') ? (
-                            <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                            <ImageIcon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--blue)' }} />
                           ) : file.type.startsWith('video/') ? (
-                            <Video className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                            <Video className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-secondary)' }} />
                           ) : (
-                            <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                            <FileText className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
                           )}
-                          <span className="text-sm truncate">{file.name}</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{file.name}</span>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             ({(file.size / 1024).toFixed(1)} KB)
                           </span>
                         </div>
@@ -1633,7 +1706,7 @@ export function UserDashboard({ user }: UserDashboardProps) {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          className="text-ds-red hover:text-ds-red hover:bg-red-bg flex-shrink-0"
                           onClick={() => setEditMediaFiles(prev => prev.filter((_, i) => i !== index))}
                         >
                           <X className="h-4 w-4" />
@@ -1644,16 +1717,35 @@ export function UserDashboard({ user }: UserDashboardProps) {
                 )}
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={editLoading}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditTicket} 
-                disabled={editLoading || !editFormData.title.trim()}
-              >
-                {editLoading ? 'Saving...' : 'Save Changes'}
-              </Button>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
+              {/* Upload Progress Bar */}
+              {isEditUploading && (
+                <div className="w-full mb-2 sm:mb-0 sm:mr-auto">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium" style={{ color: 'var(--accent)' }}>
+                      Uploading {editMediaFiles.length} file{editMediaFiles.length > 1 ? 's' : ''}...
+                    </span>
+                    <span className="font-medium" style={{ color: 'var(--accent)' }}>{editUploadProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${editUploadProgress}%`, backgroundColor: 'var(--accent)' }}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 justify-end w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={editLoading}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleEditTicket} 
+                  disabled={editLoading || !editFormData.title.trim()}
+                >
+                  {editLoading ? (isEditUploading ? `Uploading ${editUploadProgress}%...` : 'Saving...') : 'Save Changes'}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1662,18 +1754,18 @@ export function UserDashboard({ user }: UserDashboardProps) {
         <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center text-red-600">
+              <DialogTitle className="flex items-center text-ds-red">
                 <AlertTriangle className="h-5 w-5 mr-2" />
                 Cancel Ticket
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-gray-600">
+              <p style={{ color: 'var(--text-secondary)' }}>
                 Are you sure you want to cancel this ticket? Please provide a reason below.
               </p>
               <div>
-                <label htmlFor="cancelReason" className="block text-sm font-medium text-gray-700 mb-1">
-                  Reason for cancellation <span className="text-red-500">*</span>
+                <label htmlFor="cancelReason" className="block text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Reason for cancellation <span style={{ color: 'var(--red)' }}>*</span>
                 </label>
                 <textarea
                   id="cancelReason"
@@ -1681,7 +1773,8 @@ export function UserDashboard({ user }: UserDashboardProps) {
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   rows={4}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-md px-3 py-2 border border-border"
+                  style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                 />
               </div>
             </div>
@@ -1704,13 +1797,13 @@ export function UserDashboard({ user }: UserDashboardProps) {
         <Dialog open={showWorkApprovalDialog} onOpenChange={setShowWorkApprovalDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center text-red-600">
+              <DialogTitle className="flex items-center text-ds-red">
                 <XCircle className="h-5 w-5 mr-2" />
                 Reject Work Description
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Please provide a reason for rejecting the work description. The contractor will be notified and asked to submit a revised description.
               </p>
               

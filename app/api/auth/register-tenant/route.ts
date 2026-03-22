@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hash } from 'bcryptjs'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
-import { sendVerificationEmail } from '@/lib/email'
-
-const prisma = new PrismaClient()
+import { sendVerificationEmail, sendTrialStartedEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,13 +16,12 @@ export async function POST(request: NextRequest) {
       companySize,
       adminName,
       adminEmail,
-      adminPassword,
       adminPhone,
       customRequirements
     } = body
 
-    // Validate required fields
-    if (!companyName || !companyEmail || !adminName || !adminEmail || !adminPassword || !companySize) {
+    // Validate required fields (NO password - user sets via activation email)
+    if (!companyName || !companyEmail || !adminName || !adminEmail || !companySize) {
       return NextResponse.json(
         { message: 'Missing required fields' },
         { status: 400 }
@@ -50,12 +46,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash password
-    const hashedPassword = await hash(adminPassword, 12)
+    // Check if admin email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: adminEmail }
+    })
 
-    // Calculate trial end date (30 days from now)
+    if (existingUser) {
+      return NextResponse.json(
+        { message: 'An account with this email already exists.' },
+        { status: 409 }
+      )
+    }
+
+    // Calculate trial end date (14 days from now)
     const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 30)
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14)
 
     // Create tenant and admin user in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -78,7 +83,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Create admin user with email verification status
+      // Create admin user with activation token (NO password - user sets via email)
       const activationToken = randomBytes(32).toString('hex')
       const activationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
       
@@ -86,11 +91,12 @@ export async function POST(request: NextRequest) {
         data: {
           email: adminEmail,
           name: adminName,
-          password: hashedPassword,
+          password: '', // Empty - user sets password via activation email
           phone: adminPhone || null,
           role: 'TENANT_ADMIN',
           tenantId: tenant.id,
           status: 'APPROVED_EMAIL_PENDING',
+          isActive: false, // Not active until password is set
           emailVerified: null,
           activationToken,
           activationExpires
@@ -128,8 +134,18 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration if email sending fails
     }
 
-    // TODO: Send welcome email with trial information
-    // await sendWelcomeEmail(companyEmail, companyName, trialEndsAt)
+    // Send trial started email with payment reminder
+    try {
+      await sendTrialStartedEmail(
+        result.adminUser.email,
+        result.adminUser.name || 'Admin',
+        companyName,
+        trialEndsAt,
+        body.selectedPlan || 'PRO'
+      )
+    } catch (emailError) {
+      logger.error('Failed to send trial started email:', emailError)
+    }
 
     // Log successful registration
     logger.info(`New tenant registered: ${companyName} (${slug}) by ${adminEmail}`)
@@ -149,21 +165,46 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 })
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Tenant registration error:', error)
     
     // Handle specific Prisma errors
-    if (error instanceof Error) {
-      if (error.message.includes('Unique constraint')) {
+    if (error?.code === 'P2002') {
+      const target = error?.meta?.target || []
+      
+      if (target.includes('email')) {
         return NextResponse.json(
-          { message: 'Company name or email already exists' },
+          { 
+            error: 'account_exists',
+            message: 'An account with this email already exists',
+            field: 'email'
+          },
           { status: 409 }
         )
       }
+      
+      if (target.includes('slug')) {
+        return NextResponse.json(
+          { 
+            error: 'company_exists',
+            message: 'A company with this name already exists. Please choose a different name.',
+            field: 'companyName'
+          },
+          { status: 409 }
+        )
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'duplicate',
+          message: 'Company name or email already exists'
+        },
+        { status: 409 }
+      )
     }
 
     return NextResponse.json(
-      { message: 'Registration failed. Please try again.' },
+      { error: 'registration_failed', message: 'Registration failed. Please try again.' },
       { status: 500 }
     )
   } finally {

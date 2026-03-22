@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -249,14 +250,14 @@ export function TenantManagement() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string): React.CSSProperties => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800'
-      case 'TRIAL': return 'bg-blue-100 text-blue-800'
-      case 'SUSPENDED': return 'bg-red-100 text-red-800'
-      case 'CANCELLED': return 'bg-gray-100 text-gray-800'
-      case 'EXPIRED': return 'bg-orange-100 text-orange-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'ACTIVE': return { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+      case 'TRIAL': return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+      case 'SUSPENDED': return { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
+      case 'CANCELLED': return { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }
+      case 'EXPIRED': return { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
+      default: return { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }
     }
   }
 
@@ -274,15 +275,15 @@ export function TenantManagement() {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-500">Loading tenants...</p>
+          <RefreshCw className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+          <p style={{ color: 'var(--text-muted)' }}>Loading tenants...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen p-5">
+    <div className="min-h-screen p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -294,8 +295,8 @@ export function TenantManagement() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Tenant Management</h1>
-              <p className="text-gray-600">Manage all registered companies and subscriptions</p>
+              <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Tenant Management</h1>
+              <p style={{ color: 'var(--text-secondary)' }}>Manage all registered companies and subscriptions</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -315,7 +316,7 @@ export function TenantManagement() {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   placeholder="Search by name, slug, or email..."
                   value={searchTerm}
@@ -368,9 +369,9 @@ export function TenantManagement() {
           <CardContent>
             {filteredTenants.length === 0 ? (
               <div className="text-center py-12">
-                <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No tenants found</p>
-                <p className="text-gray-400 text-sm mt-1">
+                <Building2 className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                <p className="text-lg" style={{ color: 'var(--text-muted)' }}>No tenants found</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                   {searchTerm || statusFilter !== 'all' ? 'Try adjusting your filters' : 'Create your first tenant to get started'}
                 </p>
                 {!searchTerm && statusFilter === 'all' && (
@@ -384,14 +385,14 @@ export function TenantManagement() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Company</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Subscription</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-900">Expires/Renews</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-900">Users</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-900">Tickets</th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-900">Actions</th>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Company</th>
+                      <th className="text-left py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Status</th>
+                      <th className="text-left py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Subscription</th>
+                      <th className="text-left py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Expires/Renews</th>
+                      <th className="text-center py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Users</th>
+                      <th className="text-center py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Tickets</th>
+                      <th className="text-center py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -401,20 +402,20 @@ export function TenantManagement() {
                       const isExpiringSoon = daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && daysUntilExpiry <= 7
                       
                       return (
-                        <tr key={tenant.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => viewTenantDetails(tenant.id)}>
+                        <tr key={tenant.id} className="border-b border-border cursor-pointer hover:opacity-80" style={{ transition: 'background 0.1s' }} onClick={() => viewTenantDetails(tenant.id)}>
                           <td className="py-4 px-4">
                             <div>
-                              <div className="font-medium text-gray-900 flex items-center">
+                              <div className="font-medium flex items-center" style={{ color: 'var(--text-primary)' }}>
                                 {tenant.name}
                                 {!tenant.onboardingComplete && (
-                                  <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700">
+                                  <Badge variant="outline" className="ml-2 text-xs" style={{ backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }}>
                                     New
                                   </Badge>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-500">{tenant.slug}</div>
+                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{tenant.slug}</div>
                               {tenant.email && (
-                                <div className="text-xs text-gray-400 flex items-center mt-1">
+                                <div className="text-xs flex items-center mt-1" style={{ color: 'var(--text-muted)' }}>
                                   <Mail className="h-3 w-3 mr-1" />
                                   {tenant.email}
                                 </div>
@@ -422,14 +423,14 @@ export function TenantManagement() {
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            <Badge className={getStatusColor(tenant.status)}>
+                            <Badge style={getStatusStyle(tenant.status)}>
                               {tenant.status}
                             </Badge>
                           </td>
                           <td className="py-4 px-4">
                             <div>
-                              <div className="font-medium text-gray-900">{tenant.subscription?.plan || 'Free'}</div>
-                              <div className="text-sm text-gray-500">
+                              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{tenant.subscription?.plan || 'Free'}</div>
+                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
                                 {tenant.subscription?.status || 'No subscription'}
                               </div>
                             </div>
@@ -437,30 +438,30 @@ export function TenantManagement() {
                           <td className="py-4 px-4">
                             {expiryDate ? (
                               <div>
-                                <div className={`text-sm font-medium ${isExpiringSoon ? 'text-orange-600' : 'text-gray-900'}`}>
+                                <div className="text-sm font-medium" style={{ color: isExpiringSoon ? 'var(--amber)' : 'var(--text-primary)' }}>
                                   {new Date(expiryDate).toLocaleDateString()}
                                 </div>
                                 {daysUntilExpiry !== undefined && daysUntilExpiry >= 0 && (
-                                  <div className={`text-xs ${isExpiringSoon ? 'text-orange-500' : 'text-gray-500'}`}>
-                                    {daysUntilExpiry === 0 ? 'Expires today' : 
+                                  <div className="text-xs" style={{ color: isExpiringSoon ? 'var(--amber)' : 'var(--text-muted)' }}>
+                                    {daysUntilExpiry === 0 ? 'Expires today' :
                                      daysUntilExpiry === 1 ? 'Expires tomorrow' :
                                      `${daysUntilExpiry} days left`}
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400">-</span>
+                              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>-</span>
                             )}
                           </td>
                           <td className="py-4 px-4 text-center">
                             <div className="flex items-center justify-center">
-                              <Users className="h-4 w-4 text-gray-400 mr-1" />
+                              <Users className="h-4 w-4 mr-1" style={{ color: 'var(--text-muted)' }} />
                               <span className="font-medium">{tenant.userCount}</span>
                             </div>
                           </td>
                           <td className="py-4 px-4 text-center">
                             <div className="flex items-center justify-center">
-                              <Ticket className="h-4 w-4 text-gray-400 mr-1" />
+                              <Ticket className="h-4 w-4 mr-1" style={{ color: 'var(--text-muted)' }} />
                               <span className="font-medium">{tenant.ticketCount}</span>
                             </div>
                           </td>
@@ -501,7 +502,7 @@ export function TenantManagement() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <Building2 className="h-5 w-5 mr-2 text-blue-600" />
+                <Building2 className="h-5 w-5 mr-2" style={{ color: 'var(--accent)' }} />
                 Create New Tenant
               </DialogTitle>
             </DialogHeader>
@@ -565,7 +566,7 @@ export function TenantManagement() {
               </div>
 
               <div className="border-t pt-4">
-                <p className="text-sm font-medium text-gray-700 mb-3">Admin Account</p>
+                <p className="text-sm font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>Admin Account</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="adminName">Admin Name</Label>
@@ -606,7 +607,7 @@ export function TenantManagement() {
                       onChange={(e) => setCreateForm({ ...createForm, confirmPassword: e.target.value })}
                     />
                     {createForm.adminPassword && createForm.confirmPassword && createForm.adminPassword !== createForm.confirmPassword && (
-                      <p className="text-sm text-red-500 mt-1">Passwords do not match</p>
+                      <p className="text-sm mt-1" style={{ color: 'var(--red)' }}>Passwords do not match</p>
                     )}
                   </div>
                 </div>
@@ -630,11 +631,11 @@ export function TenantManagement() {
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span className="flex items-center">
-                  <Building2 className="h-5 w-5 mr-2 text-blue-600" />
+                  <Building2 className="h-5 w-5 mr-2" style={{ color: 'var(--accent)' }} />
                   {selectedTenant?.name}
                 </span>
                 {selectedTenant && (
-                  <Badge className={getStatusColor(selectedTenant.status)}>
+                  <Badge style={getStatusStyle(selectedTenant.status)}>
                     {selectedTenant.status}
                   </Badge>
                 )}
@@ -646,68 +647,69 @@ export function TenantManagement() {
                 {/* Company Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Slug</p>
-                    <p className="font-medium">{selectedTenant.slug}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Slug</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedTenant.slug}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Created</p>
-                    <p className="font-medium">
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Created</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                       {new Date(selectedTenant.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   {selectedTenant.email && (
                     <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span>{selectedTenant.email}</span>
+                      <Mail className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ color: 'var(--text-primary)' }}>{selectedTenant.email}</span>
                     </div>
                   )}
                   {selectedTenant.phone && (
                     <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <span>{selectedTenant.phone}</span>
+                      <Phone className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                      <span style={{ color: 'var(--text-primary)' }}>{selectedTenant.phone}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-blue-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-blue-600">{selectedTenant._count?.users || 0}</p>
-                    <p className="text-sm text-gray-600">Users</p>
+                  <div className="p-3 rounded-lg text-center border border-border" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                    <p style={{ fontWeight: 300, fontSize: '1.5rem', letterSpacing: '-0.025em', color: 'var(--blue)' }}>{selectedTenant._count?.users || 0}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Users</p>
                   </div>
-                  <div className="bg-green-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-green-600">{selectedTenant._count?.tickets || 0}</p>
-                    <p className="text-sm text-gray-600">Tickets</p>
+                  <div className="p-3 rounded-lg text-center border border-border" style={{ backgroundColor: 'var(--green-bg)' }}>
+                    <p style={{ fontWeight: 300, fontSize: '1.5rem', letterSpacing: '-0.025em', color: 'var(--green)' }}>{selectedTenant._count?.tickets || 0}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Tickets</p>
                   </div>
-                  <div className="bg-purple-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-purple-600">{selectedTenant._count?.assets || 0}</p>
-                    <p className="text-sm text-gray-600">Assets</p>
+                  <div className="p-3 rounded-lg text-center border border-border" style={{ backgroundColor: 'var(--surface2)' }}>
+                    <p style={{ fontWeight: 300, fontSize: '1.5rem', letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{selectedTenant._count?.assets || 0}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Assets</p>
                   </div>
-                  <div className="bg-orange-50 p-3 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-orange-600">{selectedTenant._count?.contractors || 0}</p>
-                    <p className="text-sm text-gray-600">Contractors</p>
+                  <div className="p-3 rounded-lg text-center border border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
+                    <p style={{ fontWeight: 300, fontSize: '1.5rem', letterSpacing: '-0.025em', color: 'var(--amber)' }}>{selectedTenant._count?.contractors || 0}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Contractors</p>
                   </div>
                 </div>
 
                 {/* Features */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Features</h4>
+                  <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Features</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {Object.entries(selectedTenant.features || {}).map(([feature, enabled]) => (
-                      <div 
-                        key={feature} 
-                        className={`flex items-center justify-between p-2 rounded-lg ${enabled ? 'bg-green-50' : 'bg-gray-50'}`}
+                      <div
+                        key={feature}
+                        className="flex items-center justify-between p-2 rounded-lg border border-border"
+                        style={{ backgroundColor: enabled ? 'var(--green-bg)' : 'var(--surface2)' }}
                       >
-                        <span className={enabled ? 'text-green-800' : 'text-gray-500'}>
+                        <span style={{ color: enabled ? 'var(--green)' : 'var(--text-muted)' }}>
                           {feature.replace(/([A-Z])/g, ' $1').trim()}
                         </span>
                         <button
                           onClick={() => toggleFeature(selectedTenant.id, feature, enabled)}
                         >
                           {enabled ? (
-                            <ToggleRight className="h-5 w-5 text-green-500" />
+                            <ToggleRight className="h-5 w-5" style={{ color: 'var(--green)' }} />
                           ) : (
-                            <ToggleLeft className="h-5 w-5 text-gray-400" />
+                            <ToggleLeft className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                           )}
                         </button>
                       </div>
@@ -718,47 +720,23 @@ export function TenantManagement() {
                 {/* Onboarding Progress */}
                 {selectedTenant.onboardingSteps && (
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Onboarding Progress</h4>
+                    <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Onboarding Progress</h4>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.adminCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                        {selectedTenant.onboardingSteps.adminCreated ? (
-                          <span className="text-green-600 mr-2">✓</span>
-                        ) : (
-                          <span className="text-yellow-600 mr-2">○</span>
-                        )}
-                        <span className={selectedTenant.onboardingSteps.adminCreated ? 'text-green-800' : 'text-yellow-800'}>
-                          Admin Created
-                        </span>
+                      <div className="flex items-center p-2 rounded-lg border border-border" style={{ backgroundColor: selectedTenant.onboardingSteps.adminCreated ? 'var(--green-bg)' : 'var(--amber-bg)' }}>
+                        <span className="mr-2" style={{ color: selectedTenant.onboardingSteps.adminCreated ? 'var(--green)' : 'var(--amber)' }}>{selectedTenant.onboardingSteps.adminCreated ? '✓' : '○'}</span>
+                        <span style={{ color: selectedTenant.onboardingSteps.adminCreated ? 'var(--green)' : 'var(--amber)' }}>Admin Created</span>
                       </div>
-                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.branchCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                        {selectedTenant.onboardingSteps.branchCreated ? (
-                          <span className="text-green-600 mr-2">✓</span>
-                        ) : (
-                          <span className="text-yellow-600 mr-2">○</span>
-                        )}
-                        <span className={selectedTenant.onboardingSteps.branchCreated ? 'text-green-800' : 'text-yellow-800'}>
-                          Branch Created
-                        </span>
+                      <div className="flex items-center p-2 rounded-lg border border-border" style={{ backgroundColor: selectedTenant.onboardingSteps.branchCreated ? 'var(--green-bg)' : 'var(--amber-bg)' }}>
+                        <span className="mr-2" style={{ color: selectedTenant.onboardingSteps.branchCreated ? 'var(--green)' : 'var(--amber)' }}>{selectedTenant.onboardingSteps.branchCreated ? '✓' : '○'}</span>
+                        <span style={{ color: selectedTenant.onboardingSteps.branchCreated ? 'var(--green)' : 'var(--amber)' }}>Branch Created</span>
                       </div>
-                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.categoryCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                        {selectedTenant.onboardingSteps.categoryCreated ? (
-                          <span className="text-green-600 mr-2">✓</span>
-                        ) : (
-                          <span className="text-yellow-600 mr-2">○</span>
-                        )}
-                        <span className={selectedTenant.onboardingSteps.categoryCreated ? 'text-green-800' : 'text-yellow-800'}>
-                          Category Created
-                        </span>
+                      <div className="flex items-center p-2 rounded-lg border border-border" style={{ backgroundColor: selectedTenant.onboardingSteps.categoryCreated ? 'var(--green-bg)' : 'var(--amber-bg)' }}>
+                        <span className="mr-2" style={{ color: selectedTenant.onboardingSteps.categoryCreated ? 'var(--green)' : 'var(--amber)' }}>{selectedTenant.onboardingSteps.categoryCreated ? '✓' : '○'}</span>
+                        <span style={{ color: selectedTenant.onboardingSteps.categoryCreated ? 'var(--green)' : 'var(--amber)' }}>Category Created</span>
                       </div>
-                      <div className={`flex items-center p-2 rounded-lg ${selectedTenant.onboardingSteps.firstTicketCreated ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                        {selectedTenant.onboardingSteps.firstTicketCreated ? (
-                          <span className="text-green-600 mr-2">✓</span>
-                        ) : (
-                          <span className="text-yellow-600 mr-2">○</span>
-                        )}
-                        <span className={selectedTenant.onboardingSteps.firstTicketCreated ? 'text-green-800' : 'text-yellow-800'}>
-                          First Ticket
-                        </span>
+                      <div className="flex items-center p-2 rounded-lg border border-border" style={{ backgroundColor: selectedTenant.onboardingSteps.firstTicketCreated ? 'var(--green-bg)' : 'var(--amber-bg)' }}>
+                        <span className="mr-2" style={{ color: selectedTenant.onboardingSteps.firstTicketCreated ? 'var(--green)' : 'var(--amber)' }}>{selectedTenant.onboardingSteps.firstTicketCreated ? '✓' : '○'}</span>
+                        <span style={{ color: selectedTenant.onboardingSteps.firstTicketCreated ? 'var(--green)' : 'var(--amber)' }}>First Ticket</span>
                       </div>
                     </div>
                   </div>
@@ -767,29 +745,30 @@ export function TenantManagement() {
                 {/* Payment History */}
                 {selectedTenant.payments && selectedTenant.payments.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Recent Payments</h4>
+                    <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Recent Payments</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {selectedTenant.payments.map((payment: any) => (
-                        <div 
+                        <div
                           key={payment.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                          className="flex items-center justify-between p-2 rounded-lg border border-border"
+                          style={{ backgroundColor: 'var(--surface2)' }}
                         >
                           <div>
-                            <p className="font-medium">${payment.amount} {payment.currency}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="font-medium" style={{ color: 'var(--text-primary)' }}>${payment.amount} {payment.currency}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                               {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : new Date(payment.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Badge className={
-                              payment.status === 'success' ? 'bg-green-100 text-green-800' :
-                              payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
+                            <Badge style={
+                              payment.status === 'success' ? { backgroundColor: 'var(--green-bg)', color: 'var(--green)' } :
+                              payment.status === 'pending' ? { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' } :
+                              { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
                             }>
                               {payment.status}
                             </Badge>
                             {payment.paymentMethod && (
-                              <span className="text-xs text-gray-500">{payment.paymentMethod}</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{payment.paymentMethod}</span>
                             )}
                           </div>
                         </div>
@@ -801,20 +780,21 @@ export function TenantManagement() {
                 {/* Users */}
                 {selectedTenant.users && selectedTenant.users.length > 0 && (
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Users</h4>
+                    <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Users</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {selectedTenant.users.map((user) => (
-                        <div 
+                        <div
                           key={user.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                          className="flex items-center justify-between p-2 rounded-lg border border-border"
+                          style={{ backgroundColor: 'var(--surface2)' }}
                         >
                           <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{user.name}</p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{user.email}</p>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline">{user.role}</Badge>
-                            <Badge className={user.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            <Badge style={user.isActive ? { backgroundColor: 'var(--green-bg)', color: 'var(--green)' } : { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }}>
                               {user.isActive ? 'Active' : 'Inactive'}
                             </Badge>
                           </div>

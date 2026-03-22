@@ -134,17 +134,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         <>
           {/* GRACE period warning */}
           {subscriptionStatus.level === 'grace' && (
-            <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
+            <div className="bg-amber-bgbg border-b border-yellow-200 px-4 py-3">
               <div className="flex items-center justify-between max-w-7xl mx-auto">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  <span className="text-sm text-yellow-800">
+                  <AlertTriangle className="h-5 w-5 text-ds-amber" />
+                  <span className="text-sm text-ds-amber">
                     {subscriptionStatus.message || 'Payment overdue. Please renew your subscription.'}
                   </span>
                 </div>
                 <a 
                   href="/billing" 
-                  className="text-sm font-medium text-yellow-800 hover:text-yellow-900 underline"
+                  className="text-sm font-medium text-ds-amber hover:text-ds-amber underline"
                 >
                   Pay Now
                 </a>
@@ -154,17 +154,17 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
           {/* READ_ONLY warning */}
           {subscriptionStatus.level === 'read_only' && (
-            <div className="bg-red-50 border-b border-red-200 px-4 py-3">
+            <div className="bg-red-bg border-b border-red-200 px-4 py-3">
               <div className="flex items-center justify-between max-w-7xl mx-auto">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                  <span className="text-sm text-red-800">
+                  <AlertCircle className="h-5 w-5 text-ds-red" />
+                  <span className="text-sm text-ds-red">
                     Your subscription has expired. You can view data but cannot make changes.
                   </span>
                 </div>
                 <a 
                   href="/billing" 
-                  className="text-sm font-medium bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                  className="text-sm font-medium bg-red-bg text-bg px-3 py-1 rounded hover:bg-red-bg"
                 >
                   Renew Now
                 </a>
@@ -174,10 +174,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
           {/* BLOCKED/SUSPENDED */}
           {subscriptionStatus.level === 'blocked' && (
-            <div className="bg-gray-900 border-b border-gray-700 px-4 py-3">
+            <div className="bg-accent border-b border-gray-700 px-4 py-3">
               <div className="flex items-center justify-center gap-2">
-                <XCircle className="h-5 w-5 text-white" />
-                <span className="text-sm text-white">
+                <XCircle className="h-5 w-5 text-bg" />
+                <span className="text-sm text-bg">
                   Account suspended. Please contact support.
                 </span>
               </div>
@@ -206,7 +206,7 @@ export function withWriteAccess<P extends object>(
         <div className="opacity-50 pointer-events-none relative">
           <Component {...props} />
           <div className="absolute inset-0 flex items-center justify-center bg-white/50">
-            <span className="bg-gray-800 text-white px-4 py-2 rounded text-sm">
+            <span className="bg-accent text-bg px-4 py-2 rounded text-sm">
               {fallbackMessage}
             </span>
           </div>

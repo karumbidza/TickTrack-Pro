@@ -93,18 +93,18 @@ function getFileTypeInfo(file: MediaFile): { type: 'image' | 'video' | 'audio' |
   const mimeType = file.mimeType || ''
   
   if (mimeType.startsWith('image/')) {
-    return { type: 'image', icon: ImageIcon, color: 'text-green-600' }
+    return { type: 'image', icon: ImageIcon, color: 'text-ds-green' }
   }
   if (mimeType.startsWith('video/')) {
-    return { type: 'video', icon: Video, color: 'text-purple-600' }
+    return { type: 'video', icon: Video, color: 'text-text-secondary' }
   }
   if (mimeType.startsWith('audio/')) {
-    return { type: 'audio', icon: Music, color: 'text-orange-600' }
+    return { type: 'audio', icon: Music, color: 'text-ds-amber' }
   }
   if (mimeType === 'application/pdf') {
-    return { type: 'pdf', icon: FileText, color: 'text-red-600' }
+    return { type: 'pdf', icon: FileText, color: 'text-ds-red' }
   }
-  return { type: 'file', icon: File, color: 'text-blue-600' }
+  return { type: 'file', icon: File, color: 'text-ds-blue' }
 }
 
 // Download handler
@@ -142,10 +142,10 @@ function Lightbox({ files, currentIndex, onClose, onPrevious, onNext, onDownload
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 gap-0">
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+        <div className="flex items-center justify-between p-3 border-b bg-surface2">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium truncate max-w-[300px]">{displayName}</span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-text-muted">
               {currentIndex + 1} of {files.length}
             </span>
           </div>
@@ -155,14 +155,14 @@ function Lightbox({ files, currentIndex, onClose, onPrevious, onNext, onDownload
                 <Button variant="ghost" size="sm" onClick={handleZoomOut} title="Zoom Out">
                   <ZoomOut className="h-4 w-4" />
                 </Button>
-                <span className="text-xs text-gray-500 w-12 text-center">{Math.round(zoom * 100)}%</span>
+                <span className="text-xs text-text-muted w-12 text-center">{Math.round(zoom * 100)}%</span>
                 <Button variant="ghost" size="sm" onClick={handleZoomIn} title="Zoom In">
                   <ZoomIn className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleRotate} title="Rotate">
                   <RotateCw className="h-4 w-4" />
                 </Button>
-                <div className="w-px h-6 bg-gray-300 mx-1" />
+                <div className="w-px h-6 bg-border mx-1" />
               </>
             )}
             <Button variant="ghost" size="sm" onClick={onDownload} title="Download">
@@ -178,7 +178,7 @@ function Lightbox({ files, currentIndex, onClose, onPrevious, onNext, onDownload
         </div>
 
         {/* Content */}
-        <div className="flex-1 relative bg-gray-900 flex items-center justify-center overflow-hidden" style={{ height: 'calc(95vh - 60px)' }}>
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden" style={{ height: 'calc(95vh - 60px)', backgroundColor: '#111' }}>
           {/* Navigation Arrows */}
           {files.length > 1 && (
             <>
@@ -223,9 +223,9 @@ function Lightbox({ files, currentIndex, onClose, onPrevious, onNext, onDownload
           )}
 
           {type === 'audio' && (
-            <div className="flex flex-col items-center gap-4 p-8 bg-gray-800 rounded-lg">
-              <Music className="h-24 w-24 text-orange-400" />
-              <p className="text-white text-lg">{displayName}</p>
+            <div className="flex flex-col items-center gap-4 p-8 rounded-lg" style={{ backgroundColor: 'var(--accent)' }}>
+              <Music className="h-24 w-24 text-ds-amber" />
+              <p className="text-bg text-lg">{displayName}</p>
               <audio src={currentFile.url} controls autoPlay className="w-80" />
             </div>
           )}
@@ -239,9 +239,9 @@ function Lightbox({ files, currentIndex, onClose, onPrevious, onNext, onDownload
           )}
 
           {type === 'file' && (
-            <div className="flex flex-col items-center gap-4 p-8 bg-gray-800 rounded-lg">
-              <File className="h-24 w-24 text-blue-400" />
-              <p className="text-white text-lg">{displayName}</p>
+            <div className="flex flex-col items-center gap-4 p-8 rounded-lg" style={{ backgroundColor: 'var(--accent)' }}>
+              <File className="h-24 w-24 text-ds-blue" />
+              <p className="text-bg text-lg">{displayName}</p>
               <Button onClick={onDownload} className="gap-2">
                 <Download className="h-4 w-4" />
                 Download File
@@ -266,7 +266,7 @@ function MediaThumbnail({ file, onClick, onDownload, showDownload = true, size =
   }
 
   return (
-    <div className="group relative border rounded-lg overflow-hidden bg-gray-50 hover:border-blue-400 transition-colors">
+    <div className="group relative border rounded-lg overflow-hidden bg-surface2 hover:border-accent transition-colors">
       {/* Thumbnail Content */}
       <div 
         className={`${sizeClasses[size]} cursor-pointer flex items-center justify-center`}
@@ -292,38 +292,38 @@ function MediaThumbnail({ file, onClick, onDownload, showDownload = true, size =
         ) : type === 'pdf' ? (
           <div className="flex flex-col items-center justify-center p-2">
             <FileText className={`h-12 w-12 ${color}`} />
-            <span className="text-[10px] text-gray-500 mt-1 uppercase font-medium">PDF</span>
+            <span className="text-[10px] text-text-muted mt-1 uppercase font-medium">PDF</span>
           </div>
         ) : type === 'audio' ? (
           <div className="flex flex-col items-center justify-center p-2">
             <Music className={`h-12 w-12 ${color}`} />
-            <span className="text-[10px] text-gray-500 mt-1 uppercase font-medium">Audio</span>
+            <span className="text-[10px] text-text-muted mt-1 uppercase font-medium">Audio</span>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-2">
             <Icon className={`h-12 w-12 ${color}`} />
-            <span className="text-[10px] text-gray-500 mt-1 uppercase font-medium">File</span>
+            <span className="text-[10px] text-text-muted mt-1 uppercase font-medium">File</span>
           </div>
         )}
       </div>
 
       {/* Filename & Download */}
-      <div className="p-2 bg-white border-t">
-        <p className="text-xs text-gray-700 truncate" title={displayName}>
+      <div className="p-2 bg-surface border-t border-border">
+        <p className="text-xs text-text-secondary truncate" title={displayName}>
           {displayName}
         </p>
         {showDownload && (
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-2 right-2 h-7 w-7 p-0 bg-white/90 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-2 right-2 h-7 w-7 p-0 bg-surface/90 hover:bg-surface shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => {
               e.stopPropagation()
               onDownload()
             }}
             title="Download"
           >
-            <Download className="h-3.5 w-3.5 text-gray-600" />
+            <Download className="h-3.5 w-3.5 text-text-secondary" />
           </Button>
         )}
       </div>
@@ -350,7 +350,7 @@ export function MediaViewer({
 
   if (normalizedFiles.length === 0) {
     return (
-      <div className="text-sm text-gray-500 py-2">
+      <div className="text-sm text-text-muted py-2">
         {emptyMessage}
       </div>
     )
@@ -379,9 +379,9 @@ export function MediaViewer({
     <div>
       {title && (
         <div className="flex items-center gap-2 mb-2">
-          <ImageIcon className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">{title}</span>
-          <span className="text-xs text-gray-500">({normalizedFiles.length})</span>
+          <ImageIcon className="h-4 w-4 text-text-muted" />
+          <span className="text-sm font-medium text-text-secondary">{title}</span>
+          <span className="text-xs text-text-muted">({normalizedFiles.length})</span>
         </div>
       )}
       
@@ -437,7 +437,7 @@ export function MediaInline({ files, maxShow = 4 }: { files: MediaFile[] | strin
               setCurrentIndex(index)
               setLightboxOpen(true)
             }}
-            className="relative h-10 w-10 rounded border bg-gray-50 hover:border-blue-400 overflow-hidden flex items-center justify-center"
+            className="relative h-10 w-10 rounded border bg-surface2 hover:border-accent overflow-hidden flex items-center justify-center"
             title={getDisplayName(file)}
           >
             {type === 'image' ? (
@@ -454,7 +454,7 @@ export function MediaInline({ files, maxShow = 4 }: { files: MediaFile[] | strin
             setCurrentIndex(maxShow)
             setLightboxOpen(true)
           }}
-          className="h-10 w-10 rounded border bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600"
+          className="h-10 w-10 rounded border bg-surface2 hover:bg-border flex items-center justify-center text-xs font-medium text-text-muted"
         >
           +{remainingCount}
         </button>
@@ -572,10 +572,10 @@ export function MediaHoverPreview({
   }
 
   const arrowStyles: Record<string, string> = {
-    top: 'top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-gray-800',
-    bottom: 'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-gray-800',
-    left: 'left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-gray-800',
-    right: 'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-gray-800'
+    top: 'top-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-accent',
+    bottom: 'bottom-full left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-accent',
+    left: 'left-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-accent',
+    right: 'right-full top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-accent'
   }
 
   return (
@@ -593,9 +593,9 @@ export function MediaHoverPreview({
           ref={previewRef}
           className={`absolute z-50 ${positionStyles[previewPosition]} animate-in fade-in-0 zoom-in-95 duration-200`}
         >
-          <div className={`bg-gray-800 rounded-lg shadow-2xl overflow-hidden ${sizeClasses[previewSize].width}`}>
+          <div className={`rounded-lg shadow-2xl overflow-hidden ${sizeClasses[previewSize].width}`} style={{ backgroundColor: 'var(--accent)' }}>
             {/* Preview Content */}
-            <div className={`relative ${sizeClasses[previewSize].height} bg-gray-900 flex items-center justify-center`}>
+            <div className={`relative ${sizeClasses[previewSize].height} flex items-center justify-center`} style={{ backgroundColor: '#111' }}>
               {type === 'image' && (
                 <img
                   src={normalizedFile.url}
@@ -617,14 +617,14 @@ export function MediaHoverPreview({
                   />
                   {!isPlaying && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <div className="bg-white/90 rounded-full p-3">
-                        <Play className="h-8 w-8 text-gray-800 fill-gray-800" />
+                      <div className="bg-surface/90 rounded-full p-3">
+                        <Play className="h-8 w-8 text-text-primary fill-text-primary" />
                       </div>
                     </div>
                   )}
                   {isPlaying && (
                     <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--ds-red)' }} />
                       Preview
                     </div>
                   )}
@@ -633,8 +633,8 @@ export function MediaHoverPreview({
 
               {type === 'audio' && (
                 <div className="flex flex-col items-center justify-center gap-3 p-4">
-                  <div className="bg-orange-500/20 rounded-full p-4">
-                    <Music className="h-12 w-12 text-orange-400" />
+                  <div className="rounded-full p-4" style={{ backgroundColor: 'rgba(146,64,14,0.2)' }}>
+                    <Music className="h-12 w-12 text-ds-amber" />
                   </div>
                   <audio
                     src={normalizedFile.url}
@@ -657,10 +657,10 @@ export function MediaHoverPreview({
 
               {type === 'file' && (
                 <div className="flex flex-col items-center justify-center gap-2">
-                  <div className="bg-blue-500/20 rounded-full p-4">
+                  <div className="rounded-full p-4" style={{ backgroundColor: 'rgba(42,40,37,0.4)' }}>
                     <Icon className={`h-12 w-12 ${color}`} />
                   </div>
-                  <span className="text-gray-400 text-xs uppercase">Document</span>
+                  <span className="text-text-muted text-xs uppercase">Document</span>
                 </div>
               )}
 
@@ -673,11 +673,11 @@ export function MediaHoverPreview({
 
             {/* File name footer */}
             {showFileName && (
-              <div className="px-3 py-2 bg-gray-800 border-t border-gray-700">
-                <p className="text-white text-xs truncate" title={displayName}>
+              <div className="px-3 py-2 border-t" style={{ backgroundColor: 'var(--accent)', borderColor: 'rgba(255,255,255,0.1)' }}>
+                <p className="text-bg text-xs truncate" title={displayName}>
                   {displayName}
                 </p>
-                <p className="text-gray-400 text-[10px] uppercase mt-0.5">
+                <p className="text-[10px] uppercase mt-0.5" style={{ color: 'rgba(247,246,243,0.5)' }}>
                   {type === 'image' ? 'Image' : type === 'video' ? 'Video' : type === 'audio' ? 'Audio' : type === 'pdf' ? 'PDF Document' : 'File'}
                 </p>
               </div>
@@ -709,7 +709,7 @@ export function FilePreviewLink({ file, className = '', showIcon = true, onClick
     <MediaHoverPreview file={file}>
       <button
         onClick={onClick || (() => window.open(normalizedFile.url, '_blank'))}
-        className={`inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline ${className}`}
+        className={`inline-flex items-center gap-2 text-sm text-ds-blue hover:underline ${className}`}
       >
         {showIcon && <Icon className={`h-4 w-4 ${color}`} />}
         <span className="truncate max-w-[200px]">{displayName}</span>
@@ -733,11 +733,11 @@ export function AttachmentChip({ file, onRemove, onClick, className = '' }: Atta
 
   return (
     <MediaHoverPreview file={file} previewSize="sm">
-      <div className={`inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm transition-colors ${className}`}>
+      <div className={`inline-flex items-center gap-1.5 px-2 py-1 bg-surface2 hover:bg-border rounded-full text-sm transition-colors ${className}`}>
         <Icon className={`h-3.5 w-3.5 ${color}`} />
         <button
           onClick={onClick || (() => window.open(normalizedFile.url, '_blank'))}
-          className="truncate max-w-[150px] text-gray-700 hover:text-gray-900"
+          className="truncate max-w-[150px] text-text-secondary hover:text-text-primary"
         >
           {displayName}
         </button>
@@ -747,7 +747,7 @@ export function AttachmentChip({ file, onRemove, onClick, className = '' }: Atta
               e.stopPropagation()
               onRemove()
             }}
-            className="text-gray-400 hover:text-red-500 ml-1"
+            className="text-text-muted hover:text-ds-red ml-1"
           >
             <X className="h-3.5 w-3.5" />
           </button>

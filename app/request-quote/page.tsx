@@ -116,24 +116,24 @@ export default function RequestQuotePage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl shadow-xl">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
+        <Card className="w-full max-w-2xl">
           <CardContent className="p-8 text-center">
             <div className="mb-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <MessageSquare className="w-8 h-8" style={{ color: 'var(--green)' }} />
               </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-medium mb-2" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>
                 Quote Request Submitted!
               </h1>
-              <p className="text-gray-600">
+              <p style={{ color: 'var(--text-secondary)' }}>
                 Thank you for your interest in TickTrack Pro custom solutions.
               </p>
             </div>
 
-            <div className="bg-green-50 rounded-lg p-6 mb-6">
-              <h3 className="font-semibold text-green-900 mb-2">What happens next?</h3>
-              <div className="text-left space-y-2 text-green-800">
+            <div className="rounded-lg p-6 mb-6" style={{ backgroundColor: 'var(--green-bg)' }}>
+              <h3 className="font-medium mb-2" style={{ color: 'var(--green)' }}>What happens next?</h3>
+              <div className="text-left space-y-2" style={{ color: 'var(--green)' }}>
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
                   <span>Our team will review your requirements within 24 hours</span>
@@ -149,7 +149,7 @@ export default function RequestQuotePage() {
               </div>
             </div>
 
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
               We've sent a confirmation email to <strong>{formData.contactEmail}</strong>
             </p>
 
@@ -168,13 +168,13 @@ export default function RequestQuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+    <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="container mx-auto px-6">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl mb-4" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>
             Request Custom Quote
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl max-w-3xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
             Tell us about your specific requirements and we'll create a tailored 
             TickTrack Pro solution for your organization.
           </p>
@@ -207,7 +207,7 @@ export default function RequestQuotePage() {
                           id="industry"
                           value={formData.industry}
                           onChange={(e) => handleInputChange('industry', e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 rounded-md" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                         >
                           <option value="">Select industry</option>
                           <option value="technology">Technology</option>
@@ -238,7 +238,7 @@ export default function RequestQuotePage() {
                           id="companySize"
                           value={formData.companySize}
                           onChange={(e) => handleInputChange('companySize', e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 rounded-md" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                         >
                           <option value="">Select size</option>
                           <option value="1-10">1-10 employees</option>
@@ -309,7 +309,7 @@ export default function RequestQuotePage() {
                           id="timeline"
                           value={formData.timeline}
                           onChange={(e) => handleInputChange('timeline', e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 rounded-md" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                         >
                           <option value="">Select timeline</option>
                           <option value="1-3 months">1-3 months</option>
@@ -325,7 +325,7 @@ export default function RequestQuotePage() {
                           id="budget"
                           value={formData.budget}
                           onChange={(e) => handleInputChange('budget', e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 rounded-md" style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                         >
                           <option value="">Select budget range</option>
                           <option value="<10k">Less than $10,000</option>
@@ -461,19 +461,19 @@ export default function RequestQuotePage() {
                   <CardContent>
                     <div className="space-y-3">
                       <div className="flex items-center text-sm">
-                        <Calculator className="h-4 w-4 text-green-500 mr-2" />
+                        <Calculator className="h-4 w-4 mr-2" style={{ color: 'var(--green)' }} />
                         Detailed project proposal
                       </div>
                       <div className="flex items-center text-sm">
-                        <Clock className="h-4 w-4 text-green-500 mr-2" />
+                        <Clock className="h-4 w-4 mr-2" style={{ color: 'var(--green)' }} />
                         Project timeline & milestones
                       </div>
                       <div className="flex items-center text-sm">
-                        <Users className="h-4 w-4 text-green-500 mr-2" />
+                        <Users className="h-4 w-4 mr-2" style={{ color: 'var(--green)' }} />
                         Dedicated project team
                       </div>
                       <div className="flex items-center text-sm">
-                        <MessageSquare className="h-4 w-4 text-green-500 mr-2" />
+                        <MessageSquare className="h-4 w-4 mr-2" style={{ color: 'var(--green)' }} />
                         Free consultation call
                       </div>
                     </div>
@@ -485,7 +485,7 @@ export default function RequestQuotePage() {
                     <CardTitle>Need Help?</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                       Not sure what you need? Our solution architects can help you 
                       define the perfect custom solution.
                     </p>

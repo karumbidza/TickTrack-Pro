@@ -120,14 +120,14 @@ function FilePreviewItem({
       <div className="flex items-center space-x-2 flex-1 min-w-0">
         {/* Thumbnail preview for images */}
         {mediaFile.preview ? (
-          <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-gray-100">
+          <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0" style={{ backgroundColor: 'var(--surface2)' }}>
             <img src={mediaFile.preview} alt="" className="w-full h-full object-cover" />
           </div>
         ) : mediaFile.type === 'video' && videoPreviewUrl ? (
           <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-black relative">
             <video src={videoPreviewUrl} className="w-full h-full object-cover" muted />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Play className="h-3 w-3 text-white fill-white" />
+              <Play className="h-3 w-3 text-bg fill-white" />
             </div>
           </div>
         ) : (
@@ -135,7 +135,7 @@ function FilePreviewItem({
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{mediaFile.file.name}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
             {formatFileSize(mediaFile.file.size)} • {mediaFile.type}
           </p>
         </div>
@@ -145,7 +145,7 @@ function FilePreviewItem({
         size="sm"
         variant="ghost"
         onClick={onRemove}
-        className="text-red-500 hover:text-red-700"
+        className="text-ds-red hover:text-ds-red"
       >
         <X className="h-3 w-3" />
       </Button>
@@ -153,8 +153,8 @@ function FilePreviewItem({
       {/* Hover Preview Popup */}
       {isHovering && (mediaFile.preview || videoPreviewUrl) && (
         <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-0 zoom-in-95 duration-200">
-          <div className="bg-gray-800 rounded-lg shadow-2xl overflow-hidden w-64">
-            <div className="relative h-44 bg-gray-900 flex items-center justify-center">
+          <div className="bg-accent rounded-lg shadow-2xl overflow-hidden w-64">
+            <div className="relative h-44 bg-accent flex items-center justify-center">
               {mediaFile.preview && (
                 <img
                   src={mediaFile.preview}
@@ -172,14 +172,14 @@ function FilePreviewItem({
                   playsInline
                 />
               )}
-              <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+              <div className="absolute top-2 right-2 bg-black/60 text-bg text-xs px-2 py-1 rounded flex items-center gap-1">
                 <Eye className="h-3 w-3" />
                 Preview
               </div>
             </div>
-            <div className="px-3 py-2 bg-gray-800 border-t border-gray-700">
-              <p className="text-white text-xs truncate">{mediaFile.file.name}</p>
-              <p className="text-gray-400 text-[10px] uppercase mt-0.5">{mediaFile.type}</p>
+            <div className="px-3 py-2 bg-accent border-t border-gray-700">
+              <p className="text-bg text-xs truncate">{mediaFile.file.name}</p>
+              <p className="text-[10px] uppercase mt-0.5" style={{ color: 'var(--text-muted)' }}>{mediaFile.type}</p>
             </div>
           </div>
         </div>
@@ -197,6 +197,8 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
   const setOpen = onOpenChange || setInternalOpen
   
   const [loading, setLoading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
   const [assets, setAssets] = useState<Asset[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
@@ -274,17 +276,20 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
     const validTypes = ['image/*', 'video/*', 'audio/*', '.pdf', '.doc', '.docx', '.txt']
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    const maxImageSize = 10 * 1024 * 1024 // 10MB for images/docs
+    const maxVideoSize = 100 * 1024 * 1024 // 100MB for videos
 
     const newFiles: MediaFile[] = []
 
     files.forEach(file => {
+      const fileType = getFileType(file)
+      const maxSize = fileType === 'video' ? maxVideoSize : maxImageSize
+      
       if (file.size > maxSize) {
-        toast.error(`File ${file.name} is too large. Maximum size is 10MB.`)
+        const maxSizeMB = fileType === 'video' ? '100' : '10'
+        toast.error(`File ${file.name} is too large. Maximum size is ${maxSizeMB}MB.`)
         return
       }
-
-      const fileType = getFileType(file)
       const mediaFile: MediaFile = {
         file,
         type: fileType
@@ -335,6 +340,8 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
     }
 
     setLoading(true)
+    setIsUploading(mediaFiles.length > 0)
+    setUploadProgress(0)
 
     try {
       // Generate ticket number
@@ -370,25 +377,62 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
         formDataToSend.append(`fileTypes`, mediaFile.type)
       })
 
-      const response = await fetch('/api/tickets', {
-        method: 'POST',
-        body: formDataToSend
+      // Use XMLHttpRequest for upload progress
+      const result = await new Promise<{success: boolean, data?: any, error?: string}>((resolve) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100)
+            setUploadProgress(percent)
+          }
+        })
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve({ success: true, data })
+            } catch {
+              resolve({ success: false, error: 'Invalid response' })
+            }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText)
+              resolve({ success: false, error: error.error || 'Failed to create ticket' })
+            } catch {
+              resolve({ success: false, error: `Failed to create ticket (${xhr.status})` })
+            }
+          }
+        })
+        
+        xhr.addEventListener('error', () => {
+          resolve({ success: false, error: 'Network error during upload' })
+        })
+        
+        xhr.addEventListener('abort', () => {
+          resolve({ success: false, error: 'Upload cancelled' })
+        })
+        
+        xhr.open('POST', '/api/tickets')
+        xhr.send(formDataToSend)
       })
 
-      if (response.ok) {
+      if (result.success) {
         toast.success(`Ticket ${ticketNumber} created successfully!`)
         onTicketCreated()
         setOpen(false)
         resetForm()
       } else {
-        const errorData = await response.json()
-        toast.error(errorData.error || 'Failed to create ticket')
+        toast.error(result.error || 'Failed to create ticket')
       }
     } catch (error) {
       console.error('Failed to create ticket:', error)
       toast.error('Failed to create ticket')
     } finally {
       setLoading(false)
+      setIsUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -428,7 +472,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
           {/* Reporter Information */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
+              <h3 className="font-medium mb-3 flex items-center">
                 <User className="h-4 w-4 mr-2" />
                 Reporter Information
               </h3>
@@ -459,7 +503,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
           {/* Ticket Details */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
+              <h3 className="font-medium mb-3 flex items-center">
                 <FileText className="h-4 w-4 mr-2" />
                 Ticket Details
               </h3>
@@ -537,7 +581,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
           {/* Asset Selection */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
+              <h3 className="font-medium mb-3 flex items-center">
                 <Wrench className="h-4 w-4 mr-2" />
                 Asset Information
               </h3>
@@ -571,8 +615,8 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
                     </SelectContent>
                   </Select>
                   {selectedAsset && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded-md">
-                      <div className="text-sm text-gray-600">
+                    <div className="mt-2 p-2 rounded-md" style={{ backgroundColor: 'var(--surface2)' }}>
+                      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         <div><strong>Category:</strong> {selectedAsset.category?.name || 'Uncategorized'}</div>
                         <div><strong>Location:</strong> {selectedAsset.location}</div>
                         {selectedAsset.brand && <div><strong>Brand:</strong> {selectedAsset.brand} {selectedAsset.model}</div>}
@@ -599,7 +643,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
                     </SelectContent>
                   </Select>
                   {formData.assetId && selectedAsset && (
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs mt-1" style={{ color: 'var(--accent)' }}>
                       Auto-filled from selected asset
                     </p>
                   )}
@@ -611,7 +655,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
           {/* Media Attachments */}
           <Card>
             <CardContent className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
+              <h3 className="font-medium mb-3 flex items-center">
                 <Upload className="h-4 w-4 mr-2" />
                 Media Attachments
               </h3>
@@ -638,7 +682,7 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
                       Choose Files or Drag & Drop
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                     Supported: Images, Videos, Audio files, PDFs, Documents (Max 10MB per file)
                   </p>
                 </div>
@@ -664,18 +708,38 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
           </Card>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating Ticket...' : 'Create Ticket'}
-            </Button>
+          <div className="pt-4 border-t">
+            {/* Upload Progress Bar */}
+            {isUploading && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="font-medium" style={{ color: 'var(--blue)' }}>
+                    Uploading {mediaFiles.length} file{mediaFiles.length > 1 ? 's' : ''}...
+                  </span>
+                  <span className="font-medium" style={{ color: 'var(--blue)' }}>{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%`, backgroundColor: 'var(--blue)' }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (isUploading ? `Uploading ${uploadProgress}%...` : 'Creating Ticket...') : 'Create Ticket'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

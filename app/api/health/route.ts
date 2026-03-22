@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { redisClient, isRedisAvailable } from '@/lib/redis'
+import { getAllCacheStats } from '@/lib/cache'
 
 /**
- * HEALTH CHECK ENDPOINT
- * =====================
+ * HEALTH CHECK ENDPOINT (ENHANCED)
+ * =================================
  * Returns the health status of the application and its dependencies.
  * Use this for monitoring, load balancer health checks, and debugging.
  * 
- * GET /api/health
- * GET /api/health?detailed=true  (includes more info)
+ * GET /api/health                    - Basic health check
+ * GET /api/health?detailed=true      - Includes memory, cache, CPU info
+ * GET /api/health?secret=<key>       - Includes sensitive debug info
  */
 
 interface HealthStatus {
@@ -17,10 +19,13 @@ interface HealthStatus {
   timestamp: string
   uptime: number
   version: string
+  environment: string
   checks: {
     database: { status: string; latency?: number; error?: string }
     redis: { status: string; latency?: number; error?: string }
-    memory: { used: number; total: number; percentage: number }
+    memory: { used: number; total: number; percentage: number; rss?: number }
+    cache?: { short: object; medium: object; long: object }
+    cpu?: { loadAverage: number[] }
   }
 }
 
@@ -28,12 +33,15 @@ export async function GET(request: Request) {
   const startTime = Date.now()
   const { searchParams } = new URL(request.url)
   const detailed = searchParams.get('detailed') === 'true'
+  const secretKey = searchParams.get('secret')
+  const isAuthorized = secretKey === process.env.HEALTH_CHECK_SECRET
 
   const health: HealthStatus = {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
     checks: {
       database: { status: 'unknown' },
       redis: { status: 'unknown' },
@@ -87,10 +95,28 @@ export async function GET(request: Request) {
   // Check memory
   if (detailed && typeof process !== 'undefined' && process.memoryUsage) {
     const mem = process.memoryUsage()
+    const os = await import('os')
+    
     health.checks.memory = {
       used: Math.round(mem.heapUsed / 1024 / 1024),
       total: Math.round(mem.heapTotal / 1024 / 1024),
-      percentage: Math.round((mem.heapUsed / mem.heapTotal) * 100)
+      percentage: Math.round((mem.heapUsed / mem.heapTotal) * 100),
+      rss: Math.round(mem.rss / 1024 / 1024) // Resident Set Size
+    }
+
+    // Add CPU load average
+    health.checks.cpu = {
+      loadAverage: os.loadavg()
+    }
+
+    // Add cache stats
+    health.checks.cache = getAllCacheStats()
+  }
+
+  // Memory warning - flag as degraded if using > 90% heap
+  if (health.checks.memory.percentage > 90) {
+    if (health.status !== 'unhealthy') {
+      health.status = 'degraded'
     }
   }
 

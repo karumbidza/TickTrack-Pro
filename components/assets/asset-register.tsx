@@ -245,13 +245,13 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      ACTIVE: 'bg-green-100 text-green-800',
-      MAINTENANCE: 'bg-yellow-100 text-yellow-800',
-      OUT_OF_SERVICE: 'bg-red-100 text-red-800',
-      RETIRED: 'bg-gray-100 text-gray-800',
-      REPAIR_NEEDED: 'bg-orange-100 text-orange-800'
+      ACTIVE: 'badge-mono badge-green',
+      MAINTENANCE: 'badge-mono badge-amber',
+      OUT_OF_SERVICE: 'badge-mono badge-red',
+      RETIRED: 'badge-mono badge-neutral',
+      REPAIR_NEEDED: 'badge-mono badge-amber'
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return colors[status] || 'badge-mono badge-neutral'
   }
 
   const getStatusIcon = (status: string) => {
@@ -316,7 +316,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                 justifyContent: 'center'
               }}
             >
-              <Image className="h-5 w-5 text-gray-400" />
+              <Image className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </Box>
           )
         }
@@ -355,11 +355,11 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                   bottom: 2,
                   right: 2,
                   bgcolor: 'rgba(0,0,0,0.7)',
-                  color: 'white',
+                  color: 'var(--bg)',
                   fontSize: '0.6rem',
                   px: 0.5,
                   borderRadius: 0.5,
-                  fontWeight: 600
+                  fontWeight: 500
                 }}
               >
                 +{images.length - 1}
@@ -378,9 +378,9 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Asset>) => (
         <Box sx={{ textAlign: 'center' }}>
-          <p className="font-medium text-gray-900 text-sm truncate">{params.row.name}</p>
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{params.row.name}</p>
           {params.row.brand && (
-            <p className="text-xs text-gray-500 truncate">{params.row.brand} {params.row.model}</p>
+            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{params.row.brand} {params.row.model}</p>
           )}
         </Box>
       ),
@@ -410,10 +410,10 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Asset>) => (
         <Box sx={{ textAlign: 'center' }}>
-          <p className="text-xs font-mono text-gray-700">{params.row.serialNumber || '-'}</p>
+          <p className="text-xs font-mono text-text-secondary">{params.row.serialNumber || '-'}</p>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 0.5 }}>
-            <MapPin className="h-3 w-3 text-gray-400" />
-            <span className="text-xs text-gray-500 truncate">{params.row.location}</span>
+            <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+            <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{params.row.location}</span>
           </Box>
         </Box>
       ),
@@ -454,14 +454,14 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                 {tickets.slice(0, 5).map((ticket, idx) => (
                   <Box key={idx} sx={{ mb: 1, borderBottom: idx < Math.min(tickets.length, 5) - 1 ? '1px solid #444' : 'none', pb: 0.5 }}>
                     <p className="text-sm">{ticket.title}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {ticket.status} • {new Date(ticket.createdAt).toLocaleDateString()}
                       {ticket.totalCost ? ` • $${ticket.totalCost}` : ''}
                     </p>
                   </Box>
                 ))}
                 {tickets.length > 5 && (
-                  <p className="text-xs text-gray-400">+{tickets.length - 5} more tickets...</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>+{tickets.length - 5} more tickets...</p>
                 )}
                 {params.row.totalRepairCost && params.row.totalRepairCost > 0 && (
                   <p className="text-sm font-medium mt-2 pt-1 border-t border-gray-600">
@@ -470,7 +470,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                 )}
               </>
             ) : (
-              <p className="text-sm text-gray-400">No tickets raised</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No tickets raised</p>
             )}
           </Box>
         ) : (
@@ -481,10 +481,10 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                 <p key={idx} className="text-sm mb-1">• {ticket.title}</p>
               ))
             ) : (
-              <p className="text-sm text-gray-400">No tickets raised</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No tickets raised</p>
             )}
             {tickets.length > 5 && (
-              <p className="text-xs text-gray-400">+{tickets.length - 5} more...</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>+{tickets.length - 5} more...</p>
             )}
           </Box>
         )
@@ -505,8 +505,8 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, cursor: 'pointer' }}>
-              <FileText className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-700">{ticketCount} tickets</span>
+              <FileText className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{ticketCount} tickets</span>
             </Box>
           </Tooltip>
         )
@@ -587,14 +587,14 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
   }
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="bg-surface2 p-5">
       <div className="space-y-5">
         {/* User Branch Banner */}
         {userBranches.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center gap-3">
-            <MapPin className="h-5 w-5 text-blue-600" />
+          <div className="rounded-lg px-4 py-3 flex items-center gap-3" style={{ backgroundColor: 'var(--blue-bg)', border: '1px solid var(--ds-blue)' }}>
+            <MapPin className="h-5 w-5" style={{ color: 'var(--ds-blue)' }} />
             <div>
-              <span className="text-sm text-blue-800">
+              <span className="text-sm text-ds-blue">
                 <span className="font-medium">Your Branch{userBranches.length > 1 ? 'es' : ''}:</span>{' '}
                 {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
               </span>
@@ -605,8 +605,8 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Asset Register</h1>
-            <p className="text-gray-600">Manage your company assets and equipment</p>
+            <h1 className="text-3xl" style={{ fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>Asset Register</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Manage your company assets and equipment</p>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -642,37 +642,37 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="stat-number">{stats.total}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
+              <div className="stat-number">{stats.active}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Under Maintenance</CardTitle>
-              <Wrench className="h-4 w-4 text-yellow-500" />
+              <Wrench className="h-4 w-4" style={{ color: 'var(--ds-amber)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.maintenance}</div>
+              <div className="stat-number">{stats.maintenance}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Out of Service</CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-500" />
+              <AlertCircle className="h-4 w-4" style={{ color: 'var(--ds-red)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.outOfService}</div>
+              <div className="stat-number">{stats.outOfService}</div>
             </CardContent>
           </Card>
         </div>
@@ -682,7 +682,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
           <CardContent className="p-4">
             <div className="flex items-center space-x-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   placeholder="Search assets by name, number, location, or serial..."
                   value={searchTerm}
@@ -737,11 +737,11 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
           <CardContent>
             {filteredAssets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <FileText className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                   {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                   {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
                 </p>
                 <Button onClick={() => setShowCreateDialog(true)}>
@@ -778,7 +778,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             {/* Image Hover Popup */}
             {hoveredImageAsset && hoveredImageAsset.images && hoveredImageAsset.images.length > 0 && (
               <div
-                className="fixed z-50 bg-white rounded-lg shadow-2xl border border-gray-200 p-2 pointer-events-none"
+                className="fixed z-50 rounded-lg shadow-lg p-2 pointer-events-none" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
                 style={{
                   left: Math.min(imagePopupPosition.x, window.innerWidth - 340),
                   top: Math.max(10, Math.min(imagePopupPosition.y - 100, window.innerHeight - 350)),
@@ -791,10 +791,10 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                     className="w-80 h-60 object-cover rounded-md"
                   />
                   <div className="px-1">
-                    <p className="font-semibold text-sm text-gray-900">{hoveredImageAsset.name}</p>
-                    <p className="text-xs text-gray-500">{hoveredImageAsset.assetNumber}</p>
+                    <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{hoveredImageAsset.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hoveredImageAsset.assetNumber}</p>
                     {hoveredImageAsset.images.length > 1 && (
-                      <p className="text-xs text-blue-600 mt-1">
+                      <p className="text-xs mt-1" style={{ color: 'var(--ds-blue)' }}>
                         {hoveredImageAsset.images.length} photos available
                       </p>
                     )}
@@ -895,24 +895,24 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             {selectedAsset && (
               <div className="space-y-4">
                 {/* Asset Summary */}
-                <div className="bg-gray-50 rounded-lg p-4 border">
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">Asset Number</p>
+                      <p className="section-label">Asset Number</p>
                       <p className="font-medium">{selectedAsset.assetNumber}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Category</p>
+                      <p className="section-label">Category</p>
                       <p className="font-medium">{selectedAsset.category?.name || 'N/A'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Status</p>
+                      <p className="section-label">Status</p>
                       <Badge variant={selectedAsset.status === 'ACTIVE' ? 'default' : 'secondary'}>
                         {selectedAsset.status?.replace('_', ' ')}
                       </Badge>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Location</p>
+                      <p className="section-label">Location</p>
                       <p className="font-medium">{selectedAsset.location}</p>
                     </div>
                   </div>
@@ -920,33 +920,33 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 
                 {/* Cost Summary - Only visible to admins */}
                 {userRole !== 'END_USER' && (
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', border: '1px solid var(--ds-blue)' }}>
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--ds-blue)' }}>
                     <DollarSign className="h-4 w-4" />
                     Cost Summary
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-blue-700">Purchase Price</p>
-                      <p className="font-bold text-blue-900">
+                      <p className="section-label" style={{ color: 'var(--ds-blue)' }}>Purchase Price</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                         ${selectedAsset.purchasePrice?.toLocaleString() || '0'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-blue-700">Repair Costs</p>
-                      <p className="font-bold text-blue-900">
+                      <p className="section-label" style={{ color: 'var(--ds-blue)' }}>Repair Costs</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                         ${selectedAsset.totalRepairCost?.toLocaleString() || '0'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-blue-700">Maintenance Costs</p>
-                      <p className="font-bold text-blue-900">
+                      <p className="section-label" style={{ color: 'var(--ds-blue)' }}>Maintenance Costs</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                         ${selectedAsset.totalMaintenanceCost?.toLocaleString() || '0'}
                       </p>
                     </div>
-                    <div className="bg-blue-100 rounded p-2 -m-1">
-                      <p className="text-xs text-blue-700">Total Cost</p>
-                      <p className="font-bold text-lg text-blue-900">
+                    <div className="rounded p-2 -m-1" style={{ backgroundColor: 'var(--surface2)' }}>
+                      <p className="section-label" style={{ color: 'var(--ds-blue)' }}>Total Cost</p>
+                      <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                         ${selectedAsset.totalCost?.toLocaleString() || '0'}
                       </p>
                     </div>
@@ -956,13 +956,13 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 
                 {/* Repair History List */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                     <Wrench className="h-4 w-4" />
                     Repair Tickets ({selectedAsset.repairHistory?.length || 0})
                   </h4>
-                  
+
                   {!selectedAsset.repairHistory || selectedAsset.repairHistory.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
+                    <div className="text-center py-8 rounded-lg" style={{ color: 'var(--text-muted)', backgroundColor: 'var(--surface2)', border: '1px dashed var(--border-strong)' }}>
                       <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No repair history found for this asset</p>
                     </div>
@@ -971,20 +971,20 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                       {selectedAsset.repairHistory.map((repair, idx) => (
                         <div 
                           key={repair.id || idx} 
-                          className="bg-white rounded-lg border overflow-hidden"
+                          className="rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
                         >
                           {/* Clickable Header */}
                           <div 
-                            className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                            className="flex items-center justify-between p-3 cursor-pointer transition-colors hover:opacity-90"
                             onClick={() => setExpandedRepairId(expandedRepairId === repair.id ? null : repair.id)}
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform flex-shrink-0 ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} />
-                                <span className="font-mono text-xs text-blue-600 font-medium">#{repair.ticketNumber}</span>
-                                <span className="font-medium text-gray-800">{repair.title}</span>
+                                <ChevronRight className={`h-4 w-4 transition-transform flex-shrink-0 ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} style={{ color: 'var(--text-muted)' }} />
+                                <span className="font-mono text-xs font-medium" style={{ color: 'var(--ds-blue)' }}>#{repair.ticketNumber}</span>
+                                <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{repair.title}</span>
                               </div>
-                              <div className="flex items-center gap-3 ml-6 mt-1 text-xs text-gray-500 flex-wrap">
+                              <div className="flex items-center gap-3 ml-6 mt-1 text-xs flex-wrap" style={{ color: 'var(--text-muted)' }}>
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
                                   {new Date(repair.createdAt).toLocaleDateString()}
@@ -1000,7 +1000,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               {repair.invoiceAmount && (
-                                <span className="text-sm font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                                <span className="text-sm font-medium px-2 py-0.5 rounded" style={{ color: 'var(--green)', backgroundColor: 'var(--green-bg)' }}>
                                   ${repair.invoiceAmount.toLocaleString()}
                                 </span>
                               )}
@@ -1018,15 +1018,15 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                           
                           {/* Expanded Details */}
                           {expandedRepairId === repair.id && (
-                            <div className="px-4 pb-4 pt-2 bg-gray-50 border-t space-y-3">
+                            <div className="px-4 pb-4 pt-2 bg-surface2 border-t space-y-3">
                               {/* Basic Info Grid */}
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500">Type</p>
-                                  <p className="text-gray-900">{repair.type?.replace('_', ' ') || 'N/A'}</p>
+                                  <p className="section-label">Type</p>
+                                  <p style={{ color: 'var(--text-primary)' }}>{repair.type?.replace('_', ' ') || 'N/A'}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500">Priority</p>
+                                  <p className="section-label">Priority</p>
                                   <Badge variant={
                                     repair.priority === 'CRITICAL' ? 'destructive' :
                                     repair.priority === 'HIGH' ? 'destructive' :
@@ -1037,28 +1037,28 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                                   </Badge>
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500">Contractor</p>
-                                  <p className="text-gray-900">{repair.contractorName || 'Unassigned'}</p>
+                                  <p className="section-label">Contractor</p>
+                                  <p style={{ color: 'var(--text-primary)' }}>{repair.contractorName || 'Unassigned'}</p>
                                   {repair.contractorEmail && (
-                                    <p className="text-xs text-gray-500">{repair.contractorEmail}</p>
+                                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{repair.contractorEmail}</p>
                                   )}
                                 </div>
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500">Invoice</p>
+                                  <p className="section-label">Invoice</p>
                                   {repair.invoiceNumber ? (
                                     <div>
-                                      <p className="text-gray-900 font-mono text-xs">{repair.invoiceNumber}</p>
-                                      <p className="text-sm font-semibold text-green-700">
+                                      <p className="font-mono text-xs" style={{ color: 'var(--text-primary)' }}>{repair.invoiceNumber}</p>
+                                      <p className="text-sm font-medium" style={{ color: 'var(--green)' }}>
                                         ${repair.invoiceAmount?.toLocaleString() || '0'}
                                         <span className={`ml-1 text-xs font-normal ${
-                                          repair.invoiceStatus === 'PAID' ? 'text-green-600' : 'text-yellow-600'
+                                          repair.invoiceStatus === 'PAID' ? 'text-ds-green' : 'text-ds-amber'
                                         }`}>
                                           ({repair.invoiceStatus})
                                         </span>
                                       </p>
                                     </div>
                                   ) : (
-                                    <p className="text-gray-400">No invoice</p>
+                                    <p style={{ color: 'var(--text-muted)' }}>No invoice</p>
                                   )}
                                 </div>
                               </div>
@@ -1066,24 +1066,24 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
                               {/* Original Issue Description */}
                               {repair.description && (
                                 <div>
-                                  <p className="text-xs font-medium text-gray-500 mb-1">Original Issue</p>
-                                  <p className="text-sm text-gray-700 bg-white p-2 rounded border">{repair.description}</p>
+                                  <p className="section-label mb-1">Original Issue</p>
+                                  <p className="text-sm p-2 rounded" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}>{repair.description}</p>
                                 </div>
                               )}
                               
                               {/* Approved Work Description */}
                               {repair.workDescription && repair.workDescriptionApproved && (
                                 <div>
-                                  <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                                  <p className="section-label mb-1 flex items-center gap-1" style={{ color: 'var(--green)' }}>
                                     <CheckCircle className="h-3 w-3" />
                                     Approved Work Description
                                   </p>
-                                  <p className="text-sm text-gray-700 bg-green-50 p-2 rounded border border-green-200 whitespace-pre-wrap">{repair.workDescription}</p>
+                                  <p className="text-sm p-2 rounded whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>{repair.workDescription}</p>
                                 </div>
                               )}
                               
                               {/* Timeline */}
-                              <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
+                              <div className="flex items-center gap-4 text-xs pt-2 border-t" style={{ color: 'var(--text-muted)' }}>
                                 <span>Created: {new Date(repair.createdAt).toLocaleString()}</span>
                                 {repair.completedAt && (
                                   <span>Completed: {new Date(repair.completedAt).toLocaleString()}</span>
@@ -1253,7 +1253,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
               </SelectContent>
             </Select>
             {categories.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">
+              <p className="text-xs text-ds-amber mt-1">
                 <Button variant="link" className="h-auto p-0 text-xs" onClick={() => onOpenCategoryManager?.()}>
                   Click here to create categories first
                 </Button>
@@ -1308,9 +1308,9 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
                   id="branchId"
                   value={branches.find(b => b.id === session.user.branchId)?.name || 'Your Assigned Branch'}
                   disabled
-                  className="bg-gray-100"
+                  className="bg-surface2"
                 />
-                <span className="text-xs text-gray-500">🔒 Locked to your site</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>🔒 Locked to your site</span>
               </div>
             ) : (
               // Fallback for admins without specific branch assignment
@@ -1367,7 +1367,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
         </div>
 
         <div className="border rounded-lg p-4 space-y-3">
-          <Label className="text-base font-semibold flex items-center gap-2">
+          <Label className="text-base font-medium flex items-center gap-2">
             <Image className="h-4 w-4" />
             Asset Images
           </Label>
@@ -1390,7 +1390,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
                   <button
                     type="button"
                     onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                    className="absolute -top-2 -right-2 bg-red-bg text-bg rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-bg"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -1398,7 +1398,7 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
               ))}
             </div>
           )}
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-text-muted">
             {images.length > 0 ? `${images.length} image(s) selected` : 'Select images to upload with the asset'}
           </p>
         </div>
@@ -1479,12 +1479,12 @@ function DecommissionForm({ asset, onDecommissioned, onCancel }: DecommissionFor
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+      <div className="bg-amber-bg border border-amber-200 rounded-lg p-4 mb-4">
         <div className="flex items-start gap-2">
-          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-ds-amber mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-800">Admin Approval Required</p>
-            <p className="text-sm text-amber-700 mt-1">
+            <p className="text-sm font-medium text-ds-amber">Admin Approval Required</p>
+            <p className="text-sm text-ds-amber mt-1">
               Decommission requests require admin approval. Your request will be reviewed and you&apos;ll be notified of the decision.
             </p>
           </div>
@@ -1492,7 +1492,7 @@ function DecommissionForm({ asset, onDecommissioned, onCancel }: DecommissionFor
       </div>
       
       <div>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-text-secondary mb-4">
           You are requesting to decommission <strong>{asset.name}</strong> ({asset.assetNumber}). 
           This will mark the asset as pending decommission until approved by an admin.
         </p>
@@ -1534,7 +1534,7 @@ function DecommissionForm({ asset, onDecommissioned, onCancel }: DecommissionFor
         <Button 
           type="submit" 
           disabled={loading || !reason.trim() || (reason === 'Other' && !customReason.trim())} 
-          className="bg-amber-600 hover:bg-amber-700"
+          className="bg-amber-bg hover:bg-amber-bg"
         >
           {loading ? 'Submitting...' : 'Request Decommission'}
         </Button>
@@ -1798,7 +1798,7 @@ function EditAssetForm({ asset, categories, branches, onAssetUpdated, onCancel }
 
         {/* Asset Images Section */}
         <div className="border rounded-lg p-4 space-y-3">
-          <Label className="text-base font-semibold flex items-center gap-2">
+          <Label className="text-base font-medium flex items-center gap-2">
             <Image className="h-4 w-4" />
             Asset Images
           </Label>
@@ -1816,7 +1816,7 @@ function EditAssetForm({ asset, categories, branches, onAssetUpdated, onCancel }
                   <button
                     type="button"
                     onClick={() => handleRemoveExistingImage(idx)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                    className="absolute -top-2 -right-2 bg-red-bg text-bg rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-bg"
                     title="Remove image"
                   >
                     <X className="h-3 w-3" />
@@ -1825,7 +1825,7 @@ function EditAssetForm({ asset, categories, branches, onAssetUpdated, onCancel }
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 italic">No images uploaded</p>
+            <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>No images uploaded</p>
           )}
 
           {/* Add New Images */}
@@ -1850,7 +1850,7 @@ function EditAssetForm({ asset, categories, branches, onAssetUpdated, onCancel }
               </Button>
             </div>
             {newImages.length > 0 && (
-              <p className="text-xs text-gray-500 mt-1">{newImages.length} file(s) selected</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{newImages.length} file(s) selected</p>
             )}
           </div>
         </div>
@@ -1946,7 +1946,7 @@ function TransferForm({ asset, onTransferred, onCancel }: TransferFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-text-secondary mb-4">
           You are about to transfer <strong>{asset.name}</strong> ({asset.assetNumber}) 
           from <strong>{asset.location}</strong> to a new location.
         </p>
@@ -2007,7 +2007,7 @@ function TransferForm({ asset, onTransferred, onCancel }: TransferFormProps) {
         <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
           Cancel
         </Button>
-        <Button type="submit" disabled={loading || !reason.trim() || !transferLocation.trim() || !transferredTo.trim()} className="bg-blue-600 hover:bg-blue-700">
+        <Button type="submit" disabled={loading || !reason.trim() || !transferLocation.trim() || !transferredTo.trim()} className="bg-blue-bg hover:bg-blue-bg">
           {loading ? 'Transferring...' : 'Transfer Asset'}
         </Button>
       </div>
@@ -2128,8 +2128,8 @@ function CategoryManager({ categories, onCategoriesChanged }: { categories: Asse
       <div>
         <h3 className="font-medium mb-3">Current Categories ({categories.length})</h3>
         {categories.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-600 mb-4">No categories yet</p>
+          <div className="text-center py-8 bg-surface2 rounded-lg">
+            <p className="text-text-secondary mb-4">No categories yet</p>
             <Button variant="outline" onClick={() => setShowSeedOptions(true)}>
               Quick Setup with Industry Templates
             </Button>
@@ -2144,15 +2144,15 @@ function CategoryManager({ categories, onCategoriesChanged }: { categories: Asse
               >
                 <div>
                   <p className="font-medium">{cat.name}</p>
-                  {cat.description && <p className="text-xs text-gray-500">{cat.description}</p>}
-                  {cat._count && <p className="text-xs text-gray-400">{cat._count.assets} assets</p>}
+                  {cat.description && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat.description}</p>}
+                  {cat._count && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{cat._count.assets} assets</p>}
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => handleDeleteCategory(cat.id, cat.name)}
                   disabled={cat._count && cat._count.assets > 0}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-ds-red hover:text-ds-red"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -2164,10 +2164,10 @@ function CategoryManager({ categories, onCategoriesChanged }: { categories: Asse
 
       {/* Seed from Industry Template */}
       {showSeedOptions && categories.length === 0 && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-blue-200 bg-blue-bg">
           <CardContent className="pt-4">
             <h4 className="font-medium mb-2">Quick Setup</h4>
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-text-secondary mb-3">
               Select your industry to pre-populate categories tailored to your business.
             </p>
             <div className="flex gap-2">

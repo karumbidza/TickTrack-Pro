@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { uploadToR2, isR2Configured, validateFileSize } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +13,13 @@ export async function POST(request: NextRequest) {
     
     if (!session?.user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check if R2 is configured
+    if (!isR2Configured()) {
+      return NextResponse.json({ 
+        message: 'Cloud storage not configured. Please contact administrator.' 
+      }, { status: 500 })
     }
 
     const formData = await request.formData()
@@ -43,28 +52,32 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'invoices')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
+    // Validate file size (max 20MB for documents)
+    if (!validateFileSize(file.size, 20)) {
+      return NextResponse.json({ 
+        message: 'File size exceeds 20MB limit' 
+      }, { status: 400 })
     }
 
-    // Generate unique filename
-    const timestamp = Date.now()
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileName = `${ticketId}-${timestamp}-${sanitizedFileName}`
-    const filePath = join(uploadsDir, fileName)
-
-    // Write file
+    // Get file buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
 
-    // Return public URL
-    const fileUrl = `/uploads/invoices/${fileName}`
+    // Generate filename with ticket ID prefix
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const fileName = `${ticketId}-${sanitizedFileName}`
+
+    // Upload to R2
+    const result = await uploadToR2(buffer, fileName, 'invoices', file.type)
+
+    if (!result.success) {
+      return NextResponse.json({ 
+        message: result.error || 'Upload failed' 
+      }, { status: 500 })
+    }
 
     return NextResponse.json({ 
-      fileUrl,
+      fileUrl: result.url,
       message: 'File uploaded successfully' 
     })
   } catch (error) {

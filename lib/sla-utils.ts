@@ -192,14 +192,14 @@ export function calculateSLAInfo(ticket: {
 export function getSLAStatusClasses(status: SLAStatus): string {
   switch (status) {
     case 'green':
-      return 'bg-green-100 text-green-800 border-green-200'
+      return 'bg-green-bg text-ds-green border-green-bg'
     case 'yellow':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      return 'bg-amber-bg text-ds-amber border-amber-bg'
     case 'red':
-      return 'bg-red-100 text-red-800 border-red-200'
+      return 'bg-red-bg text-ds-red border-red-bg'
     case 'grey':
     default:
-      return 'bg-gray-100 text-gray-600 border-gray-200'
+      return 'bg-surface2 text-text-muted border-border'
   }
 }
 

@@ -23,112 +23,80 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#2563eb', // Blue-600
-      light: '#3b82f6', // Blue-500
-      dark: '#1d4ed8', // Blue-700
+      main: '#2a2825',
+      light: '#4a4843',
+      dark: '#1a1916',
     },
     secondary: {
-      main: '#7c3aed', // Violet-600
-      light: '#8b5cf6', // Violet-500
-      dark: '#6d28d9', // Violet-700
+      main: '#6b6860',
+      light: '#9e9c94',
+      dark: '#4a4843',
     },
     success: {
-      main: '#16a34a', // Green-600
-      light: '#22c55e', // Green-500
-      dark: '#15803d', // Green-700
+      main: '#2d6a4f',
+      light: '#6ee7b7',
+      dark: '#064e3b',
     },
     warning: {
-      main: '#d97706', // Amber-600
-      light: '#f59e0b', // Amber-500
-      dark: '#b45309', // Amber-700
+      main: '#92400e',
+      light: '#fcd34d',
+      dark: '#78350f',
     },
     error: {
-      main: '#dc2626', // Red-600
-      light: '#ef4444', // Red-500
-      dark: '#b91c1c', // Red-700
-    },
-    grey: {
-      50: '#f9fafb',
-      100: '#f3f4f6',
-      200: '#e5e7eb',
-      300: '#d1d5db',
-      400: '#9ca3af',
-      500: '#6b7280',
-      600: '#4b5563',
-      700: '#374151',
-      800: '#1f2937',
-      900: '#111827',
+      main: '#991b1b',
+      light: '#fca5a5',
+      dark: '#7f1d1d',
     },
     background: {
-      default: '#f9fafb',
+      default: '#f7f6f3',
       paper: '#ffffff',
     },
   },
   typography: {
-    fontFamily: 'var(--font-inter), Inter, system-ui, -apple-system, sans-serif',
-    h1: {
-      fontWeight: 700,
-    },
-    h2: {
-      fontWeight: 600,
-    },
-    h3: {
-      fontWeight: 600,
-    },
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 600,
-    },
+    fontFamily: "'DM Sans', sans-serif",
+    h1: { fontWeight: 300, letterSpacing: '-0.04em' },
+    h2: { fontWeight: 300, letterSpacing: '-0.03em' },
+    h3: { fontWeight: 300, letterSpacing: '-0.025em' },
+    h4: { fontWeight: 300, letterSpacing: '-0.025em' },
+    h5: { fontWeight: 400 },
+    h6: { fontWeight: 400 },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 10,
   },
   components: {
     MuiDataGrid: {
       styleOverrides: {
         root: {
           border: 'none',
-          '& .MuiDataGrid-cell:focus': {
-            outline: 'none',
-          },
-          '& .MuiDataGrid-cell:focus-within': {
-            outline: 'none',
-          },
-          '& .MuiDataGrid-columnHeader:focus': {
-            outline: 'none',
-          },
-          '& .MuiDataGrid-columnHeader:focus-within': {
-            outline: 'none',
-          },
+          '& .MuiDataGrid-cell:focus': { outline: 'none' },
+          '& .MuiDataGrid-cell:focus-within': { outline: 'none' },
+          '& .MuiDataGrid-columnHeader:focus': { outline: 'none' },
+          '& .MuiDataGrid-columnHeader:focus-within': { outline: 'none' },
         },
         columnHeaders: {
-          backgroundColor: '#f9fafb',
-          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: 'var(--surface2)',
+          borderBottom: '1px solid var(--border)',
         },
         columnHeader: {
-          fontWeight: 600,
-          color: '#374151',
+          fontWeight: 500,
+          color: 'var(--text-secondary)',
+          fontFamily: "'DM Mono', monospace",
+          fontSize: '11px',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
         },
         row: {
-          '&:hover': {
-            backgroundColor: '#f9fafb',
-          },
+          '&:hover': { backgroundColor: 'var(--surface2)' },
         },
         cell: {
-          borderBottom: '1px solid #f3f4f6',
+          borderBottom: '1px solid var(--border)',
         },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: {
-          fontWeight: 500,
-        },
+        root: { fontWeight: 500 },
       },
     },
     MuiButton: {

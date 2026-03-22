@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+import { logger } from '@/lib/logger'
+
+// Route segment config for large file uploads
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 // GET - Fetch all invoices for the contractor
 export async function GET(request: NextRequest) {
@@ -134,21 +138,22 @@ export async function POST(request: NextRequest) {
       previousInvoiceId = existingInvoice.id
     }
 
-    // Handle file upload
+    // Handle file upload to R2
     let invoiceFileUrl: string | null = null
-    if (invoiceFile && invoiceFile.size > 0) {
+    if (invoiceFile && invoiceFile.size > 0 && isR2Configured()) {
       const bytes = await invoiceFile.arrayBuffer()
       const buffer = Buffer.from(bytes)
       
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'invoices')
-      await mkdir(uploadDir, { recursive: true })
+      const ext = invoiceFile.name.split('.').pop() || 'pdf'
+      const safeFilename = `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.${ext}`
       
-      const ext = path.extname(invoiceFile.name)
-      const filename = `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}${ext}`
-      const filePath = path.join(uploadDir, filename)
+      const uploadResult = await uploadToR2(buffer, safeFilename, 'invoices', invoiceFile.type || 'application/octet-stream')
       
-      await writeFile(filePath, buffer)
-      invoiceFileUrl = `/uploads/invoices/${filename}`
+      if (uploadResult.success && uploadResult.url) {
+        invoiceFileUrl = uploadResult.url
+      } else {
+        logger.error('Failed to upload invoice file to R2:', uploadResult.error)
+      }
     }
 
     // Create the invoice

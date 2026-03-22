@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+// Validation schema for invoice creation
+const invoiceCreateSchema = z.object({
+  ticketId: z.string().cuid('Invalid ticket ID'),
+  invoiceNumber: z.string().min(1, 'Invoice number required').max(50),
+  amount: z.number().positive('Amount must be positive'),
+  invoiceFileUrl: z.string().url('Invalid invoice file URL'),
+  hoursWorked: z.number().nonnegative().optional(),
+  hourlyRate: z.number().nonnegative().optional(),
+  description: z.string().max(2000).optional(),
+  notes: z.string().max(2000).optional(),
+  workDescription: z.string().max(5000).optional(),
+  variationDescription: z.string().max(2000).optional(),
+  revisionNotes: z.string().max(2000).optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +81,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    // Validate request body with Zod schema
     const body = await request.json()
+    const parseResult = invoiceCreateSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ message: errors }, { status: 400 })
+    }
+
     const {
       ticketId,
       invoiceNumber,
@@ -77,16 +101,8 @@ export async function POST(request: NextRequest) {
       notes,
       workDescription,
       variationDescription,
-      revisionNotes  // New field for resubmissions
-    } = body
-
-    // Validate required fields (simplified - only invoice number, amount, and file required)
-    if (!ticketId || !invoiceNumber || !amount || !invoiceFileUrl) {
-      return NextResponse.json(
-        { message: 'Missing required fields: ticketId, invoiceNumber, amount, and invoiceFileUrl are required' },
-        { status: 400 }
-      )
-    }
+      revisionNotes
+    } = parseResult.data
 
     // Verify ticket exists and contractor has access
     const ticket = await prisma.ticket.findFirst({
@@ -162,17 +178,17 @@ export async function POST(request: NextRequest) {
     const invoice = await prisma.invoice.create({
       data: {
         invoiceNumber,
-        amount: parseFloat(amount),
+        amount: amount,
         quotedAmount,
         variationDescription: variationDescription || null,
-        hoursWorked: hoursWorked ? parseFloat(hoursWorked) : null,
-        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        hoursWorked: hoursWorked || null,
+        hourlyRate: hourlyRate || null,
         description: description || `Invoice for ticket ${ticket.ticketNumber}`,
         workDescription,
         notes,
         invoiceFileUrl,
         status: 'PENDING',
-        balance: parseFloat(amount), // Initially, balance equals full amount
+        balance: amount, // Initially, balance equals full amount
         paidAmount: 0,
         contractorId: session.user.id,
         ticketId: ticketId,

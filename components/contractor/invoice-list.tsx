@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Table } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -54,24 +54,16 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
     }
   }
 
-  const getStatusBadgeColor = (status: string) => {
+  const getStatusBadgeVariant = (status: string): React.ComponentProps<typeof Badge>['variant'] => {
     switch (status) {
-      case 'PAID':
-        return 'bg-green-100 text-green-800'
-      case 'APPROVED':
-        return 'bg-blue-100 text-blue-800'
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'DRAFT':
-        return 'bg-gray-100 text-gray-800'
-      case 'OVERDUE':
-        return 'bg-red-100 text-red-800'
-      case 'REJECTED':
-        return 'bg-red-100 text-red-800'
-      case 'CANCELLED':
-        return 'bg-gray-100 text-gray-600'
-      default:
-        return 'bg-gray-100 text-gray-800'
+      case 'PAID': return 'success'
+      case 'APPROVED': return 'info'
+      case 'PENDING': return 'warning'
+      case 'DRAFT': return 'neutral'
+      case 'OVERDUE': return 'destructive'
+      case 'REJECTED': return 'destructive'
+      case 'CANCELLED': return 'neutral'
+      default: return 'neutral'
     }
   }
 
@@ -90,7 +82,7 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent)' }}></div>
       </div>
     )
   }
@@ -99,33 +91,33 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg border p-4">
+        <div className="rounded-lg border border-border p-4" style={{ backgroundColor: 'var(--surface)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Earnings</p>
-              <p className="text-2xl font-bold text-green-600">${totalEarnings.toFixed(2)}</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Earnings</p>
+              <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>${totalEarnings.toFixed(2)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-green-600" />
+            <DollarSign className="h-8 w-8" style={{ color: 'var(--green)' }} />
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border p-4">
+
+        <div className="rounded-lg border border-border p-4" style={{ backgroundColor: 'var(--surface)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Earnings</p>
-              <p className="text-2xl font-bold text-yellow-600">${pendingEarnings.toFixed(2)}</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Pending Earnings</p>
+              <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>${pendingEarnings.toFixed(2)}</p>
             </div>
-            <Calendar className="h-8 w-8 text-yellow-600" />
+            <Calendar className="h-8 w-8" style={{ color: 'var(--amber)' }} />
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border p-4">
+
+        <div className="rounded-lg border border-border p-4" style={{ backgroundColor: 'var(--surface)' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Invoices</p>
-              <p className="text-2xl font-bold text-blue-600">{invoices.length}</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Invoices</p>
+              <p className="text-2xl font-medium" style={{ color: 'var(--accent)' }}>{invoices.length}</p>
             </div>
-            <FileText className="h-8 w-8 text-blue-600" />
+            <FileText className="h-8 w-8" style={{ color: 'var(--accent)' }} />
           </div>
         </div>
       </div>
@@ -162,10 +154,10 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
       </div>
 
       {/* Invoice Table */}
-      <div className="bg-white rounded-lg border overflow-hidden">
+      <div className="rounded-lg border border-border overflow-hidden" style={{ backgroundColor: 'var(--surface)' }}>
         <Table>
           <thead>
-            <tr className="border-b bg-gray-50">
+            <tr className="border-b border-border" style={{ backgroundColor: 'var(--surface2)' }}>
               <th className="text-left p-4 font-medium">Invoice</th>
               <th className="text-left p-4 font-medium">Ticket</th>
               <th className="text-left p-4 font-medium">Hours</th>
@@ -177,11 +169,11 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
           </thead>
           <tbody>
             {filteredInvoices.map((invoice) => (
-              <tr key={invoice.id} className="border-b hover:bg-gray-50">
+              <tr key={invoice.id} className="border-b border-border hover:bg-[var(--surface2)]">
                 <td className="p-4">
                   <div>
                     <div className="font-medium">{invoice.invoiceNumber}</div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                       ${invoice.hourlyRate}/hr
                     </div>
                   </div>
@@ -189,7 +181,7 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
                 <td className="p-4">
                   <div>
                     <div className="font-medium">{invoice.ticket.ticketNumber}</div>
-                    <div className="text-sm text-gray-600 max-w-xs truncate">
+                    <div className="text-sm max-w-xs truncate" style={{ color: 'var(--text-secondary)' }}>
                       {invoice.ticket.title}
                     </div>
                   </div>
@@ -201,14 +193,14 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
                   <div>
                     <div className="font-medium">${invoice.amount.toFixed(2)}</div>
                     {invoice.status === 'PAID' && invoice.paidAmount > 0 && (
-                      <div className="text-sm text-green-600">
+                      <div className="text-sm" style={{ color: 'var(--green)' }}>
                         Paid: ${invoice.paidAmount.toFixed(2)}
                       </div>
                     )}
                   </div>
                 </td>
                 <td className="p-4">
-                  <Badge className={getStatusBadgeColor(invoice.status)}>
+                  <Badge variant={getStatusBadgeVariant(invoice.status)}>
                     {invoice.status}
                   </Badge>
                 </td>
@@ -217,7 +209,7 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
                     {new Date(invoice.createdAt).toLocaleDateString()}
                   </div>
                   {invoice.paidDate && (
-                    <div className="text-xs text-green-600">
+                    <div className="text-xs" style={{ color: 'var(--green)' }}>
                       Paid: {new Date(invoice.paidDate).toLocaleDateString()}
                     </div>
                   )}
@@ -250,7 +242,7 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
                           size="sm" 
                           variant="outline"
                           onClick={() => window.open(invoice.proofOfPaymentUrl, '_blank')}
-                          className="text-green-600"
+                          style={{ color: 'var(--green)' }}
                         >
                           <FileText className="h-4 w-4" />
                         </Button>
@@ -264,7 +256,7 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
         </Table>
         
         {filteredInvoices.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
             {filter === 'all' 
               ? 'No invoices yet. Create your first invoice to get started.'
               : `No ${filter} invoices found.`

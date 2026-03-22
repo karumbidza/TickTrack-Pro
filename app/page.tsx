@@ -2,13 +2,10 @@ import { getServerSession } from 'next-auth/next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { 
-  Ticket, 
-  Users, 
-  Building2, 
-  CheckCircle,
+import {
+  Ticket,
+  Users,
+  Building2,
   Clock,
   MessageSquare,
   Star,
@@ -18,286 +15,142 @@ import { LandingNavbar } from '@/components/layout/landing-navbar'
 import { authOptions } from '@/lib/auth'
 
 export default async function HomePage() {
-  // Redirect authenticated users to dashboard
   const session = await getServerSession(authOptions)
   if (session?.user) {
     redirect('/dashboard')
   }
 
+  const features = [
+    { icon: Ticket, label: 'Ticket Management', description: 'Create, track, and manage support tickets with full workflow automation' },
+    { icon: Users, label: 'Multi-Role Access', description: 'End users, admins, and contractors with role-based permissions' },
+    { icon: Building2, label: 'Multi-Tenant', description: 'Host multiple organisations with complete data isolation' },
+    { icon: MessageSquare, label: 'Real-time Chat', description: 'Communicate instantly between users, admins, and contractors' },
+    { icon: Clock, label: 'SLA Tracking', description: 'Monitor response times and ensure service level agreements' },
+    { icon: Star, label: 'Rating System', description: 'Collect feedback and ratings to improve service quality' },
+  ]
+
+  const steps = [
+    { num: '01', title: 'User Creates Ticket', description: 'End users submit support requests with detailed descriptions' },
+    { num: '02', title: 'Admin Assigns', description: 'Admin reviews and assigns tickets to qualified contractors' },
+    { num: '03', title: 'Work Completion', description: 'Contractor performs work and updates status in real-time' },
+    { num: '04', title: 'Invoice & Rating', description: 'User approves work, contractor submits invoice, user rates service' },
+  ]
+
   return (
-    <div className="min-h-screen">
+    <div style={{ backgroundColor: 'var(--bg)', color: 'var(--text-primary)' }}>
       <LandingNavbar />
-      
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              TickTrack Pro
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              Multi-tenant helpdesk and ticket tracking system for modern organizations
-            </p>
-            <div className="space-x-4">
-              <Link href="/get-started">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold">
-                  Get Started Free
-                </Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-blue-600 font-semibold bg-transparent">
-                  Sign In
-                </Button>
-              </Link>
-            </div>
+
+      {/* Hero */}
+      <section style={{ padding: '6rem 0', borderBottom: '1px solid var(--border)' }}>
+        <div className="mx-auto max-w-[1100px] px-6 text-center">
+          <p className="section-label mb-6">Helpdesk Management System</p>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 300, letterSpacing: '-0.04em', lineHeight: 1.1, marginBottom: '1.5rem', color: 'var(--text-primary)' }}>
+            Built for teams that <strong>need to move fast</strong>
+          </h1>
+          <p style={{ fontSize: 17, color: 'var(--text-secondary)', maxWidth: 560, margin: '0 auto 2.5rem', lineHeight: 1.6 }}>
+            Multi-tenant helpdesk and ticket tracking system for modern organisations — from ticket to invoice, all in one place.
+          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <Link href="/get-started">
+              <Button size="lg">Get Started Free</Button>
+            </Link>
+            <Link href="/auth/login">
+              <Button size="lg" variant="outline">Sign In</Button>
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Complete Helpdesk Solution
+      {/* Features */}
+      <section style={{ padding: '5rem 0' }}>
+        <div className="mx-auto max-w-[1100px] px-6">
+          <div className="text-center mb-12">
+            <p className="section-label mb-3">What's included</p>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+              Complete helpdesk solution
             </h2>
-            <p className="text-xl text-gray-600">
-              Everything you need to manage tickets, contractors, and customer support
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader>
-                <Ticket className="h-10 w-10 text-blue-600 mb-2" />
-                <CardTitle>Ticket Management</CardTitle>
-                <CardDescription>
-                  Create, track, and manage support tickets with full workflow automation
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Users className="h-10 w-10 text-green-600 mb-2" />
-                <CardTitle>Multi-Role Access</CardTitle>
-                <CardDescription>
-                  End users, admins, and contractors with role-based permissions
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Building2 className="h-10 w-10 text-purple-600 mb-2" />
-                <CardTitle>Multi-Tenant</CardTitle>
-                <CardDescription>
-                  Host multiple organizations with complete data isolation
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <MessageSquare className="h-10 w-10 text-orange-600 mb-2" />
-                <CardTitle>Real-time Chat</CardTitle>
-                <CardDescription>
-                  Communicate instantly between users, admins, and contractors
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Clock className="h-10 w-10 text-red-600 mb-2" />
-                <CardTitle>SLA Tracking</CardTitle>
-                <CardDescription>
-                  Monitor response times and ensure service level agreements
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Star className="h-10 w-10 text-yellow-600 mb-2" />
-                <CardTitle>Rating System</CardTitle>
-                <CardDescription>
-                  Collect feedback and ratings to improve service quality
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          {/* Grid with 1px gap on --border background */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 1,
+              backgroundColor: 'var(--border)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              overflow: 'hidden',
+            }}
+          >
+            {features.map(({ icon: Icon, label, description }) => (
+              <div
+                key={label}
+                style={{ backgroundColor: 'var(--surface)', padding: '2rem' }}
+              >
+                <Icon className="h-8 w-8 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, color: 'var(--text-primary)' }}>{label}</h3>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{description}</p>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Workflow Section */}
-      <div className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Streamlined Workflow
+      {/* Workflow */}
+      <section style={{ padding: '5rem 0', borderTop: '1px solid var(--border)' }}>
+        <div className="mx-auto max-w-[1100px] px-6">
+          <div className="text-center mb-12">
+            <p className="section-label mb-3">How it works</p>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+              Streamlined workflow
             </h2>
-            <p className="text-xl text-gray-600">
-              From ticket creation to completion with full transparency
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-blue-600">1</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem' }}>
+            {steps.map(({ num, title, description }) => (
+              <div key={num}>
+                <span
+                  className="font-mono"
+                  style={{ fontSize: 11, letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}
+                >
+                  {num}
+                </span>
+                <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8, color: 'var(--text-primary)' }}>{title}</h3>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{description}</p>
               </div>
-              <h3 className="text-lg font-semibold mb-2">User Creates Ticket</h3>
-              <p className="text-gray-600">
-                End users submit support requests with detailed descriptions
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">2</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Admin Assigns</h3>
-              <p className="text-gray-600">
-                Admin reviews and assigns tickets to qualified contractors
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-orange-600">3</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Work Completion</h3>
-              <p className="text-gray-600">
-                Contractor performs work and updates status in real-time
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-purple-600">4</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Invoice & Rating</h3>
-              <p className="text-gray-600">
-                User approves work, contractor submits invoice, user rates service
-              </p>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Pricing Section */}
-      <div className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Simple Pricing
-            </h2>
-            <p className="text-xl text-gray-600">
-              Choose the plan that fits your organization&apos;s needs
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Starter</CardTitle>
-                <div className="text-4xl font-bold text-blue-600">$29</div>
-                <CardDescription>per month</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Up to 50 users</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Basic ticket management</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Email notifications</span>
-                  </div>
-                </div>
-                <Button className="w-full">Get Started</Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-500 border-2">
-              <CardHeader className="text-center">
-                <Badge className="mb-2">Most Popular</Badge>
-                <CardTitle className="text-2xl">Professional</CardTitle>
-                <div className="text-4xl font-bold text-blue-600">$99</div>
-                <CardDescription>per month</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Up to 200 users</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Advanced workflow</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Real-time chat</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Analytics & reporting</span>
-                  </div>
-                </div>
-                <Button className="w-full">Get Started</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Enterprise</CardTitle>
-                <div className="text-4xl font-bold text-blue-600">$299</div>
-                <CardDescription>per month</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Unlimited users</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Custom integrations</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Priority support</span>
-                  </div>
-                  <div className="flex items-center">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                    <span>Advanced security</span>
-                  </div>
-                </div>
-                <Button className="w-full">Contact Sales</Button>
-              </CardContent>
-            </Card>
-          </div>
+      {/* CTA */}
+      <section style={{ padding: '5rem 0', borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div className="mx-auto max-w-[1100px] px-6 text-center">
+          <p className="section-label mb-4">Get started today</p>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 300, letterSpacing: '-0.03em', marginBottom: '1rem', color: 'var(--text-primary)' }}>
+            Ready to get started?
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--text-secondary)', maxWidth: 480, margin: '0 auto 2rem' }}>
+            Start your 14-day free trial today. No credit card required.
+          </p>
+          <Link href="/get-started">
+            <Button size="lg" className="gap-2">
+              Start Free Trial
+              <Shield className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
-      </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Ticket className="h-8 w-8 text-blue-400" />
-              <span className="ml-2 text-xl font-bold">TickTrack Pro</span>
-            </div>
-            <div className="text-gray-400">
-              © 2024 TickTrack Pro. All rights reserved.
-            </div>
+      <footer style={{ borderTop: '1px solid var(--border)', backgroundColor: 'var(--surface)', padding: '2rem 0' }}>
+        <div className="mx-auto max-w-[1100px] px-6 flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <Ticket className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+            <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 15 }}>TickTrack Pro</span>
           </div>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>© {new Date().getFullYear()} TickTrack Pro. All rights reserved.</span>
         </div>
       </footer>
     </div>

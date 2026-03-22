@@ -14,8 +14,6 @@ import {
   User, 
   CreditCard, 
   CheckCircle, 
-  Eye, 
-  EyeOff, 
   AlertCircle,
   ArrowRight,
   ArrowLeft,
@@ -26,18 +24,10 @@ import {
   Loader2,
   Mail,
   Phone,
-  Lock,
-  Ticket
+  Ticket,
+  Key,
+  Calendar
 } from 'lucide-react'
-
-// Password requirements
-const passwordRequirements = [
-  { regex: /.{8,}/, label: 'At least 8 characters' },
-  { regex: /[A-Z]/, label: 'One uppercase letter' },
-  { regex: /[a-z]/, label: 'One lowercase letter' },
-  { regex: /[0-9]/, label: 'One number' },
-  { regex: /[^A-Za-z0-9]/, label: 'One special character' }
-]
 
 // Plans data
 const plans = [
@@ -111,8 +101,6 @@ interface FormData {
   adminName: string
   email: string
   phone: string
-  password: string
-  confirmPassword: string
 }
 
 const stepOrder: Step[] = ['plan', 'company', 'account', 'success']
@@ -120,8 +108,8 @@ const stepOrder: Step[] = ['plan', 'company', 'account', 'success']
 const stepInfo = {
   plan: { title: 'Choose Your Plan', subtitle: 'Start with a 14-day free trial', icon: CreditCard },
   company: { title: 'Company Information', subtitle: 'Tell us about your organization', icon: Building2 },
-  account: { title: 'Create Your Account', subtitle: 'Set up your admin credentials', icon: User },
-  success: { title: 'Welcome Aboard!', subtitle: 'Your account is ready', icon: CheckCircle }
+  account: { title: 'Create Your Account', subtitle: 'Your admin account details', icon: User },
+  success: { title: 'Check Your Email!', subtitle: 'Set your password to get started', icon: Mail }
 }
 
 export default function GetStartedPage() {
@@ -130,8 +118,8 @@ export default function GetStartedPage() {
   const [direction, setDirection] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showAccountExistsDialog, setShowAccountExistsDialog] = useState(false)
+  const [existingEmail, setExistingEmail] = useState('')
 
   const [formData, setFormData] = useState<FormData>({
     selectedPlan: 'PRO',
@@ -141,9 +129,17 @@ export default function GetStartedPage() {
     companyPhone: '',
     adminName: '',
     email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
+    phone: ''
+  })
+
+  // Calculate trial end date (14 days from now)
+  const trialEndDate = new Date()
+  trialEndDate.setDate(trialEndDate.getDate() + 14)
+  const formattedTrialEnd = trialEndDate.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
   })
 
   const updateFormData = (field: keyof FormData, value: string) => {
@@ -208,14 +204,6 @@ export default function GetStartedPage() {
           setError('Phone number is required')
           return false
         }
-        if (!allRequirementsMet) {
-          setError('Password does not meet all requirements')
-          return false
-        }
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match')
-          return false
-        }
         return true
         
       default:
@@ -238,16 +226,18 @@ export default function GetStartedPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/company-register', {
+      const response = await fetch('/api/auth/register-tenant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: formData.companyName,
+          companyEmail: formData.email,
+          companyPhone: formData.phone,
+          companyAddress: formData.companyAddress,
+          companySize: 'small',
           adminName: formData.adminName,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          address: formData.companyAddress,
+          adminEmail: formData.email,
+          adminPhone: formData.phone,
           selectedPlan: formData.selectedPlan,
           billingCycle: formData.billingCycle
         })
@@ -257,8 +247,14 @@ export default function GetStartedPage() {
 
       if (response.ok) {
         nextStep()
+      } else if (data.error === 'account_exists') {
+        setExistingEmail(formData.email)
+        setShowAccountExistsDialog(true)
+        setError('')
+      } else if (data.error === 'company_exists') {
+        setError(data.message || 'A company with this name already exists. Please choose a different name.')
       } else {
-        setError(data.error || 'Registration failed. Please try again.')
+        setError(data.message || 'Registration failed. Please try again.')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -266,12 +262,6 @@ export default function GetStartedPage() {
       setIsLoading(false)
     }
   }
-
-  const passwordStrength = passwordRequirements.map(req => ({
-    ...req,
-    met: req.regex.test(formData.password)
-  }))
-  const allRequirementsMet = passwordStrength.every(req => req.met)
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -289,12 +279,12 @@ export default function GetStartedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--bg)', color: 'var(--text-primary)' }}>
       {/* Header */}
-      <header className="p-6">
-        <Link href="/" className="flex items-center gap-2 text-white">
-          <Ticket className="h-8 w-8" />
-          <span className="text-xl font-bold">TickTrack Pro</span>
+      <header className="p-6" style={{ borderBottom: '1px solid var(--border)' }}>
+        <Link href="/" className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Ticket className="h-5 w-5" />
+          <span style={{ fontWeight: 500, fontSize: 16 }}>TickTrack Pro</span>
         </Link>
       </header>
 
@@ -309,30 +299,41 @@ export default function GetStartedPage() {
                   const StepIcon = stepInfo[step].icon
                   const isActive = currentStepIndex >= index
                   const isCurrent = currentStep === step
-                  
+
                   return (
                     <div key={step} className="flex items-center">
                       <button
                         onClick={() => index < currentStepIndex && goToStep(step)}
                         disabled={index >= currentStepIndex}
-                        className={`
-                          flex items-center gap-2 px-3 py-2 rounded-full transition-all
-                          ${isActive 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-white/10 text-white/50'}
-                          ${isCurrent ? 'ring-2 ring-blue-400 ring-offset-2 ring-offset-slate-900' : ''}
-                          ${index < currentStepIndex ? 'cursor-pointer hover:bg-blue-500' : 'cursor-default'}
-                        `}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '6px 14px',
+                          borderRadius: 999,
+                          fontSize: 14,
+                          fontWeight: 500,
+                          border: 'none',
+                          cursor: index < currentStepIndex ? 'pointer' : 'default',
+                          backgroundColor: isActive ? 'var(--accent)' : 'var(--surface2)',
+                          color: isActive ? 'var(--bg)' : 'var(--text-muted)',
+                          outline: isCurrent ? '2px solid var(--border-strong)' : 'none',
+                          outlineOffset: 2,
+                          transition: 'all 0.15s',
+                        }}
                       >
                         <StepIcon className="h-4 w-4" />
-                        <span className="hidden md:inline text-sm font-medium">
+                        <span className="hidden md:inline">
                           {stepInfo[step].title}
                         </span>
                       </button>
                       {index < stepOrder.length - 2 && (
-                        <div className={`w-8 md:w-16 h-0.5 mx-2 ${
-                          currentStepIndex > index ? 'bg-blue-500' : 'bg-white/20'
-                        }`} />
+                        <div style={{
+                          width: 48,
+                          height: 1,
+                          margin: '0 8px',
+                          backgroundColor: currentStepIndex > index ? 'var(--accent)' : 'var(--border)',
+                        }} />
                       )}
                     </div>
                   )
@@ -342,7 +343,7 @@ export default function GetStartedPage() {
           )}
 
           {/* Step Content */}
-          <Card className="overflow-hidden bg-white/95 backdrop-blur shadow-2xl">
+          <Card className="overflow-hidden" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
             <CardContent className="p-0">
               <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
@@ -358,36 +359,49 @@ export default function GetStartedPage() {
                   {currentStep === 'plan' && (
                     <div className="p-6 md:p-8">
                       <div className="text-center mb-8">
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                        <p className="section-label mb-3">{stepInfo.plan.subtitle}</p>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>
                           {stepInfo.plan.title}
                         </h2>
-                        <p className="text-gray-600">{stepInfo.plan.subtitle}</p>
-                        
+
                         {/* Billing Toggle */}
                         <div className="flex items-center justify-center mt-6">
-                          <div className="bg-gray-100 rounded-lg p-1 inline-flex">
+                          <div className="inline-flex rounded-lg p-1" style={{ backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}>
                             <button
                               onClick={() => updateFormData('billingCycle', 'monthly')}
-                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                formData.billingCycle === 'monthly'
-                                  ? 'bg-white text-gray-900 shadow'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
+                              style={{
+                                padding: '6px 16px',
+                                borderRadius: 8,
+                                fontSize: 14,
+                                fontWeight: 500,
+                                border: 'none',
+                                cursor: 'pointer',
+                                backgroundColor: formData.billingCycle === 'monthly' ? 'var(--surface)' : 'transparent',
+                                color: formData.billingCycle === 'monthly' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                boxShadow: formData.billingCycle === 'monthly' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                              }}
                             >
                               Monthly
                             </button>
                             <button
                               onClick={() => updateFormData('billingCycle', 'yearly')}
-                              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                formData.billingCycle === 'yearly'
-                                  ? 'bg-white text-gray-900 shadow'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
+                              style={{
+                                padding: '6px 16px',
+                                borderRadius: 8,
+                                fontSize: 14,
+                                fontWeight: 500,
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                backgroundColor: formData.billingCycle === 'yearly' ? 'var(--surface)' : 'transparent',
+                                color: formData.billingCycle === 'yearly' ? 'var(--text-primary)' : 'var(--text-muted)',
+                                boxShadow: formData.billingCycle === 'yearly' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                              }}
                             >
                               Yearly
-                              <Badge variant="secondary" className="ml-2 bg-green-100 text-green-700">
-                                2 months free
-                              </Badge>
+                              <Badge variant="success">2 months free</Badge>
                             </button>
                           </div>
                         </div>
@@ -399,58 +413,60 @@ export default function GetStartedPage() {
                           const Icon = plan.icon
                           const isSelected = formData.selectedPlan === plan.id
                           const price = plan.pricing[formData.billingCycle].USD
-                          
+
                           return (
                             <button
                               key={plan.id}
                               onClick={() => updateFormData('selectedPlan', plan.id)}
-                              className={`
-                                relative p-6 rounded-xl border-2 text-left transition-all
-                                ${isSelected 
-                                  ? 'border-blue-500 bg-blue-50 shadow-lg scale-[1.02]' 
-                                  : 'border-gray-200 hover:border-gray-300 hover:shadow'}
-                              `}
+                              style={{
+                                position: 'relative',
+                                padding: '1.5rem',
+                                borderRadius: 10,
+                                border: isSelected ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                textAlign: 'left',
+                                backgroundColor: isSelected ? 'var(--surface2)' : 'var(--surface)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                              }}
                             >
                               {plan.popular && (
-                                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-600 to-blue-600">
+                                <Badge variant="default" style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)' }}>
                                   Most Popular
                                 </Badge>
                               )}
-                              
-                              <div className={`
-                                w-12 h-12 rounded-lg flex items-center justify-center mb-4
-                                ${plan.color === 'blue' ? 'bg-blue-100 text-blue-600' : ''}
-                                ${plan.color === 'purple' ? 'bg-purple-100 text-purple-600' : ''}
-                                ${plan.color === 'green' ? 'bg-green-100 text-green-600' : ''}
-                              `}>
-                                <Icon className="h-6 w-6" />
+
+                              <div style={{
+                                width: 40, height: 40, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                backgroundColor: 'var(--surface2)', marginBottom: 16,
+                              }}>
+                                <Icon className="h-5 w-5" style={{ color: 'var(--text-secondary)' }} />
                               </div>
-                              
-                              <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                              <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
-                              
-                              <div className="mb-4">
-                                <span className="text-3xl font-bold text-gray-900">${price}</span>
-                                <span className="text-gray-500">/{formData.billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+
+                              <h3 style={{ fontSize: 16, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>{plan.name}</h3>
+                              <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>{plan.description}</p>
+
+                              <div style={{ marginBottom: 16 }}>
+                                <span style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>${price}</span>
+                                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>/{formData.billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                               </div>
-                              
-                              <ul className="space-y-2">
+
+                              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {plan.features.slice(0, 4).map((feature, i) => (
-                                  <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                  <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
+                                    <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: 'var(--green)' }} />
                                     {feature}
                                   </li>
                                 ))}
                                 {plan.features.length > 4 && (
-                                  <li className="text-sm text-blue-600 font-medium">
+                                  <li style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
                                     +{plan.features.length - 4} more features
                                   </li>
                                 )}
                               </ul>
-                              
+
                               {isSelected && (
-                                <div className="absolute top-4 right-4">
-                                  <CheckCircle className="h-6 w-6 text-blue-600" />
+                                <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                                  <CheckCircle className="h-5 w-5" style={{ color: 'var(--accent)' }} />
                                 </div>
                               )}
                             </button>
@@ -458,7 +474,7 @@ export default function GetStartedPage() {
                         })}
                       </div>
 
-                      <p className="text-center text-sm text-gray-500 mt-6">
+                      <p className="section-label text-center mt-6" style={{ textTransform: 'none', fontSize: 13, letterSpacing: 0 }}>
                         All plans include a 14-day free trial. No credit card required.
                       </p>
                     </div>
@@ -468,199 +484,140 @@ export default function GetStartedPage() {
                   {currentStep === 'company' && (
                     <div className="p-6 md:p-8 max-w-xl mx-auto">
                       <div className="text-center mb-8">
-                        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                          <Building2 className="h-8 w-8 text-blue-600" />
+                        <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                          <Building2 className="h-6 w-6" style={{ color: 'var(--text-muted)' }} />
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
                           {stepInfo.company.title}
                         </h2>
-                        <p className="text-gray-600">{stepInfo.company.subtitle}</p>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{stepInfo.company.subtitle}</p>
                       </div>
 
-                      <div className="space-y-6">
+                      <div className="space-y-5">
                         <div>
-                          <Label htmlFor="companyName" className="text-sm font-medium text-gray-700">
-                            Company Name <span className="text-red-500">*</span>
+                          <Label htmlFor="companyName">
+                            Company Name <span style={{ color: 'var(--ds-red)' }}>*</span>
                           </Label>
-                          <div className="mt-1 relative">
-                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <div className="mt-1.5 relative">
+                            <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                             <Input
                               id="companyName"
                               value={formData.companyName}
                               onChange={(e) => updateFormData('companyName', e.target.value)}
                               placeholder="Acme Corporation"
-                              className="pl-10 h-12"
+                              className="pl-9"
                               autoFocus
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="companyPhone" className="text-sm font-medium text-gray-700">
-                            Company Phone
-                          </Label>
-                          <div className="mt-1 relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Label htmlFor="companyPhone">Company Phone</Label>
+                          <div className="mt-1.5 relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                             <Input
                               id="companyPhone"
                               value={formData.companyPhone}
                               onChange={(e) => updateFormData('companyPhone', e.target.value)}
                               placeholder="+263 XX XXX XXXX"
-                              className="pl-10 h-12"
+                              className="pl-9"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="companyAddress" className="text-sm font-medium text-gray-700">
-                            Company Address
-                          </Label>
-                          <div className="mt-1">
+                          <Label htmlFor="companyAddress">Company Address</Label>
+                          <div className="mt-1.5">
                             <Input
                               id="companyAddress"
                               value={formData.companyAddress}
                               onChange={(e) => updateFormData('companyAddress', e.target.value)}
                               placeholder="123 Business Street, Harare"
-                              className="h-12"
                             />
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">Optional - you can add this later</p>
+                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Optional — you can add this later</p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Account Creation Step */}
+                  {/* Account Creation Step - NO PASSWORD */}
                   {currentStep === 'account' && (
                     <div className="p-6 md:p-8 max-w-xl mx-auto">
                       <div className="text-center mb-8">
-                        <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                          <User className="h-8 w-8 text-blue-600" />
+                        <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                          <User className="h-6 w-6" style={{ color: 'var(--text-muted)' }} />
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
                           {stepInfo.account.title}
                         </h2>
-                        <p className="text-gray-600">{stepInfo.account.subtitle}</p>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{stepInfo.account.subtitle}</p>
                       </div>
 
                       <div className="space-y-5">
                         <div>
-                          <Label htmlFor="adminName" className="text-sm font-medium text-gray-700">
-                            Your Full Name <span className="text-red-500">*</span>
+                          <Label htmlFor="adminName">
+                            Your Full Name <span style={{ color: 'var(--ds-red)' }}>*</span>
                           </Label>
-                          <div className="mt-1 relative">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <div className="mt-1.5 relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                             <Input
                               id="adminName"
                               value={formData.adminName}
                               onChange={(e) => updateFormData('adminName', e.target.value)}
                               placeholder="John Doe"
-                              className="pl-10 h-12"
+                              className="pl-9"
                               autoFocus
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                            Email Address <span className="text-red-500">*</span>
+                          <Label htmlFor="email">
+                            Email Address <span style={{ color: 'var(--ds-red)' }}>*</span>
                           </Label>
-                          <div className="mt-1 relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <div className="mt-1.5 relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                             <Input
                               id="email"
                               type="email"
                               value={formData.email}
                               onChange={(e) => updateFormData('email', e.target.value)}
                               placeholder="john@company.com"
-                              className="pl-10 h-12"
+                              className="pl-9"
                             />
                           </div>
                         </div>
 
                         <div>
-                          <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                            Phone Number <span className="text-red-500">*</span>
+                          <Label htmlFor="phone">
+                            Phone Number <span style={{ color: 'var(--ds-red)' }}>*</span>
                           </Label>
-                          <div className="mt-1 relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <div className="mt-1.5 relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                             <Input
                               id="phone"
                               value={formData.phone}
                               onChange={(e) => updateFormData('phone', e.target.value)}
                               placeholder="+263 77 123 4567"
-                              className="pl-10 h-12"
+                              className="pl-9"
                             />
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">For SMS notifications</p>
+                          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>For SMS notifications</p>
                         </div>
 
-                        <div>
-                          <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                            Password <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="mt-1 relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                            <Input
-                              id="password"
-                              type={showPassword ? 'text' : 'password'}
-                              value={formData.password}
-                              onChange={(e) => updateFormData('password', e.target.value)}
-                              placeholder="Create a strong password"
-                              className="pl-10 pr-10 h-12"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                            </button>
-                          </div>
-                          
-                          {/* Password Requirements */}
-                          {formData.password && (
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                              {passwordStrength.map((req, i) => (
-                                <div
-                                  key={i}
-                                  className={`flex items-center gap-1.5 text-xs ${
-                                    req.met ? 'text-green-600' : 'text-gray-400'
-                                  }`}
-                                >
-                                  {req.met ? (
-                                    <CheckCircle className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <div className="h-3.5 w-3.5 rounded-full border border-current" />
-                                  )}
-                                  {req.label}
-                                </div>
-                              ))}
+                        {/* Info box about password */}
+                        <div style={{ backgroundColor: 'var(--surface2)', borderRadius: 8, padding: 16, border: '1px solid var(--border)' }}>
+                          <div className="flex gap-3">
+                            <Mail className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--text-muted)' }} />
+                            <div>
+                              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                                You&apos;ll set your password via email
+                              </p>
+                              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                After registration, we&apos;ll send you an activation email to set up your secure password.
+                              </p>
                             </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                            Confirm Password <span className="text-red-500">*</span>
-                          </Label>
-                          <div className="mt-1 relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                            <Input
-                              id="confirmPassword"
-                              type={showConfirmPassword ? 'text' : 'password'}
-                              value={formData.confirmPassword}
-                              onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                              placeholder="Confirm your password"
-                              className="pl-10 pr-10 h-12"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -674,49 +631,66 @@ export default function GetStartedPage() {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', delay: 0.2 }}
-                        className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"
+                        style={{ width: 64, height: 64, borderRadius: 16, backgroundColor: 'var(--green-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}
                       >
-                        <CheckCircle className="h-12 w-12 text-green-600" />
+                        <Mail className="h-8 w-8" style={{ color: 'var(--green)' }} />
                       </motion.div>
-                      
-                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                        Welcome to TickTrack Pro!
+
+                      <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
+                        Check Your Email!
                       </h2>
-                      <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                        We&apos;ve sent a verification email to <strong>{formData.email}</strong>. 
-                        Please check your inbox and click the link to activate your account.
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                        We&apos;ve sent an activation email to:
+                      </p>
+                      <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 32, fontFamily: 'DM Mono, monospace' }}>
+                        {formData.email}
                       </p>
 
-                      <div className="bg-blue-50 rounded-lg p-6 max-w-md mx-auto mb-8">
-                        <h3 className="font-semibold text-blue-900 mb-3">Your Trial Details</h3>
-                        <div className="text-left space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Company:</span>
-                            <span className="font-medium text-gray-900">{formData.companyName}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Plan:</span>
-                            <span className="font-medium text-gray-900">{formData.selectedPlan}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Trial Period:</span>
-                            <span className="font-medium text-gray-900">14 days</span>
-                          </div>
+                      {/* Next Steps */}
+                      <div style={{ backgroundColor: 'var(--surface2)', borderRadius: 10, padding: 24, maxWidth: 400, margin: '0 auto 24px', textAlign: 'left' }}>
+                        <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
+                          Next Steps
+                        </h3>
+                        <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {['Open the email and click the activation link', 'Create your secure password', 'Sign in and start your 14-day free trial!'].map((step, i) => (
+                            <li key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                              <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', backgroundColor: 'var(--accent)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Mono, monospace', fontSize: 11 }}>{i + 1}</span>
+                              <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      {/* Trial Details */}
+                      <div style={{ backgroundColor: 'var(--surface2)', borderRadius: 10, padding: 24, maxWidth: 400, margin: '0 auto 32px', textAlign: 'left', border: '1px solid var(--border)' }}>
+                        <h3 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16, fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          <Calendar className="h-3.5 w-3.5" />
+                          Trial Details
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {[
+                            { label: 'Company', value: formData.companyName },
+                            { label: 'Plan', value: formData.selectedPlan },
+                            { label: 'Trial Period', value: '14 days' },
+                            { label: 'Trial Expires', value: formattedTrialEnd },
+                          ].map(({ label, value }) => (
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                              <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                              <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{value}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
                       <div className="space-y-4">
-                        <Button
-                          onClick={() => router.push('/auth/signin')}
-                          className="w-full max-w-xs h-12"
-                        >
+                        <Button onClick={() => router.push('/auth/signin')} className="gap-2">
                           Go to Sign In
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          <ArrowRight className="h-4 w-4" />
                         </Button>
-                        
-                        <p className="text-sm text-gray-500">
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                           Didn&apos;t receive the email?{' '}
-                          <button className="text-blue-600 hover:underline">
+                          <button style={{ color: 'var(--text-secondary)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
                             Resend verification
                           </button>
                         </p>
@@ -729,50 +703,92 @@ export default function GetStartedPage() {
               {/* Error Message */}
               {error && currentStep !== 'success' && (
                 <div className="px-6 md:px-8 pb-4">
-                  <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm p-3 rounded-lg" style={{ backgroundColor: 'var(--red-bg)', color: 'var(--red)' }}>
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {error}
                   </div>
                 </div>
               )}
 
+              {/* Account Already Exists Dialog */}
+              {showAccountExistsDialog && (
+                <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    style={{ backgroundColor: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)', maxWidth: 400, width: '100%', overflow: 'hidden' }}
+                  >
+                    <div style={{ padding: '2rem', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                        <User className="h-6 w-6" style={{ color: 'var(--text-muted)' }} />
+                      </div>
+                      <h3 style={{ fontSize: 18, fontWeight: 300, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 8 }}>Account Already Exists</h3>
+                      <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>We found an existing account with this email</p>
+                    </div>
+
+                    <div style={{ padding: '1.5rem' }}>
+                      <div style={{ backgroundColor: 'var(--surface2)', borderRadius: 8, padding: 12, marginBottom: 20 }}>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Email</p>
+                        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'DM Mono, monospace' }}>{existingEmail}</p>
+                      </div>
+
+                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 20 }}>
+                        Would you like to sign in to your existing account or reset your password?
+                      </p>
+
+                      <div className="space-y-2">
+                        <Link href="/auth/signin" className="flex items-center justify-center gap-2 w-full rounded-lg py-2.5 px-4 text-sm font-medium transition-colors"
+                          style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
+                          <ArrowRight className="h-4 w-4" />
+                          Sign In to Your Account
+                        </Link>
+                        <Link href="/auth/forgot-password" className="flex items-center justify-center gap-2 w-full rounded-lg py-2.5 px-4 text-sm font-medium"
+                          style={{ backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+                          <Key className="h-4 w-4" />
+                          Forgot Password?
+                        </Link>
+                        <button
+                          onClick={() => { setShowAccountExistsDialog(false); updateFormData('email', '') }}
+                          className="w-full py-2 text-sm"
+                          style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                        >
+                          Use a Different Email
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
               {/* Navigation Buttons */}
               {currentStep !== 'success' && (
-                <div className="px-6 md:px-8 pb-6 flex items-center justify-between">
+                <div className="px-6 md:px-8 pb-6 flex items-center justify-between" style={{ borderTop: '1px solid var(--border)', paddingTop: 20 }}>
                   {currentStepIndex > 0 ? (
-                    <Button
-                      variant="outline"
-                      onClick={prevStep}
-                      className="h-12"
-                    >
-                      <ArrowLeft className="mr-2 h-4 w-4" />
+                    <Button variant="outline" onClick={prevStep} className="gap-2">
+                      <ArrowLeft className="h-4 w-4" />
                       Back
                     </Button>
                   ) : (
-                    <Link href="/auth/signin" className="text-sm text-gray-600 hover:text-gray-900">
-                      Already have an account? <span className="text-blue-600 font-medium">Sign in</span>
+                    <Link href="/auth/signin" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                      Already have an account? <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Sign in</span>
                     </Link>
                   )}
 
-                  <Button
-                    onClick={handleNext}
-                    disabled={isLoading}
-                    className="h-12 min-w-[140px]"
-                  >
+                  <Button onClick={handleNext} disabled={isLoading} className="min-w-[140px] gap-2">
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                         Creating...
                       </>
                     ) : currentStep === 'account' ? (
                       <>
-                        Create Account
-                        <CheckCircle className="ml-2 h-4 w-4" />
+                        Start Free Trial
+                        <CheckCircle className="h-4 w-4" />
                       </>
                     ) : (
                       <>
                         Continue
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <ArrowRight className="h-4 w-4" />
                       </>
                     )}
                   </Button>
@@ -782,11 +798,11 @@ export default function GetStartedPage() {
           </Card>
 
           {/* Footer */}
-          <p className="text-center text-white/60 text-sm mt-6">
+          <p className="text-center mt-6" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             By creating an account, you agree to our{' '}
-            <Link href="/terms" className="text-white/80 hover:text-white underline">Terms of Service</Link>
+            <Link href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>Terms of Service</Link>
             {' '}and{' '}
-            <Link href="/privacy" className="text-white/80 hover:text-white underline">Privacy Policy</Link>
+            <Link href="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>Privacy Policy</Link>
           </p>
         </div>
       </main>

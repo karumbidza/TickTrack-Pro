@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 
-// Password validation
+// Password validation - requires strong passwords
 const passwordSchema = z.string()
-  .min(8, 'Password must be at least 8 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+  .min(6, 'Password must be at least 6 characters')
+  .regex(/[A-Z]/, 'Must contain uppercase')
+  .regex(/[a-z]/, 'Must contain lowercase')
+  .regex(/[0-9]/, 'Must contain number')
+  .regex(/[^A-Za-z0-9]/, 'Must contain special character')
 
 const resetPasswordSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -27,6 +28,10 @@ const resetPasswordSchema = z.object({
  * Resets password after OTP verification
  */
 export async function POST(request: NextRequest) {
+  // Rate limit: prevent brute force OTP attacks
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const validatedData = resetPasswordSchema.parse(body)

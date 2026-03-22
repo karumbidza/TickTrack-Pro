@@ -96,29 +96,29 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      OPEN: 'bg-blue-100 text-blue-800',
-      PROCESSING: 'bg-yellow-100 text-yellow-800',
-      IN_PROGRESS: 'bg-orange-100 text-orange-800',
-      ON_SITE: 'bg-purple-100 text-purple-800',
-      PENDING_REVIEW: 'bg-indigo-100 text-indigo-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CLOSED: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800'
+  const getStatusVariant = (status: string): 'info' | 'warning' | 'success' | 'neutral' | 'destructive' => {
+    const variants: Record<string, 'info' | 'warning' | 'success' | 'neutral' | 'destructive'> = {
+      OPEN: 'info',
+      PROCESSING: 'warning',
+      IN_PROGRESS: 'warning',
+      ON_SITE: 'info',
+      PENDING_REVIEW: 'info',
+      COMPLETED: 'success',
+      CLOSED: 'neutral',
+      CANCELLED: 'destructive'
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return variants[status] || 'neutral'
   }
 
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-800',
-      MEDIUM: 'bg-yellow-100 text-yellow-800',
-      HIGH: 'bg-orange-100 text-orange-800',
-      CRITICAL: 'bg-red-100 text-red-800',
-      URGENT: 'bg-red-100 text-red-800'
+  const getPriorityVariant = (priority: string): 'success' | 'warning' | 'destructive' | 'neutral' => {
+    const variants: Record<string, 'success' | 'warning' | 'destructive' | 'neutral'> = {
+      LOW: 'success',
+      MEDIUM: 'warning',
+      HIGH: 'warning',
+      CRITICAL: 'destructive',
+      URGENT: 'destructive'
     }
-    return colors[priority] || 'bg-gray-100 text-gray-800'
+    return variants[priority] || 'neutral'
   }
 
   const formatRole = (role: string) => {
@@ -136,92 +136,92 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent)' }}></div>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5">
         {/* Welcome Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user.name || 'Admin'}</h1>
-            <p className="text-gray-600">Here's what's happening with your tickets today</p>
+            <h1 className="text-3xl" style={{ fontWeight: 300, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Welcome back, {user.name || 'Admin'}</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Here's what's happening with your tickets today</p>
           </div>
-          <Badge variant="outline" className="text-base px-4 py-2">
+          <Badge variant="neutral" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             {formatRole(user.role)}
           </Badge>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+          <Card style={{ backgroundColor: 'var(--amber-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-amber-100">Open</CardTitle>
-              <AlertCircle className="h-5 w-5 text-amber-200" />
+              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 500 }}>Open</CardTitle>
+              <AlertCircle className="h-5 w-5" style={{ color: 'var(--amber)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.openTickets}</div>
-              <p className="text-xs text-amber-200 mt-1">Awaiting assignment</p>
+              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{stats.openTickets}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Awaiting assignment</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+          <Card style={{ backgroundColor: 'var(--blue-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-100">In Progress</CardTitle>
-              <Clock className="h-5 w-5 text-purple-200" />
+              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 500 }}>In Progress</CardTitle>
+              <Clock className="h-5 w-5" style={{ color: 'var(--blue)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.inProgressTickets}</div>
-              <p className="text-xs text-purple-200 mt-1">Being worked on</p>
+              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{stats.inProgressTickets}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Being worked on</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <Card style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-100">Completed</CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-200" />
+              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 500 }}>Completed</CardTitle>
+              <CheckCircle className="h-5 w-5" style={{ color: 'var(--green)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.completedMTD}</div>
-              <p className="text-xs text-green-200 mt-1">Month to date</p>
+              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{stats.completedMTD}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Month to date</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100">Approved Cost</CardTitle>
-              <DollarSign className="h-5 w-5 text-emerald-200" />
+              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', fontWeight: 500 }}>Approved Cost</CardTitle>
+              <DollarSign className="h-5 w-5" style={{ color: 'var(--green)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalCostMTD.toLocaleString()}</div>
-              <p className="text-xs text-emerald-200 mt-1">Month to date</p>
+              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>${stats.totalCostMTD.toLocaleString()}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Month to date</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Links */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <span className="text-gray-500 font-medium">Quick links:</span>
-          <Link href="/admin/tickets" className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
+          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Quick links:</span>
+          <Link href="/admin/tickets" className="hover:underline flex items-center gap-1" style={{ color: 'var(--accent)' }}>
             <Ticket className="h-4 w-4" />
             Manage Tickets
           </Link>
-          <Link href="/admin/assets" className="text-cyan-600 hover:text-cyan-800 hover:underline flex items-center gap-1">
+          <Link href="/admin/assets" className="hover:underline flex items-center gap-1" style={{ color: 'var(--blue)' }}>
             <Package className="h-4 w-4" />
             Assets
           </Link>
-          <Link href="/admin/contractors" className="text-green-600 hover:text-green-800 hover:underline flex items-center gap-1">
+          <Link href="/admin/contractors" className="hover:underline flex items-center gap-1" style={{ color: 'var(--green)' }}>
             <Wrench className="h-4 w-4" />
             Contractors
           </Link>
-          <Link href="/admin/invoices" className="text-amber-600 hover:text-amber-800 hover:underline flex items-center gap-1">
+          <Link href="/admin/invoices" className="hover:underline flex items-center gap-1" style={{ color: 'var(--amber)' }}>
             <FileText className="h-4 w-4" />
             Invoices
           </Link>
@@ -229,30 +229,30 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Urgent Tickets */}
-          <Card>
+          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+              <CardTitle className="flex items-center font-medium" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                <AlertTriangle className="h-5 w-5 mr-2" style={{ color: 'var(--red)' }} />
                 Urgent Tickets
               </CardTitle>
-              <Badge variant="destructive">{urgentTickets.length}</Badge>
+              <Badge variant="destructive" style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{urgentTickets.length}</Badge>
             </CardHeader>
             <CardContent>
               {urgentTickets.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="h-12 w-12 mx-auto text-green-400 mb-2" />
+                <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+                  <CheckCircle className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--green)' }} />
                   <p>No urgent tickets! Great job!</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {urgentTickets.slice(0, 5).map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                    <div key={ticket.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--red-bg)', border: '1px solid var(--border)' }}>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
-                        <p className="text-sm text-gray-500">{ticket.ticketNumber || ticket.id.slice(0, 8)}</p>
+                        <p className="font-medium truncate" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{ticket.title}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{ticket.ticketNumber || ticket.id.slice(0, 8)}</p>
                       </div>
                       <div className="flex items-center space-x-2 ml-4">
-                        <Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                        <Badge variant={getPriorityVariant(ticket.priority)} style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{ticket.priority}</Badge>
                         <Link href={`/admin/tickets`}>
                           <Button size="sm" variant="outline">View</Button>
                         </Link>
@@ -265,10 +265,10 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
           </Card>
 
           {/* Recent Tickets */}
-          <Card>
+          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Clock className="h-5 w-5 text-blue-500 mr-2" />
+              <CardTitle className="flex items-center font-medium" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                <Clock className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
                 Recent Tickets
               </CardTitle>
               <Link href="/admin/tickets">
@@ -279,26 +279,26 @@ export function AdminDashboard({ user }: AdminDashboardProps) {
             </CardHeader>
             <CardContent>
               {recentTickets.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Ticket className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+                  <Ticket className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--border-strong)' }} />
                   <p>No tickets yet</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {recentTickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div key={ticket.id} className="flex items-center justify-between p-3 rounded-lg transition-colors" style={{ ['--hover-bg' as string]: 'var(--surface2)' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Ticket className="h-5 w-5 text-blue-600" />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                          <Ticket className="h-5 w-5" style={{ color: 'var(--blue)' }} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-medium truncate" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{ticket.title}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                             {ticket.user?.name || 'Unknown'} • {new Date(ticket.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(ticket.status)}>
+                      <Badge variant={getStatusVariant(ticket.status)} style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         {ticket.status.replace('_', ' ')}
                       </Badge>
                     </div>

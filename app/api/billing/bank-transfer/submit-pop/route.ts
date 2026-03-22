@@ -4,8 +4,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BillingService, getSubscriptionPricing } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/billing/bank-transfer/submit-pop
@@ -92,17 +95,21 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Convert file to buffer
+    // Upload file to R2
+    if (!isR2Configured()) {
+      return NextResponse.json({ error: 'File storage not configured' }, { status: 500 })
+    }
+
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    // Save file to uploads directory
-    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'bank-transfer-pop')
-    await mkdir(uploadsDir, { recursive: true })
-
-    const filename = `${tenant.id}-${subscription.id}-${Date.now()}.${file.name.split('.').pop()}`
-    const filepath = join(uploadsDir, filename)
-    await writeFile(filepath, buffer)
+    const safeFilename = `${tenant.id}-${subscription.id}-${Date.now()}.${file.name.split('.').pop()}`
+    
+    const uploadResult = await uploadToR2(buffer, safeFilename, 'bank-transfer-pop', file.type)
+    
+    if (!uploadResult.success || !uploadResult.url) {
+      logger.error('[Bank Transfer] Failed to upload POP to R2:', uploadResult.error)
+      return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 })
+    }
 
     // Create payment record with POP
     const payment = await BillingService.createInvoice(
@@ -119,7 +126,7 @@ export async function POST(request: NextRequest) {
       data: {
         status: 'pending_approval',
         metadata: {
-          popFile: `/uploads/bank-transfer-pop/${filename}`,
+          popFile: uploadResult.url,
           popSubmittedAt: new Date().toISOString(),
           submittedByUserId: session.user.id
         }

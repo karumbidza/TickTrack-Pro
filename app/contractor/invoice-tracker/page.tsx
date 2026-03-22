@@ -291,17 +291,17 @@ export default function InvoiceTrackerPage() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { className: string; icon: React.ReactNode }> = {
-      DRAFT: { className: 'bg-gray-100 text-gray-800', icon: <FileText className="h-3 w-3" /> },
-      PENDING: { className: 'bg-yellow-100 text-yellow-800', icon: <Clock className="h-3 w-3" /> },
-      APPROVED: { className: 'bg-blue-100 text-blue-800', icon: <CheckCircle className="h-3 w-3" /> },
-      PAID: { className: 'bg-green-100 text-green-800', icon: <DollarSign className="h-3 w-3" /> },
-      OVERDUE: { className: 'bg-red-100 text-red-800', icon: <AlertCircle className="h-3 w-3" /> },
-      CANCELLED: { className: 'bg-gray-100 text-gray-500', icon: <X className="h-3 w-3" /> },
-      REJECTED: { className: 'bg-red-100 text-red-800', icon: <X className="h-3 w-3" /> }
+      DRAFT: { className: '', style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <FileText className="h-3 w-3" /> },
+      PENDING: { className: '', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <Clock className="h-3 w-3" /> },
+      APPROVED: { className: '', style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <CheckCircle className="h-3 w-3" /> },
+      PAID: { className: '', style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <DollarSign className="h-3 w-3" /> },
+      OVERDUE: { className: '', style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <AlertCircle className="h-3 w-3" /> },
+      CANCELLED: { className: '', style: { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }, icon: <X className="h-3 w-3" /> },
+      REJECTED: { className: '', style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <X className="h-3 w-3" /> }
     }
     const variant = variants[status] || variants.PENDING
     return (
-      <Badge className={`${variant.className} flex items-center gap-1`}>
+      <Badge className="flex items-center gap-1" style={variant.style}>
         {variant.icon}
         {status}
       </Badge>
@@ -330,8 +330,8 @@ export default function InvoiceTrackerPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Invoice Tracker</h1>
-          <p className="text-gray-600 mt-1">Manage your invoices and track payments</p>
+          <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Invoice Tracker</h1>
+          <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>Manage your invoices and track payments</p>
         </div>
         <Button onClick={fetchData} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -345,10 +345,10 @@ export default function InvoiceTrackerPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Invoices</p>
-                <p className="text-2xl font-bold">{stats.totalInvoices}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Invoices</p>
+                <p className="text-2xl font-medium">{stats.totalInvoices}</p>
               </div>
-              <FileText className="h-10 w-10 text-blue-500 opacity-50" />
+              <FileText className="h-10 w-10 opacity-40" style={{ color: 'var(--ds-blue)' }} />
             </div>
           </CardContent>
         </Card>
@@ -357,10 +357,10 @@ export default function InvoiceTrackerPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pendingInvoices}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Pending</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>{stats.pendingInvoices}</p>
               </div>
-              <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
+              <Clock className="h-10 w-10 opacity-40" style={{ color: 'var(--ds-amber)' }} />
             </div>
           </CardContent>
         </Card>
@@ -369,10 +369,10 @@ export default function InvoiceTrackerPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Paid</p>
-                <p className="text-2xl font-bold text-green-600">{stats.paidInvoices}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Paid</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>{stats.paidInvoices}</p>
               </div>
-              <CheckCircle className="h-10 w-10 text-green-500 opacity-50" />
+              <CheckCircle className="h-10 w-10 opacity-40" style={{ color: 'var(--green)' }} />
             </div>
           </CardContent>
         </Card>
@@ -381,12 +381,12 @@ export default function InvoiceTrackerPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Earnings</p>
+                <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>
                   ${stats.totalEarnings.toLocaleString()}
                 </p>
               </div>
-              <DollarSign className="h-10 w-10 text-green-500 opacity-50" />
+              <DollarSign className="h-10 w-10 opacity-40" style={{ color: 'var(--green)' }} />
             </div>
           </CardContent>
         </Card>
@@ -409,9 +409,9 @@ export default function InvoiceTrackerPage() {
             <CardContent>
               {invoices.length === 0 ? (
                 <div className="text-center py-12">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No invoices yet</h3>
-                  <p className="text-gray-600 mb-4">
+                  <FileText className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No invoices yet</h3>
+                  <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                     Submit invoices for your completed jobs to start tracking payments
                   </p>
                 </div>
@@ -420,7 +420,7 @@ export default function InvoiceTrackerPage() {
                   {invoices.map((invoice) => (
                     <div 
                       key={invoice.id}
-                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                      className="border rounded-lg p-4 transition-colors" style={{ borderColor: 'var(--border)' }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -428,24 +428,24 @@ export default function InvoiceTrackerPage() {
                             <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
                             {getStatusBadge(invoice.status)}
                             {invoice.clarificationRequest && !invoice.clarificationResponse && (
-                              <Badge className="bg-orange-100 text-orange-800 animate-pulse">
+                              <Badge className="animate-pulse" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>
                                 <AlertCircle className="h-3 w-3 mr-1" />
                                 Response Needed
                               </Badge>
                             )}
                           </div>
-                          <p className="text-gray-600 text-sm mb-1">
+                          <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
                             {invoice.ticket.ticketNumber} - {invoice.ticket.title}
                           </p>
-                          <p className="text-gray-500 text-xs">
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             {invoice.ticket.tenant.name} • Created {new Date(invoice.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                         
                         <div className="text-right mr-4">
-                          <p className="text-lg font-bold">${invoice.amount.toLocaleString()}</p>
+                          <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>${invoice.amount.toLocaleString()}</p>
                           {invoice.status === 'PAID' && invoice.paidDate && (
-                            <p className="text-xs text-green-600">
+                            <p className="text-xs" style={{ color: 'var(--green)' }}>
                               Paid {new Date(invoice.paidDate).toLocaleDateString()}
                             </p>
                           )}
@@ -467,7 +467,7 @@ export default function InvoiceTrackerPage() {
                           {invoice.clarificationRequest && !invoice.clarificationResponse && (
                             <Button 
                               size="sm"
-                              className="bg-orange-600 hover:bg-orange-700"
+                              style={{ backgroundColor: 'var(--ds-amber)', color: 'var(--bg)' }}
                               onClick={() => {
                                 setSelectedInvoice(invoice)
                                 setShowClarificationDialog(true)
@@ -510,9 +510,9 @@ export default function InvoiceTrackerPage() {
             <CardContent>
               {paymentBatches.length === 0 ? (
                 <div className="text-center py-12">
-                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No payments yet</h3>
-                  <p className="text-gray-600">
+                  <CreditCard className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No payments yet</h3>
+                  <p style={{ color: 'var(--text-secondary)' }}>
                     Payment batches will appear here once admin processes payments
                   </p>
                 </div>
@@ -523,11 +523,11 @@ export default function InvoiceTrackerPage() {
                     return (
                     <div 
                       key={batch.id}
-                      className="border-2 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 overflow-hidden"
+                      className="border rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}
                     >
                       {/* POP Header - Clickable to toggle */}
                       <div 
-                        className="bg-green-600 text-white p-4 cursor-pointer hover:bg-green-700 transition-colors"
+                        className="p-4 cursor-pointer transition-colors" style={{ backgroundColor: 'var(--green)', color: 'var(--bg)' }}
                         onClick={() => {
                           setExpandedPops(prev => {
                             const newSet = new Set(prev)
@@ -542,12 +542,12 @@ export default function InvoiceTrackerPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="bg-white/20 rounded-lg p-2">
+                            <div className="rounded-lg p-2" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
                               <CreditCard className="h-6 w-6" />
                             </div>
                             <div>
-                              <p className="font-bold text-lg">{batch.batchNumber}</p>
-                              <p className="text-green-100 text-sm">
+                              <p className="font-medium text-lg">{batch.batchNumber}</p>
+                              <p className="text-sm" style={{ opacity: 0.8 }}>
                                 {new Date(batch.paymentDate).toLocaleDateString('en-US', { 
                                   weekday: 'long', 
                                   year: 'numeric', 
@@ -559,12 +559,12 @@ export default function InvoiceTrackerPage() {
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-right">
-                              <p className="text-3xl font-bold">${batch.totalAmount.toLocaleString()}</p>
+                              <p className="text-3xl font-medium">${batch.totalAmount.toLocaleString()}</p>
                               {batch.popReference && (
-                                <p className="text-green-200 text-sm">Ref: {batch.popReference}</p>
+                                <p className="text-sm" style={{ opacity: 0.7 }}>Ref: {batch.popReference}</p>
                               )}
                             </div>
-                            <div className="bg-white/20 rounded-full p-1.5">
+                            <div className="rounded-full p-1.5" style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}>
                               {isExpanded ? (
                                 <ChevronUp className="h-5 w-5" />
                               ) : (
@@ -576,7 +576,7 @@ export default function InvoiceTrackerPage() {
                       </div>
 
                       {/* POP Actions Bar */}
-                      <div className="bg-green-100 px-4 py-2 flex items-center justify-between">
+                      <div className="px-4 py-2 flex items-center justify-between" style={{ backgroundColor: 'var(--green-bg)' }}>
                         <div 
                           className="flex items-center gap-2 cursor-pointer"
                           onClick={() => {
@@ -591,11 +591,11 @@ export default function InvoiceTrackerPage() {
                             })
                           }}
                         >
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-green-800 font-medium text-sm">
+                          <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
+                          <span className="font-medium text-sm" style={{ color: 'var(--green)' }}>
                             {batch.invoices.length} Ticket{batch.invoices.length !== 1 ? 's' : ''} Paid
                           </span>
-                          <span className="text-green-600 text-xs ml-1">
+                          <span className="text-xs ml-1" style={{ color: 'var(--green)' }}>
                             {isExpanded ? '(click to collapse)' : '(click to view)'}
                           </span>
                         </div>
@@ -603,7 +603,7 @@ export default function InvoiceTrackerPage() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="bg-white hover:bg-green-50"
+                            style={{ backgroundColor: 'var(--surface)' }}
                             onClick={(e) => {
                               e.stopPropagation()
                               window.open(batch.popFileUrl, '_blank')
@@ -612,10 +612,10 @@ export default function InvoiceTrackerPage() {
                             <Eye className="h-4 w-4 mr-1" />
                             View POP
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            className="bg-white hover:bg-green-50"
+                            style={{ backgroundColor: 'var(--surface)' }}
                             onClick={(e) => {
                               e.stopPropagation()
                               const link = document.createElement('a')
@@ -633,7 +633,7 @@ export default function InvoiceTrackerPage() {
                       {/* Associated Tickets - Collapsible */}
                       {isExpanded && (
                       <div className="p-4">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                           <FileText className="h-4 w-4" />
                           Tickets Included in this Payment:
                         </h4>
@@ -641,35 +641,35 @@ export default function InvoiceTrackerPage() {
                           {batch.invoices.map((invoice) => (
                             <div 
                               key={invoice.id}
-                              className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-between hover:border-green-300 transition-colors"
+                              className="rounded-lg p-3 flex items-center justify-between transition-colors" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
                             >
                               <div className="flex items-center gap-3">
-                                <div className="bg-green-100 rounded-full p-1.5">
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                <div className="rounded-full p-1.5" style={{ backgroundColor: 'var(--green-bg)' }}>
+                                  <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
                                 </div>
                                 <div>
-                                  <p className="font-medium text-gray-900">
-                                    <span className="font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded mr-2">
+                                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                    <span className="font-mono text-sm px-1.5 py-0.5 rounded mr-2" style={{ backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }}>
                                       {invoice.ticket.ticketNumber}
                                     </span>
                                     {invoice.ticket.title}
                                   </p>
-                                  <p className="text-xs text-gray-500 mt-0.5">
+                                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                                     Invoice: {invoice.invoiceNumber} • {invoice.ticket.tenant.name}
                                   </p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="font-bold text-green-700">${invoice.amount.toLocaleString()}</p>
+                                <p className="font-medium" style={{ color: 'var(--green)' }}>${invoice.amount.toLocaleString()}</p>
                               </div>
                             </div>
                           ))}
                         </div>
-                        
+
                         {batch.notes && (
-                          <div className="mt-3 bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500 uppercase font-medium mb-1">Payment Notes</p>
-                            <p className="text-sm text-gray-700">{batch.notes}</p>
+                          <div className="mt-3 rounded-lg p-3" style={{ backgroundColor: 'var(--surface2)' }}>
+                            <p className="text-xs uppercase font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Payment Notes</p>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{batch.notes}</p>
                           </div>
                         )}
                       </div>
@@ -696,21 +696,21 @@ export default function InvoiceTrackerPage() {
           {selectedBatch && (
             <div className="space-y-6">
               {/* Batch Header */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-green-700">Total Payment</p>
-                    <p className="text-3xl font-bold text-green-800">
+                    <p className="text-sm" style={{ color: 'var(--green)' }}>Total Payment</p>
+                    <p className="text-3xl font-medium" style={{ color: 'var(--green)' }}>
                       ${selectedBatch.totalAmount.toLocaleString()}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">Payment Date</p>
-                    <p className="font-medium">
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Payment Date</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                       {new Date(selectedBatch.paymentDate).toLocaleDateString()}
                     </p>
                     {selectedBatch.popReference && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                         Ref: {selectedBatch.popReference}
                       </p>
                     )}
@@ -720,9 +720,9 @@ export default function InvoiceTrackerPage() {
 
               {/* Notes */}
               {selectedBatch.notes && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Notes</p>
-                  <p className="text-gray-800">{selectedBatch.notes}</p>
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Notes</p>
+                  <p style={{ color: 'var(--text-primary)' }}>{selectedBatch.notes}</p>
                 </div>
               )}
 
@@ -733,22 +733,22 @@ export default function InvoiceTrackerPage() {
                 </h4>
                 <div className="space-y-3">
                   {selectedBatch.invoices.map((invoice) => (
-                    <div 
+                    <div
                       key={invoice.id}
-                      className="border rounded-lg p-3 hover:bg-gray-50"
+                      className="border rounded-lg p-3" style={{ borderColor: 'var(--border)' }}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <span className="font-mono font-medium" style={{ color: 'var(--text-primary)' }}>{invoice.invoiceNumber}</span>
+                          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                             {invoice.ticket.ticketNumber} - {invoice.ticket.title}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             {invoice.ticket.tenant.name}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-green-700">
+                          <p className="font-medium" style={{ color: 'var(--green)' }}>
                             ${invoice.amount.toLocaleString()}
                           </p>
                         </div>
@@ -782,10 +782,10 @@ export default function InvoiceTrackerPage() {
           {selectedInvoice && (
             <div className="space-y-6">
               {/* Status Header */}
-              <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
                 <div>
-                  <span className="font-mono text-lg font-bold">{selectedInvoice.invoiceNumber}</span>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <span className="font-mono text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{selectedInvoice.invoiceNumber}</span>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
                     Created {new Date(selectedInvoice.createdAt).toLocaleString()}
                   </p>
                 </div>
@@ -794,11 +794,11 @@ export default function InvoiceTrackerPage() {
 
               {/* Rejection Reason */}
               {selectedInvoice.status === 'REJECTED' && selectedInvoice.rejectionReason && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-medium text-red-800 mb-2">Rejection Reason</h4>
-                  <p className="text-red-700 mb-4">{selectedInvoice.rejectionReason}</p>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                  <h4 className="font-medium mb-2" style={{ color: 'var(--red)' }}>Rejection Reason</h4>
+                  <p className="mb-4" style={{ color: 'var(--red)' }}>{selectedInvoice.rejectionReason}</p>
+                  <Button
+                    style={{ backgroundColor: 'var(--accent)', color: 'white' }}
                     onClick={() => handleOpenResubmit(selectedInvoice)}
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
@@ -809,19 +809,19 @@ export default function InvoiceTrackerPage() {
 
               {/* Clarification Request */}
               {selectedInvoice.clarificationRequest && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h4 className="font-medium text-orange-800 mb-2">Clarification Requested</h4>
-                  <p className="text-orange-700 mb-3">{selectedInvoice.clarificationRequest}</p>
-                  
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                  <h4 className="font-medium mb-2" style={{ color: 'var(--amber)' }}>Clarification Requested</h4>
+                  <p className="mb-3" style={{ color: 'var(--amber)' }}>{selectedInvoice.clarificationRequest}</p>
+
                   {selectedInvoice.clarificationResponse ? (
-                    <div className="bg-white rounded p-3 mt-2">
-                      <p className="text-sm text-gray-600 mb-1">Your Response:</p>
-                      <p className="text-gray-800">{selectedInvoice.clarificationResponse}</p>
+                    <div className="rounded p-3 mt-2" style={{ backgroundColor: 'var(--surface)' }}>
+                      <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Your Response:</p>
+                      <p style={{ color: 'var(--text-primary)' }}>{selectedInvoice.clarificationResponse}</p>
                     </div>
                   ) : (
-                    <Button 
+                    <Button
                       size="sm"
-                      className="bg-orange-600 hover:bg-orange-700"
+                      style={{ backgroundColor: 'var(--amber)', color: 'white' }}
                       onClick={() => {
                         setShowInvoiceDetails(false)
                         setShowClarificationDialog(true)
@@ -836,13 +836,13 @@ export default function InvoiceTrackerPage() {
 
               {/* Invoice Details */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Amount</p>
-                  <p className="text-2xl font-bold">${selectedInvoice.amount.toLocaleString()}</p>
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Amount</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>${selectedInvoice.amount.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">Status</p>
-                  <p className="text-2xl font-bold">{selectedInvoice.status}</p>
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Status</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{selectedInvoice.status}</p>
                 </div>
               </div>
 
@@ -850,14 +850,14 @@ export default function InvoiceTrackerPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {selectedInvoice.hoursWorked && (
                     <div>
-                      <p className="text-sm text-gray-600">Hours Worked</p>
-                      <p className="font-medium">{selectedInvoice.hoursWorked} hours</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Hours Worked</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedInvoice.hoursWorked} hours</p>
                     </div>
                   )}
                   {selectedInvoice.hourlyRate && (
                     <div>
-                      <p className="text-sm text-gray-600">Hourly Rate</p>
-                      <p className="font-medium">${selectedInvoice.hourlyRate}/hour</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Hourly Rate</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>${selectedInvoice.hourlyRate}/hour</p>
                     </div>
                   )}
                 </div>
@@ -867,7 +867,7 @@ export default function InvoiceTrackerPage() {
               {selectedInvoice.workDescription && (
                 <div>
                   <h4 className="font-medium mb-2">Work Description</h4>
-                  <p className="text-gray-600 bg-gray-50 rounded-lg p-4">
+                  <p className="rounded-lg p-4" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>
                     {selectedInvoice.workDescription}
                   </p>
                 </div>
@@ -876,25 +876,25 @@ export default function InvoiceTrackerPage() {
               {/* Ticket Info */}
               <div>
                 <h4 className="font-medium mb-2">Related Ticket</h4>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-mono">{selectedInvoice.ticket.ticketNumber}</p>
-                  <p className="text-gray-600">{selectedInvoice.ticket.title}</p>
-                  <p className="text-sm text-gray-500">{selectedInvoice.ticket.tenant.name}</p>
+                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="font-mono" style={{ color: 'var(--text-primary)' }}>{selectedInvoice.ticket.ticketNumber}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>{selectedInvoice.ticket.title}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{selectedInvoice.ticket.tenant.name}</p>
                 </div>
               </div>
 
               {/* Payment Info */}
               {selectedInvoice.status === 'PAID' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-medium text-green-800 mb-2">Payment Information</h4>
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                  <h4 className="font-medium mb-2" style={{ color: 'var(--green)' }}>Payment Information</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-green-700">Paid Amount</p>
-                      <p className="font-bold text-green-800">${selectedInvoice.paidAmount.toLocaleString()}</p>
+                      <p className="text-sm" style={{ color: 'var(--green)' }}>Paid Amount</p>
+                      <p className="font-medium" style={{ color: 'var(--green)' }}>${selectedInvoice.paidAmount.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-green-700">Paid Date</p>
-                      <p className="font-medium text-green-800">
+                      <p className="text-sm" style={{ color: 'var(--green)' }}>Paid Date</p>
+                      <p className="font-medium" style={{ color: 'var(--green)' }}>
                         {selectedInvoice.paidDate && new Date(selectedInvoice.paidDate).toLocaleDateString()}
                       </p>
                     </div>
@@ -938,9 +938,9 @@ export default function InvoiceTrackerPage() {
 
           <div className="space-y-4">
             {/* Clarification Request */}
-            <div className="bg-orange-50 rounded-lg p-4">
-              <h4 className="font-medium text-orange-800 mb-2">Admin's Request:</h4>
-              <p className="text-orange-700">{selectedInvoice?.clarificationRequest}</p>
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)' }}>
+              <h4 className="font-medium mb-2" style={{ color: 'var(--amber)' }}>Admin's Request:</h4>
+              <p style={{ color: 'var(--amber)' }}>{selectedInvoice?.clarificationRequest}</p>
             </div>
 
             {/* Response */}
@@ -992,9 +992,9 @@ export default function InvoiceTrackerPage() {
           {selectedInvoice && (
             <div className="space-y-4">
               {/* Previous rejection reason */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-800 font-medium">Previous Rejection:</p>
-                <p className="text-sm text-red-700">{selectedInvoice.rejectionReason}</p>
+              <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                <p className="text-sm font-medium" style={{ color: 'var(--red)' }}>Previous Rejection:</p>
+                <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedInvoice.rejectionReason}</p>
               </div>
 
               {/* New Invoice Number */}
@@ -1005,7 +1005,7 @@ export default function InvoiceTrackerPage() {
                   onChange={(e) => setResubmitData(prev => ({ ...prev, invoiceNumber: e.target.value }))}
                   placeholder="INV-2024-002-REV"
                 />
-                <p className="text-xs text-gray-500 mt-1">Enter a new/different invoice number</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Enter a new/different invoice number</p>
               </div>
 
               {/* Amount */}
@@ -1051,9 +1051,9 @@ export default function InvoiceTrackerPage() {
                   onChange={(e) => setResubmitData(prev => ({ ...prev, revisionNotes: e.target.value }))}
                   placeholder="Explain what was corrected in this revised invoice (e.g., 'Corrected calculation error, updated hourly rate from $50 to $45 as per agreement')"
                   rows={3}
-                  className="border-blue-300 focus:border-blue-500"
+                  style={{ borderColor: 'var(--accent)' }}
                 />
-                <p className="text-xs text-gray-500 mt-1">Minimum 10 characters required</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Minimum 10 characters required</p>
               </div>
 
               {/* File Upload */}
@@ -1064,11 +1064,11 @@ export default function InvoiceTrackerPage() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => setResubmitFile(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium" style={{ color: 'var(--text-muted)' }}
                   />
                 </div>
                 {resubmitFile && (
-                  <p className="text-sm text-green-600 mt-2 flex items-center">
+                  <p className="text-sm mt-2 flex items-center" style={{ color: 'var(--green)' }}>
                     <CheckCircle className="h-4 w-4 mr-1" />
                     {resubmitFile.name}
                   </p>
@@ -1084,7 +1084,7 @@ export default function InvoiceTrackerPage() {
             <Button 
               onClick={handleResubmitInvoice}
               disabled={isResubmitting || !resubmitData.invoiceNumber.trim() || !resubmitData.revisionNotes.trim() || !resubmitFile}
-              className="bg-blue-600 hover:bg-blue-700"
+              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
             >
               {isResubmitting ? (
                 <>

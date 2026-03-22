@@ -6,9 +6,12 @@ import { calculateSLADeadlines } from '@/lib/sla-utils'
 import { sendNewTicketEmailToAdmin } from '@/lib/email'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
 import { z } from 'zod'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
 import { logger } from '@/lib/logger'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+
+// Route segment config for large file uploads (100MB for videos)
+export const maxDuration = 300 // 5 minutes timeout for large uploads
+export const dynamic = 'force-dynamic'
 
 const createTicketSchema = z.object({
   title: z.string().min(1),
@@ -220,21 +223,22 @@ export async function POST(request: NextRequest) {
     })
 
     // Save uploaded files and create attachment records
-    if (uploadedFiles.length > 0) {
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'tickets', ticket.id)
-      await mkdir(uploadsDir, { recursive: true })
-
+    if (uploadedFiles.length > 0 && isR2Configured()) {
       for (const file of uploadedFiles) {
         try {
           const bytes = await file.arrayBuffer()
           const buffer = Buffer.from(bytes)
           
           // Create safe filename
-          const timestamp = Date.now()
-          const safeFilename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-          const filePath = path.join(uploadsDir, safeFilename)
+          const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
           
-          await writeFile(filePath, buffer)
+          // Upload to R2
+          const result = await uploadToR2(buffer, safeFilename, `tickets/${ticket.id}`, file.type || 'application/octet-stream')
+          
+          if (!result.success || !result.url) {
+            logger.error(`Failed to upload file ${file.name} to R2: ${result.error}`)
+            continue
+          }
           
           // Determine attachment type from mime type
           const getAttachmentType = (mimeType: string): string => {
@@ -247,9 +251,9 @@ export async function POST(request: NextRequest) {
           // Create attachment record in database
           await prisma.attachment.create({
             data: {
-              filename: safeFilename,
+              filename: result.key || safeFilename,
               originalName: file.name,
-              url: `/uploads/tickets/${ticket.id}/${safeFilename}`,
+              url: result.url,
               mimeType: file.type || 'application/octet-stream',
               type: getAttachmentType(file.type || 'application/octet-stream'),
               size: file.size,
@@ -258,7 +262,7 @@ export async function POST(request: NextRequest) {
             }
           })
           
-          logger.debug(`Saved file: ${safeFilename}`)
+          logger.debug(`Saved file to R2: ${result.url}`)
         } catch (fileError) {
           logger.error(`Error saving file ${file.name}:`, fileError)
         }

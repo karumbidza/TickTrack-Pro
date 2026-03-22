@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
       amount, 
       currency = 'USD',
       phone,
-      method = 'ecocash'  // ecocash, onemoney, telecash
+      method = 'ecocash',  // ecocash, onemoney, telecash
+      mode = 'upgrade',    // upgrade, advance, renew
+      advanceMonths = 1,   // Number of months for advance payment
+      description
     } = body
 
     // Validate phone number for mobile money
@@ -115,6 +118,18 @@ export async function POST(request: NextRequest) {
 
     let payment = existingPayment
     
+    // Build invoice description based on mode
+    let invoiceDescription = description
+    if (!invoiceDescription) {
+      if (mode === 'advance') {
+        invoiceDescription = `${plan} Plan - Pre-payment for ${advanceMonths} months`
+      } else if (mode === 'renew') {
+        invoiceDescription = `${plan} Plan - Early renewal`
+      } else {
+        invoiceDescription = `${plan} Plan - ${billingCycle} subscription`
+      }
+    }
+    
     if (!existingPayment) {
       // Create invoice/payment record only if doesn't exist
       try {
@@ -123,7 +138,8 @@ export async function POST(request: NextRequest) {
           paymentAmount,
           currency,
           'PAYNOW',
-          `${plan} Plan - ${billingCycle} subscription`
+          invoiceDescription,
+          { mode, advanceMonths: mode === 'advance' ? advanceMonths : undefined }
         )
       } catch (invoiceError: any) {
         // Handle unique constraint error - likely a duplicate invoice number from concurrent requests
@@ -212,7 +228,13 @@ export async function POST(request: NextRequest) {
       logger.info(`[Paynow] Mobile payment initiated successfully, pollUrl: ${response.pollUrl}`)
 
       // Get provider-specific instructions
-      const providerName = method === 'ecocash' ? 'EcoCash' : method === 'onemoney' ? 'OneMoney' : 'Telecash'
+      const providerNames: Record<string, string> = {
+        'ecocash': 'EcoCash',
+        'onemoney': 'OneMoney',
+        'innbucks': 'InnBucks',
+        'telecash': 'Telecash'
+      }
+      const providerName = providerNames[method] || method
       const instructions = `A payment request has been sent to your ${providerName} number (${phone}). Please check your phone and enter your PIN to complete the payment.`
 
       return NextResponse.json({

@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
-import { sendWelcomeEmail } from '@/lib/email'
+import { sendUserActivationEmail } from '@/lib/email'
+import { z } from 'zod'
+import crypto from 'crypto'
+
+// Validation schema for creating users (NO PASSWORD - user sets it via activation)
+const createUserSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100).trim(),
+  email: z.string().email('Invalid email address').toLowerCase().trim(),
+  phone: z.string().min(10, 'Phone number required').max(20),
+  role: z.enum(['END_USER', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']),
+  branchIds: z.array(z.string().cuid()).min(1, 'At least one branch must be selected'),
+})
 
 // Get all users for tenant
 export async function GET() {
@@ -83,19 +93,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
-    const { name, email, password, role, branchIds, phone } = await request.json()
-
-    if (!name || !email || !password || !phone) {
-      return NextResponse.json({ error: 'Name, email, phone, and password are required' }, { status: 400 })
+    // Validate request body with Zod schema
+    const body = await request.json()
+    const parseResult = createUserSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errors }, { status: 400 })
     }
 
-    if (!branchIds || !Array.isArray(branchIds) || branchIds.length === 0) {
-      return NextResponse.json({ error: 'At least one branch must be selected' }, { status: 400 })
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
-    }
+    const { name, email, role, branchIds, phone } = parseResult.data
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -104,13 +111,6 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
-    }
-
-    // Valid roles that can be created
-    const validRoles = ['END_USER', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    
-    if (!validRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
 
     // Verify all branches belong to the tenant
@@ -142,19 +142,23 @@ export async function POST(request: NextRequest) {
       finalBranchIds = allBranches.map(b => b.id)
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Generate activation token (user will set their own password)
+    const activationToken = crypto.randomBytes(32).toString('hex')
+    const activationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
 
-    // Create user with branch assignments
+    // Create user with branch assignments (NO password - pending activation)
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         phone,
-        password: hashedPassword,
+        password: '', // Empty - user will set via activation
         role: role as any,
         tenantId: session.user.tenantId,
-        isActive: true,
+        isActive: false, // Not active until they set password
+        status: 'APPROVED_EMAIL_PENDING',
+        activationToken,
+        activationExpires,
         branches: {
           create: finalBranchIds.map(branchId => ({
             branchId
@@ -192,16 +196,23 @@ export async function POST(request: NextRequest) {
     // Get branch names for email
     const branchNames = newUser.branches.map(ub => ub.branch.name)
 
-    // Send welcome email with credentials (non-blocking)
-    sendWelcomeEmail(
+    // Generate activation link
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const activationLink = `${baseUrl}/auth/activate-account/${activationToken}`
+
+    // Send activation email (user will set their own password)
+    sendUserActivationEmail(
       email,
       name,
-      password, // Original password before hashing
       tenant?.name || 'TickTrack Pro',
-      branchNames
-    ).catch(err => console.error('Failed to send welcome email:', err))
+      branchNames,
+      activationLink
+    ).catch(err => console.error('Failed to send activation email:', err))
 
-    return NextResponse.json({ user: newUser })
+    return NextResponse.json({ 
+      user: newUser,
+      message: 'User created. Activation email sent.'
+    })
   } catch (error) {
     console.error('Failed to create user:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

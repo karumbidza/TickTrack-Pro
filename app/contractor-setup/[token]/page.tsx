@@ -13,7 +13,7 @@ export default function ContractorSetupPage() {
   const params = useParams()
   const router = useRouter()
   const token = params.token as string
-  
+
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [valid, setValid] = useState(false)
@@ -21,7 +21,7 @@ export default function ContractorSetupPage() {
   const [success, setSuccess] = useState(false)
   const [tenant, setTenant] = useState<{ name: string; logo?: string } | null>(null)
   const [companyInfo, setCompanyInfo] = useState<{ companyName: string; companyEmail: string } | null>(null)
-  
+
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -35,7 +35,7 @@ export default function ContractorSetupPage() {
     try {
       const response = await fetch(`/api/contractor-setup/${token}`)
       const data = await response.json()
-      
+
       if (data.valid) {
         setValid(true)
         setTenant(data.tenant)
@@ -59,11 +59,10 @@ export default function ContractorSetupPage() {
       toast.error('Passwords do not match')
       return false
     }
-    // Check for at least one uppercase, one lowercase, one number
     const hasUppercase = /[A-Z]/.test(password)
     const hasLowercase = /[a-z]/.test(password)
     const hasNumber = /[0-9]/.test(password)
-    
+
     if (!hasUppercase || !hasLowercase || !hasNumber) {
       toast.error('Password must contain uppercase, lowercase, and numbers')
       return false
@@ -73,25 +72,23 @@ export default function ContractorSetupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validatePassword()) return
-    
+
     setSubmitting(true)
-    
+
     try {
       const response = await fetch(`/api/contractor-setup/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, confirmPassword })
       })
-      
+
       const data = await response.json()
-      
+
       if (response.ok) {
         setSuccess(true)
         toast.success('Account created successfully!')
-        
-        // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push('/auth/login')
         }, 3000)
@@ -107,20 +104,20 @@ export default function ContractorSetupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--text-muted)' }} />
       </div>
     )
   }
 
   if (!valid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Link</h1>
-            <p className="text-gray-600">{error}</p>
+            <AlertCircle className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--ds-red)' }} />
+            <h1 className="text-2xl mb-2" style={{ fontWeight: 300, color: 'var(--text-primary)' }}>Invalid Link</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
           </CardContent>
         </Card>
       </div>
@@ -129,17 +126,17 @@ export default function ContractorSetupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="bg-green-100 rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-600" />
+            <div className="rounded-full p-4 w-20 h-20 mx-auto mb-6 flex items-center justify-center" style={{ backgroundColor: 'var(--green-bg)' }}>
+              <CheckCircle className="h-10 w-10" style={{ color: 'var(--green)' }} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h1>
-            <p className="text-gray-600 mb-4">
+            <h1 className="text-2xl mb-2" style={{ fontWeight: 300, color: 'var(--text-primary)' }}>Account Created!</h1>
+            <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
               Your account has been set up successfully. Redirecting to login...
             </p>
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto" />
+            <Loader2 className="h-6 w-6 animate-spin mx-auto" style={{ color: 'var(--text-muted)' }} />
           </CardContent>
         </Card>
       </div>
@@ -147,31 +144,31 @@ export default function ContractorSetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--bg)' }}>
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
           {tenant?.logo && (
             <img src={tenant.logo} alt={tenant.name} className="h-12 mx-auto mb-4" />
           )}
-          <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <KeyRound className="h-8 w-8 text-blue-600" />
+          <div className="rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: 'var(--surface2)' }}>
+            <KeyRound className="h-8 w-8" style={{ color: 'var(--accent)' }} />
           </div>
           <CardTitle>Set Up Your Account</CardTitle>
           <CardDescription>
             Create a password for your contractor account at {tenant?.name}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600">
+          <div className="rounded-lg p-4 mb-6" style={{ backgroundColor: 'var(--surface2)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               <strong>Company:</strong> {companyInfo?.companyName}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               <strong>Email:</strong> {companyInfo?.companyEmail}
             </p>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -187,13 +184,14 @@ export default function ContractorSetupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
@@ -208,34 +206,35 @@ export default function ContractorSetupPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-muted)' }}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            
-            <div className="text-xs text-gray-500 space-y-1">
+
+            <div className="text-xs space-y-1" style={{ color: 'var(--text-muted)' }}>
               <p>Password must:</p>
               <ul className="list-disc list-inside space-y-0.5">
-                <li className={password.length >= 8 ? 'text-green-600' : ''}>
+                <li style={{ color: password.length >= 8 ? 'var(--green)' : 'var(--text-muted)' }}>
                   Be at least 8 characters
                 </li>
-                <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>
+                <li style={{ color: /[A-Z]/.test(password) ? 'var(--green)' : 'var(--text-muted)' }}>
                   Contain an uppercase letter
                 </li>
-                <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>
+                <li style={{ color: /[a-z]/.test(password) ? 'var(--green)' : 'var(--text-muted)' }}>
                   Contain a lowercase letter
                 </li>
-                <li className={/[0-9]/.test(password) ? 'text-green-600' : ''}>
+                <li style={{ color: /[0-9]/.test(password) ? 'var(--green)' : 'var(--text-muted)' }}>
                   Contain a number
                 </li>
               </ul>
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
+
+            <Button
+              type="submit"
+              className="w-full"
               disabled={submitting}
             >
               {submitting ? (

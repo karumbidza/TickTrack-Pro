@@ -160,7 +160,7 @@ export function CreateInvoiceForm({ job, onSuccess }: CreateInvoiceFormProps) {
             type="number"
             value={job.hourlyRate}
             disabled
-            className="bg-gray-50"
+            style={{ backgroundColor: 'var(--surface2)' }}
           />
         </div>
         <div>
@@ -190,7 +190,7 @@ export function CreateInvoiceForm({ job, onSuccess }: CreateInvoiceFormProps) {
       <div>
         <Label htmlFor="workDescription">
           Detailed Work Description *
-          <span className="text-xs text-gray-500 ml-2">(This will appear in the invoice summary document)</span>
+          <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>(This will appear in the invoice summary document)</span>
         </Label>
         <Textarea
           id="workDescription"

@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+import { logger } from '@/lib/logger'
+
+// Route segment config for large file uploads
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
@@ -37,20 +41,21 @@ export async function POST(
       paymentReference = formData.get('paymentReference') as string
       const popFile = formData.get('popFile') as File | null
       
-      // Handle POP file upload
-      if (popFile && popFile.size > 0) {
+      // Handle POP file upload to R2
+      if (popFile && popFile.size > 0 && isR2Configured()) {
         const bytes = await popFile.arrayBuffer()
         const buffer = Buffer.from(bytes)
         
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'pop')
-        await mkdir(uploadDir, { recursive: true })
+        const ext = popFile.name.split('.').pop() || 'pdf'
+        const safeFilename = `POP-${invoiceId}-${Date.now()}.${ext}`
         
-        const ext = path.extname(popFile.name)
-        const filename = `POP-${invoiceId}-${Date.now()}${ext}`
-        const filePath = path.join(uploadDir, filename)
+        const uploadResult = await uploadToR2(buffer, safeFilename, 'pop', popFile.type || 'application/octet-stream')
         
-        await writeFile(filePath, buffer)
-        proofOfPaymentUrl = `/uploads/pop/${filename}`
+        if (uploadResult.success && uploadResult.url) {
+          proofOfPaymentUrl = uploadResult.url
+        } else {
+          logger.error('Failed to upload POP to R2:', uploadResult.error)
+        }
       }
     } else {
       // Handle JSON

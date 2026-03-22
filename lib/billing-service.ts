@@ -155,7 +155,8 @@ export class BillingService {
     amount: number,
     currency: string = 'USD',
     paymentMethod: 'PAYNOW' | 'BANK' = 'PAYNOW',
-    description?: string
+    description?: string,
+    metadata?: { mode?: string; advanceMonths?: number }
   ) {
     const subscription = await prisma.subscription.findUnique({
       where: { tenantId }
@@ -180,11 +181,12 @@ export class BillingService {
         provider: paymentMethod === 'BANK' ? 'PAYNOW' : 'PAYNOW', // Bank uses same provider enum
         invoiceNumber,
         dueDate,
-        description: description || `${subscription.plan} subscription - ${subscription.billingCycle}`
+        description: description || `${subscription.plan} subscription - ${subscription.billingCycle}`,
+        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined
       }
     })
     
-    logger.info(`[Billing] Created invoice ${invoiceNumber} for tenant ${tenantId}, amount ${amount} ${currency}`)
+    logger.info(`[Billing] Created invoice ${invoiceNumber} for tenant ${tenantId}, amount ${amount} ${currency}, mode: ${metadata?.mode || 'standard'}`)
     return payment
   }
 
@@ -228,15 +230,45 @@ export class BillingService {
       
       // Extend subscription
       if (payment.subscription) {
-        const dates = calculatePeriodDates(payment.subscription.billingCycle)
+        // Check if this is an advance payment (metadata contains advanceMonths)
+        const paymentMetadata = payment.metadata as { mode?: string; advanceMonths?: number } | null
+        const advanceMonths = paymentMetadata?.advanceMonths || 1
+        const isAdvancePayment = paymentMetadata?.mode === 'advance'
+        
+        // Calculate new period dates
+        // For advance payment or renewal, extend from current end date (not from now)
+        let startDate: Date
+        let endDate: Date
+        
+        if (isAdvancePayment || paymentMetadata?.mode === 'renew') {
+          // Extend from current period end (if in future) or from now
+          const currentEnd = payment.subscription.currentPeriodEnd
+          const now = new Date()
+          startDate = (currentEnd && currentEnd > now) ? currentEnd : now
+          endDate = new Date(startDate)
+          
+          if (payment.subscription.billingCycle === 'yearly') {
+            endDate.setFullYear(endDate.getFullYear() + advanceMonths)
+          } else {
+            endDate.setMonth(endDate.getMonth() + advanceMonths)
+          }
+        } else {
+          // Standard upgrade - use regular period calculation
+          const dates = calculatePeriodDates(payment.subscription.billingCycle)
+          startDate = dates.currentPeriodStart
+          endDate = dates.currentPeriodEnd
+        }
+        
+        const gracePeriodEnd = new Date(endDate)
+        gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 7)
         
         await tx.subscription.update({
           where: { id: payment.subscription.id },
           data: {
             status: 'ACTIVE',
-            currentPeriodStart: dates.currentPeriodStart,
-            currentPeriodEnd: dates.currentPeriodEnd,
-            gracePeriodEnd: dates.gracePeriodEnd,
+            currentPeriodStart: startDate,
+            currentPeriodEnd: endDate,
+            gracePeriodEnd: gracePeriodEnd,
             paynowSubscriptionId: providerReference || payment.subscription.paynowSubscriptionId
           }
         })
@@ -246,9 +278,10 @@ export class BillingService {
           where: { id: payment.tenantId },
           data: { status: 'ACTIVE' }
         })
+        
+        logger.info(`[Billing] Payment ${paymentId} successful, subscription extended ${advanceMonths} months for tenant ${payment.tenantId}`)
       }
       
-      logger.info(`[Billing] Payment ${paymentId} successful, subscription activated for tenant ${payment.tenantId}`)
       return { payment: updatedPayment, alreadyProcessed: false }
     })
   }

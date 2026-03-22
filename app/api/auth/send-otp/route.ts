@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendPasswordResetEmail } from '@/lib/email'
 import { sendSMS } from '@/lib/africastalking-service'
 import { logger } from '@/lib/logger'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 import { randomBytes } from 'crypto'
 
 /**
@@ -10,6 +11,10 @@ import { randomBytes } from 'crypto'
  * Sends OTP via email or SMS for password reset
  */
 export async function POST(request: NextRequest) {
+  // Rate limit: prevent OTP spam abuse
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const { email, method, phone } = await request.json()
 

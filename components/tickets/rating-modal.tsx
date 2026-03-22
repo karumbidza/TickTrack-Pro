@@ -298,8 +298,8 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
             key={star}
             className={`${sizeClasses[size]} ${
               star <= rating 
-                ? 'text-yellow-400 fill-yellow-400' 
-                : 'text-gray-200'
+                ? 'text-ds-amber fill-yellow-400' 
+                : 'text-[var(--border)]'
             }`}
           />
         ))}
@@ -411,17 +411,17 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-blue-600">
+              <div className="flex items-center space-x-3" style={{ color: 'var(--blue)' }}>
                 <Clock className="h-6 w-6" />
-                <h3 className="text-lg font-semibold">Was the Contractor On Time?</h3>
+                <h3 className="text-lg font-medium">Was the Contractor On Time?</h3>
               </div>
-              <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">25% Weight</span>
+              <span className="text-sm font-medium px-2 py-1 rounded" style={{ color: 'var(--blue)', backgroundColor: 'var(--blue-bg)' }}>25% Weight</span>
             </div>
             
             <div className="space-y-4">
-              <div className="flex flex-col items-center space-y-2 py-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-col items-center space-y-2 py-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
                 {renderStars(ratingData.punctualityRating, 'lg')}
-                <span className="text-sm font-medium text-gray-600">
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {ratingData.punctualityRating === 5 ? 'On Time - 5 Stars!' : 
                    ratingData.punctualityRating === 3 ? 'Late but Notified - 3 Stars' :
                    ratingData.punctualityRating === 0 && isLate ? 'Late without Notice - 0 Stars' :
@@ -430,16 +430,16 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className={`p-3 rounded-lg ${ticketData?.scheduledArrival ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
-                  <Label className="text-xs text-gray-500">Scheduled Arrival</Label>
+                <div className="p-3 rounded-lg" style={ticketData?.scheduledArrival ? { backgroundColor: 'var(--blue-bg)', border: '1px solid var(--blue)' } : { backgroundColor: 'var(--surface2)' }}>
+                  <Label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Scheduled Arrival</Label>
                   <p className="text-sm font-medium">
                     {ratingData.scheduledTime 
                       ? new Date(ratingData.scheduledTime).toLocaleString() 
                       : 'Not set'}
                   </p>
                 </div>
-                <div className={`p-3 rounded-lg ${ticketData?.onSiteTime ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-                  <Label className="text-xs text-gray-500">Actual Arrival</Label>
+                <div className="p-3 rounded-lg" style={ticketData?.onSiteTime ? { backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' } : { backgroundColor: 'var(--surface2)' }}>
+                  <Label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Actual Arrival</Label>
                   <p className="text-sm font-medium">
                     {ratingData.actualArrival 
                       ? new Date(ratingData.actualArrival).toLocaleString() 
@@ -449,18 +449,18 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               </div>
               
               {isOnTime === true && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-3">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="rounded-lg p-4 flex items-center space-x-3" style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>
+                  <CheckCircle className="h-6 w-6" style={{ color: 'var(--green)' }} />
                   <div>
-                    <p className="font-medium text-green-800">Contractor arrived on time!</p>
-                    <p className="text-sm text-green-600">Full 5 stars awarded (25% of total)</p>
+                    <p className="font-medium" style={{ color: 'var(--green)' }}>Contractor arrived on time!</p>
+                    <p className="text-sm" style={{ color: 'var(--green)' }}>Full 5 stars awarded (25% of total)</p>
                   </div>
                 </div>
               )}
               
               {isLate && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center space-x-2 text-yellow-700">
+                <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: 'var(--amber-bg)', border: '1px solid var(--amber)' }}>
+                  <div className="flex items-center space-x-2" style={{ color: 'var(--amber)' }}>
                     <AlertTriangle className="h-5 w-5" />
                     <span className="font-medium">Contractor arrived late</span>
                   </div>
@@ -474,7 +474,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                       Did the contractor notify you of the delay in advance?
                     </Label>
                   </div>
-                  <p className="text-xs text-yellow-600">
+                  <p className="text-xs" style={{ color: 'var(--amber)' }}>
                     {ratingData.notifiedOfDelays 
                       ? '3 stars awarded for notifying' 
                       : '0 stars if delay was not communicated'}
@@ -489,15 +489,15 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-orange-600">
+              <div className="flex items-center space-x-3" style={{ color: 'var(--amber)' }}>
                 <Shield className="h-6 w-6" />
-                <h3 className="text-lg font-semibold">PPE Compliance</h3>
+                <h3 className="text-lg font-medium">PPE Compliance</h3>
               </div>
-              <span className="text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">25% Weight</span>
+              <span className="text-sm font-medium px-2 py-1 rounded" style={{ color: 'var(--amber)', backgroundColor: 'var(--amber-bg)' }}>25% Weight</span>
             </div>
             
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
                 <Checkbox 
                   id="ppeCompliant"
                   checked={ratingData.ppeCompliant}
@@ -519,10 +519,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               </div>
               
               {ratingData.ppeCompliant && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+                <div className="rounded-lg p-4 flex items-center justify-between" style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>
                   <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                    <span className="font-medium text-green-800">Full PPE Compliance - 5 Stars</span>
+                    <CheckCircle className="h-6 w-6" style={{ color: 'var(--green)' }} />
+                    <span className="font-medium" style={{ color: 'var(--green)' }}>Full PPE Compliance - 5 Stars</span>
                   </div>
                   {renderStars(5, 'sm')}
                 </div>
@@ -530,8 +530,8 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               
               {!ratingData.ppeCompliant && (
                 <>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <Label className="text-sm font-medium mb-3 block text-red-800">
+                  <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', border: '1px solid var(--red)' }}>
+                    <Label className="text-sm font-medium mb-3 block" style={{ color: 'var(--red)' }}>
                       Check missing PPE items:
                     </Label>
                     <div className="grid grid-cols-2 gap-3">
@@ -553,7 +553,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                             })}
                           />
                           <Label htmlFor={item.key} className="text-sm cursor-pointer">
-                            {item.label} {item.required && <span className="text-red-500">*</span>}
+                            {item.label} {item.required && <span className="text-ds-red">*</span>}
                           </Label>
                         </div>
                       ))}
@@ -561,8 +561,8 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   </div>
                   
                   {REQUIRED_PPE.some(item => !ratingData.ppeChecklist[item as keyof typeof ratingData.ppeChecklist]) && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2 text-red-700 mb-2">
+                    <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', border: '1px solid var(--red)' }}>
+                      <div className="flex items-center space-x-2 mb-2" style={{ color: 'var(--red)' }}>
                         <AlertTriangle className="h-5 w-5" />
                         <span className="font-medium">Required PPE missing - 0 stars</span>
                       </div>
@@ -587,20 +587,20 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-pink-600">
+              <div className="flex items-center space-x-3" style={{ color: 'var(--accent)' }}>
                 <Heart className="h-6 w-6" />
-                <h3 className="text-lg font-semibold">Customer Service & Conduct</h3>
+                <h3 className="text-lg font-medium">Customer Service & Conduct</h3>
               </div>
-              <span className="text-sm font-medium text-pink-600 bg-pink-50 px-2 py-1 rounded">20% Weight</span>
+              <span className="text-sm font-medium px-2 py-1 rounded" style={{ color: 'var(--accent)', backgroundColor: 'var(--tag-bg)' }}>20% Weight</span>
             </div>
             
-            <div className="flex items-center justify-center space-x-4 py-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-center space-x-4 py-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
               {renderStars(csRating, 'lg')}
-              <span className="text-lg font-medium">{csRating}/5</span>
+              <span className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{csRating}/5</span>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="communicatedClearly"
@@ -609,10 +609,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="communicatedClearly" className="cursor-pointer">Communicated clearly</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+2 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+2 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="professionalAttitude"
@@ -621,10 +621,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="professionalAttitude" className="cursor-pointer">Professional attitude</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="respectfulToStaff"
@@ -633,10 +633,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="respectfulToStaff" className="cursor-pointer">Respectful to staff</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="patientAndSolutionOriented"
@@ -645,7 +645,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="patientAndSolutionOriented" className="cursor-pointer">Patient and solution-oriented</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
             </div>
           </div>
@@ -656,20 +656,20 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-green-600">
+              <div className="flex items-center space-x-3" style={{ color: 'var(--green)' }}>
                 <Wrench className="h-6 w-6" />
-                <h3 className="text-lg font-semibold">Quality of Workmanship</h3>
+                <h3 className="text-lg font-medium">Quality of Workmanship</h3>
               </div>
-              <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">20% Weight</span>
+              <span className="text-sm font-medium px-2 py-1 rounded" style={{ color: 'var(--green)', backgroundColor: 'var(--green-bg)' }}>20% Weight</span>
             </div>
             
-            <div className="flex items-center justify-center space-x-4 py-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-center space-x-4 py-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
               {renderStars(wmRating, 'lg')}
-              <span className="text-lg font-medium">{wmRating}/5</span>
+              <span className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{wmRating}/5</span>
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="workCompletedAsRequested"
@@ -678,10 +678,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="workCompletedAsRequested" className="cursor-pointer">Work completed as requested</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+2 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+2 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="noShortcuts"
@@ -690,10 +690,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="noShortcuts" className="cursor-pointer">No shortcuts or safety compromises</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="cleanWorkArea"
@@ -702,10 +702,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="cleanWorkArea" className="cursor-pointer">Clean work area after completion</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+              <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="noReworkNeeded"
@@ -714,7 +714,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                   />
                   <Label htmlFor="noReworkNeeded" className="cursor-pointer">No rework needed</Label>
                 </div>
-                <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                <span className="text-sm font-medium text-ds-amber">+1 ★</span>
               </div>
             </div>
           </div>
@@ -725,20 +725,20 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-purple-600">
+              <div className="flex items-center space-x-3" style={{ color: 'var(--accent)' }}>
                 <ClipboardCheck className="h-6 w-6" />
-                <h3 className="text-lg font-semibold">Site Procedures Compliance</h3>
+                <h3 className="text-lg font-medium">Site Procedures Compliance</h3>
               </div>
-              <span className="text-sm font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">10% Weight</span>
+              <span className="text-sm font-medium px-2 py-1 rounded" style={{ color: 'var(--accent)', backgroundColor: 'var(--tag-bg)' }}>10% Weight</span>
             </div>
             
-            <div className="flex items-center justify-center space-x-4 py-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-center space-x-4 py-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
               {renderStars(spRating, 'lg')}
-              <span className="text-lg font-medium">{spRating}/5</span>
+              <span className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{spRating}/5</span>
             </div>
             
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center space-x-3 p-4 rounded-lg" style={{ backgroundColor: 'var(--tag-bg)', border: '1px solid var(--border)' }}>
                 <Checkbox 
                   id="followedSiteProcedures"
                   checked={ratingData.followedSiteProcedures}
@@ -750,17 +750,17 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               </div>
               
               {ratingData.followedSiteProcedures && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
-                  <span className="font-medium text-green-800">Full compliance - 5 Stars</span>
+                <div className="rounded-lg p-4 flex items-center justify-between" style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>
+                  <span className="font-medium" style={{ color: 'var(--green)' }}>Full compliance - 5 Stars</span>
                   {renderStars(5, 'sm')}
                 </div>
               )}
               
               {!ratingData.followedSiteProcedures && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Or check individual items:</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Or check individual items:</p>
                   
-                  <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="permitToWorkFilledOut"
@@ -769,10 +769,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                       />
                       <Label htmlFor="permitToWorkFilledOut" className="cursor-pointer">Permit to work filled out</Label>
                     </div>
-                    <span className="text-sm font-medium text-yellow-600">+2 ★</span>
+                    <span className="text-sm font-medium text-ds-amber">+2 ★</span>
                   </div>
                   
-                  <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="loggedIntoJobCard"
@@ -781,10 +781,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                       />
                       <Label htmlFor="loggedIntoJobCard" className="cursor-pointer">Logged into job card/app</Label>
                     </div>
-                    <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                    <span className="text-sm font-medium text-ds-amber">+1 ★</span>
                   </div>
                   
-                  <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="followedIsolationProcedures"
@@ -793,10 +793,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                       />
                       <Label htmlFor="followedIsolationProcedures" className="cursor-pointer">Followed isolation/lockout procedures</Label>
                     </div>
-                    <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                    <span className="text-sm font-medium text-ds-amber">+1 ★</span>
                   </div>
                   
-                  <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)' }}>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="followedWasteDisposal"
@@ -805,7 +805,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                       />
                       <Label htmlFor="followedWasteDisposal" className="cursor-pointer">Followed waste disposal rules</Label>
                     </div>
-                    <span className="text-sm font-medium text-yellow-600">+1 ★</span>
+                    <span className="text-sm font-medium text-ds-amber">+1 ★</span>
                   </div>
                 </div>
               )}
@@ -816,8 +816,8 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
       case 6: // Comments
         return (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold">Additional Comments</h3>
-            <p className="text-sm text-gray-600">Share any additional feedback (optional)</p>
+            <h3 className="text-lg font-medium">Additional Comments</h3>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Share any additional feedback (optional)</p>
             
             <Textarea 
               placeholder="Enter your comments here..."
@@ -838,16 +838,16 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         
         return (
           <div className="space-y-6">
-            <div className="flex items-center space-x-3 text-indigo-600">
+            <div className="flex items-center space-x-3" style={{ color: 'var(--accent)' }}>
               <CheckCircle className="h-6 w-6" />
-              <h3 className="text-lg font-semibold">Review & Submit</h3>
+              <h3 className="text-lg font-medium">Review & Submit</h3>
             </div>
             
             {/* Overall Score */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl p-6 text-center">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-bg rounded-xl p-6 text-center">
               <p className="text-sm opacity-90 mb-2">OVERALL SCORE</p>
               <div className="flex items-center justify-center space-x-4">
-                <span className="text-5xl font-bold">{percentage}%</span>
+                <span className="text-5xl font-medium">{percentage}%</span>
                 <div className="flex flex-col items-start">
                   {renderStars(stars, 'md')}
                   <span className="text-sm mt-1">{stars}/5 Stars</span>
@@ -857,9 +857,9 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
             
             {/* Breakdown */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--blue-bg)' }}>
                 <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-blue-600" />
+                  <Clock className="h-4 w-4" style={{ color: 'var(--blue)' }} />
                   <span>Punctuality (25%)</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -868,9 +868,9 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                 </div>
               </div>
               
-              <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--amber-bg)' }}>
                 <div className="flex items-center space-x-2">
-                  <Shield className="h-4 w-4 text-orange-600" />
+                  <Shield className="h-4 w-4" style={{ color: 'var(--amber)' }} />
                   <span>PPE Compliance (25%)</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -879,9 +879,9 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                 </div>
               </div>
               
-              <div className="flex justify-between items-center p-3 bg-pink-50 rounded-lg">
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--tag-bg)' }}>
                 <div className="flex items-center space-x-2">
-                  <Heart className="h-4 w-4 text-pink-600" />
+                  <Heart className="h-4 w-4" style={{ color: 'var(--accent)' }} />
                   <span>Customer Service (20%)</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -890,9 +890,9 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                 </div>
               </div>
               
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
                 <div className="flex items-center space-x-2">
-                  <Wrench className="h-4 w-4 text-green-600" />
+                  <Wrench className="h-4 w-4" style={{ color: 'var(--green)' }} />
                   <span>Workmanship (20%)</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -901,9 +901,9 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
                 </div>
               </div>
               
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+              <div className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: 'var(--tag-bg)' }}>
                 <div className="flex items-center space-x-2">
-                  <ClipboardCheck className="h-4 w-4 text-purple-600" />
+                  <ClipboardCheck className="h-4 w-4" style={{ color: 'var(--accent)' }} />
                   <span>Site Procedures (10%)</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -913,12 +913,12 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               </div>
             </div>
             
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>
               <div className="flex items-center space-x-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+                <CheckCircle className="h-6 w-6" style={{ color: 'var(--green)' }} />
                 <div>
-                  <h4 className="font-medium text-green-800">Ready to Submit</h4>
-                  <p className="text-sm text-green-700">Rating will be sent to contractor via email.</p>
+                  <h4 className="font-medium" style={{ color: 'var(--green)' }}>Ready to Submit</h4>
+                  <p className="text-sm" style={{ color: 'var(--green)' }}>Rating will be sent to contractor via email.</p>
                 </div>
               </div>
             </div>
@@ -935,7 +935,7 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[600px]">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--accent)' }}></div>
           </div>
         </DialogContent>
       </Dialog>
@@ -948,16 +948,16 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Rate Contractor Service</span>
-            <span className="text-sm font-normal text-gray-500">
+            <span className="text-sm font-normal" style={{ color: 'var(--text-secondary)' }}>
               Step {currentStep} of {totalSteps}
             </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+        <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--surface2)' }}>
+          <div
+            className="h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: 'var(--accent)' }}
           />
         </div>
 
@@ -978,10 +978,10 @@ export function RatingModal({ ticketId, open, onOpenChange, onRatingSubmitted }:
               Next
             </Button>
           ) : (
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700"
+              style={{ backgroundColor: 'var(--green)', color: '#fff' }}
             >
               {isSubmitting ? 'Submitting...' : 'Save & Send Rating'}
             </Button>

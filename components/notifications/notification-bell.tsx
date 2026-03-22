@@ -163,18 +163,18 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'new_message':
-        return <MessageSquare className="h-4 w-4 text-blue-500" />
+        return <MessageSquare className="h-4 w-4 text-ds-blue" />
       case 'ticket_assigned':
-        return <UserCheck className="h-4 w-4 text-green-500" />
+        return <UserCheck className="h-4 w-4 text-ds-green" />
       case 'ticket_updated':
       case 'status_change':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-ds-amber" />
       case 'ticket_completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-ds-green" />
       case 'ticket_cancelled':
-        return <X className="h-4 w-4 text-red-500" />
+        return <X className="h-4 w-4 text-ds-red" />
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />
+        return <AlertCircle className="h-4 w-4 text-text-muted" />
     }
   }
 
@@ -200,7 +200,7 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-bg"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -209,7 +209,7 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-3 border-b">
-          <h3 className="font-semibold">Notifications</h3>
+          <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
           {unreadCount > 0 && (
             <Button 
               variant="ghost" 
@@ -226,7 +226,7 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
         
         <ScrollArea className="h-[350px]">
           {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[200px] text-gray-500">
+            <div className="flex flex-col items-center justify-center h-[200px] text-text-muted">
               <Bell className="h-10 w-10 mb-2 opacity-30" />
               <p className="text-sm">No notifications</p>
             </div>
@@ -235,8 +235,8 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
               {notifications.map((notification) => (
                 <div 
                   key={notification.id}
-                  className={`p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                    !notification.read ? 'bg-blue-50' : ''
+                  className={`p-3 hover:bg-surface2 cursor-pointer transition-colors ${
+                    !notification.read ? 'bg-blue-bg' : ''
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
@@ -248,17 +248,17 @@ export function NotificationBell({ pollInterval = 30000 }: NotificationBellProps
                       <p className={`text-sm ${!notification.read ? 'font-medium' : ''}`}>
                         {notification.title}
                       </p>
-                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">
                         {notification.message}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-text-muted mt-1">
                         {formatTime(notification.createdAt)}
                       </p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-gray-400 hover:text-red-500"
+                      className="h-6 w-6 text-text-muted hover:text-ds-red"
                       onClick={(e) => {
                         e.stopPropagation()
                         deleteNotification(notification.id)

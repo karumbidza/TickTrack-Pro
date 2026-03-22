@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="innbucksGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#innbucksGrad)"/>
+  <text x="50" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">INN</text>
+  <text x="50" y="54" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="white">BUCKS</text>
+  <rect x="35" y="62" width="30" height="14" rx="3" fill="white"/>
+  <text x="50" y="73" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#3B82F6">$</text>
+</svg>

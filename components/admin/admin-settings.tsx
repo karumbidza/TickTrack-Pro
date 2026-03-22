@@ -535,12 +535,12 @@ export function AdminSettings({ user }: AdminSettingsProps) {
   ]
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your organization's settings and resources</p>
+          <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>Settings</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Manage your organization's settings and resources</p>
         </div>
 
         {/* Settings Layout - Sidebar + Content */}
@@ -549,131 +549,68 @@ export function AdminSettings({ user }: AdminSettingsProps) {
           <div className="lg:w-48 flex-shrink-0">
             <Card className="sticky top-24">
               <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <CardTitle className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                   Menu
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-2">
                 <nav className="space-y-0.5">
-                  <button
-                    onClick={() => setActiveTab('assets')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'assets' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Package className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Assets</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('contractors')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'contractors' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Wrench className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Contractors</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'users' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Users className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Users</span>
-                  </button>
-                  
+                  {[
+                    { tab: 'assets', icon: <Package className="h-4 w-4 flex-shrink-0" />, label: 'Assets' },
+                    { tab: 'contractors', icon: <Wrench className="h-4 w-4 flex-shrink-0" />, label: 'Contractors' },
+                    { tab: 'users', icon: <Users className="h-4 w-4 flex-shrink-0" />, label: 'Users' },
+                  ].map(({ tab, icon, label }) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
+                      style={activeTab === tab
+                        ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
+                        : { color: 'var(--text-secondary)' }}
+                    >
+                      {icon}
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+
                   <div className="pt-2 pb-1">
-                    <p className="px-2.5 text-xs font-medium text-gray-400 uppercase">Config</p>
+                    <p className="px-2.5 text-xs font-medium uppercase" style={{ color: 'var(--text-muted)' }}>Config</p>
                   </div>
-                  
-                  <button
-                    onClick={() => setActiveTab('categories')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'categories' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Layers className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Categories</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('branches')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'branches' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Branches</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('tickets')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'tickets' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Tag className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Ticket Types</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('notifications')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'notifications' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Bell className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Notifications</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('reports')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'reports' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <FileSpreadsheet className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Reports</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('organization')}
-                    className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                      activeTab === 'organization' 
-                        ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Building2 className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">Organization</span>
-                  </button>
-                  
+
+                  {[
+                    { tab: 'categories', icon: <Layers className="h-4 w-4 flex-shrink-0" />, label: 'Categories' },
+                    { tab: 'branches', icon: <MapPin className="h-4 w-4 flex-shrink-0" />, label: 'Branches' },
+                    { tab: 'tickets', icon: <Tag className="h-4 w-4 flex-shrink-0" />, label: 'Ticket Types' },
+                    { tab: 'notifications', icon: <Bell className="h-4 w-4 flex-shrink-0" />, label: 'Notifications' },
+                    { tab: 'reports', icon: <FileSpreadsheet className="h-4 w-4 flex-shrink-0" />, label: 'Reports' },
+                    { tab: 'organization', icon: <Building2 className="h-4 w-4 flex-shrink-0" />, label: 'Organization' },
+                  ].map(({ tab, icon, label }) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
+                      style={activeTab === tab
+                        ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
+                        : { color: 'var(--text-secondary)' }}
+                    >
+                      {icon}
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+
                   {/* Only show Billing tab for Tenant Admins, not Super Admins */}
                   {user.role !== 'SUPER_ADMIN' && (
                     <>
                       <div className="pt-2 pb-1">
-                        <p className="px-2.5 text-xs font-medium text-gray-400 uppercase">Account</p>
+                        <p className="px-2.5 text-xs font-medium uppercase" style={{ color: 'var(--text-muted)' }}>Account</p>
                       </div>
-                      
+
                       <button
                         onClick={() => setActiveTab('billing')}
-                        className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all ${
-                          activeTab === 'billing' 
-                            ? 'bg-blue-50 text-blue-700 font-medium shadow-sm' 
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
+                        style={activeTab === 'billing'
+                          ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
+                          : { color: 'var(--text-secondary)' }}
                       >
                         <CreditCard className="h-4 w-4 flex-shrink-0" />
                         <span className="truncate">Billing</span>
@@ -689,21 +626,21 @@ export function AdminSettings({ user }: AdminSettingsProps) {
           <div className="flex-1 min-w-0">
             {/* Assets Tab */}
             {activeTab === 'assets' && (
-              <div className="bg-white rounded-lg shadow-sm border">
+              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
                 <AdminAssetManagement />
               </div>
             )}
 
             {/* Contractors Tab */}
             {activeTab === 'contractors' && (
-              <div className="bg-white rounded-lg shadow-sm border">
+              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
                 <ContractorManagement user={user} />
               </div>
             )}
 
             {/* Users Tab */}
             {activeTab === 'users' && (
-              <div className="bg-white rounded-lg shadow-sm border">
+              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
                 <UserManagement user={user} />
               </div>
             )}
@@ -729,8 +666,8 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               <CardContent className="space-y-6">
                 {/* Categories List */}
                 {categories.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Layers className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                    <Layers className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
                     <p>No categories yet. Click "Add Category" to create one.</p>
                   </div>
                 ) : (
@@ -738,19 +675,20 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                     {categories.map((category) => (
                       <div
                         key={category.id}
-                        className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow"
+                        className="flex items-center justify-between p-4 border rounded-lg transition-shadow"
+                        style={{ backgroundColor: 'var(--surface)' }}
                       >
                         <div className="flex items-center space-x-4">
                           <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-bg font-medium"
                             style={{ backgroundColor: category.color || '#3B82F6' }}
                           >
                             {category.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{category.name}</div>
+                            <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{category.name}</div>
                             {category.description && (
-                              <div className="text-sm text-gray-500">{category.description}</div>
+                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{category.description}</div>
                             )}
                           </div>
                         </div>
@@ -772,7 +710,7 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteCategory(category)}
-                            className="text-red-600 hover:text-red-700"
+                            style={{ color: 'var(--red)' }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -863,8 +801,8 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               </CardHeader>
               <CardContent>
                 {branches.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                    <MapPin className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
                     <p>No branches defined yet. Add your first branch.</p>
                   </div>
                 ) : (
@@ -872,25 +810,25 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                     {branches.map((branch) => (
                       <div
                         key={branch.id}
-                        className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-sm transition-shadow"
+                        className="flex items-center justify-between p-4 border rounded-lg transition-shadow"
+                        style={{ backgroundColor: 'var(--surface)' }}
                       >
                         <div className="flex items-center space-x-4">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            branch.isHeadOffice ? 'bg-blue-100' : 'bg-green-100'
-                          }`}>
-                            <MapPin className={`h-5 w-5 ${
-                              branch.isHeadOffice ? 'text-blue-600' : 'text-green-600'
-                            }`} />
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: branch.isHeadOffice ? 'var(--blue-bg)' : 'var(--green-bg)' }}
+                          >
+                            <MapPin className="h-5 w-5" style={{ color: branch.isHeadOffice ? 'var(--blue)' : 'var(--green)' }} />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <div className="font-medium text-gray-900">{branch.name}</div>
+                              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{branch.name}</div>
                               {branch.isHeadOffice && (
-                                <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">HQ</Badge>
+                                <Badge style={{ backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }}>HQ</Badge>
                               )}
                             </div>
                             {branch.address && (
-                              <div className="text-sm text-gray-500">{branch.address}</div>
+                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{branch.address}</div>
                             )}
                           </div>
                         </div>
@@ -907,7 +845,7 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteBranch(branch)}
-                            className="text-red-600 hover:text-red-700"
+                            style={{ color: 'var(--red)' }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -947,14 +885,14 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                       rows={2}
                     />
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
                     <Switch
                       checked={branchForm.isHeadOffice}
                       onCheckedChange={(checked) => setBranchForm({ ...branchForm, isHeadOffice: checked, type: checked ? 'HEAD_OFFICE' : 'BRANCH' })}
                     />
                     <div className="flex-1">
-                      <Label className="font-medium text-gray-900">Head Office</Label>
-                      <p className="text-xs text-gray-600">Users assigned to HQ have access to all branches</p>
+                      <Label className="font-medium" style={{ color: 'var(--text-primary)' }}>Head Office</Label>
+                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Users assigned to HQ have access to all branches</p>
                     </div>
                   </div>
                   {!branchForm.isHeadOffice && (
@@ -1018,19 +956,20 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               <CardContent>
                 <div className="space-y-2">
                   {ticketTypes.map((type) => (
-                    <div 
-                      key={type.id} 
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"
+                    <div
+                      key={type.id}
+                      className="flex items-center justify-between p-3 rounded-lg border transition-colors"
+                      style={{ backgroundColor: 'var(--surface2)' }}
                     >
                       <div className="flex items-center gap-3">
-                        <div 
-                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: type.color }}
                         />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{type.name}</div>
+                          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{type.name}</div>
                           {type.description && (
-                            <div className="text-xs text-gray-500">{type.description}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{type.description}</div>
                           )}
                         </div>
                         {type.requiresAsset && (
@@ -1044,21 +983,21 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                           onClick={() => openEditTicketType(type)}
                           className="h-8 w-8 p-0"
                         >
-                          <Edit className="h-3.5 w-3.5 text-gray-500" />
+                          <Edit className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteTicketType(type)}
-                          className="h-8 w-8 p-0 hover:text-red-600"
+                          className="h-8 w-8 p-0"
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                          <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
                         </Button>
                       </div>
                     </div>
                   ))}
                   {ticketTypes.length === 0 && (
-                    <div className="text-center py-6 text-gray-500 text-sm">
+                    <div className="text-center py-6 text-sm" style={{ color: 'var(--text-muted)' }}>
                       No ticket types configured. Click "Add Type" to create one.
                     </div>
                   )}
@@ -1077,12 +1016,12 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
-                    { name: 'Low', color: 'bg-green-100 text-green-700 border-green-200' },
-                    { name: 'Medium', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                    { name: 'High', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-                    { name: 'Critical', color: 'bg-red-100 text-red-700 border-red-200' }
+                    { name: 'Low', style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green)' } },
+                    { name: 'Medium', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber)' } },
+                    { name: 'High', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber)' } },
+                    { name: 'Critical', style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)', borderColor: 'var(--red)' } }
                   ].map((priority) => (
-                    <div key={priority.name} className={`px-3 py-2 rounded-md border text-sm font-medium ${priority.color}`}>
+                    <div key={priority.name} className="px-3 py-2 rounded-md border text-sm font-medium" style={priority.style}>
                       {priority.name}
                     </div>
                   ))}
@@ -1169,45 +1108,21 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">Email Notifications</div>
-                      <div className="text-sm text-gray-500">Send email alerts for ticket updates</div>
+                  {[
+                    { title: 'Email Notifications', desc: 'Send email alerts for ticket updates' },
+                    { title: 'New Ticket Alerts', desc: 'Notify admins when new tickets are created' },
+                    { title: 'Assignment Notifications', desc: 'Notify contractors when assigned to tickets' },
+                    { title: 'Completion Alerts', desc: 'Notify users when their tickets are completed' },
+                    { title: 'SLA Breach Warnings', desc: 'Alert when tickets are approaching SLA deadlines' },
+                  ].map(({ title, desc }) => (
+                    <div key={title} className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
+                      <div>
+                        <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{title}</div>
+                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{desc}</div>
+                      </div>
+                      <Switch defaultChecked />
                     </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">New Ticket Alerts</div>
-                      <div className="text-sm text-gray-500">Notify admins when new tickets are created</div>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">Assignment Notifications</div>
-                      <div className="text-sm text-gray-500">Notify contractors when assigned to tickets</div>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">Completion Alerts</div>
-                      <div className="text-sm text-gray-500">Notify users when their tickets are completed</div>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-medium">SLA Breach Warnings</div>
-                      <div className="text-sm text-gray-500">Alert when tickets are approaching SLA deadlines</div>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
+                  ))}
                 </div>
                 
                 <div className="pt-4 border-t">
@@ -1215,7 +1130,7 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                     <Save className="h-4 w-4 mr-2" />
                     Save Preferences
                   </Button>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
                     Note: Full notification configuration coming soon.
                   </p>
                 </div>
@@ -1240,12 +1155,12 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                 <div className="border rounded-lg p-6 space-y-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold text-lg">Ticket Report</h3>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <h3 className="font-medium text-lg">Ticket Report</h3>
+                      <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                         Export detailed ticket data including site, requester, dates, SLA, contractor, category, asset, cost, and status.
                       </p>
                     </div>
-                    <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                    <FileSpreadsheet className="h-8 w-8" style={{ color: 'var(--green)' }} />
                   </div>
                   
                   {/* Filters */}
@@ -1304,9 +1219,9 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                   </div>
                   
                   {/* Report Columns Selection */}
-                  <div className="bg-gray-50 rounded-lg p-4 mt-4">
+                  <div className="rounded-lg p-4 mt-4" style={{ backgroundColor: 'var(--surface2)' }}>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-gray-700">Select columns to include:</h4>
+                      <h4 className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Select columns to include:</h4>
                       <div className="flex gap-2">
                         <Button 
                           variant="ghost" 
@@ -1355,14 +1270,14 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                         { key: 'priority', label: 'Priority' },
                         { key: 'status', label: 'Status' }
                       ].map(col => (
-                        <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-100 p-1 rounded">
-                          <Checkbox 
-                            checked={reportColumns[col.key]} 
-                            onCheckedChange={(checked) => 
+                        <label key={col.key} className="flex items-center gap-2 text-sm cursor-pointer p-1 rounded">
+                          <Checkbox
+                            checked={reportColumns[col.key]}
+                            onCheckedChange={(checked) =>
                               setReportColumns(prev => ({ ...prev, [col.key]: !!checked }))
                             }
                           />
-                          <span className="text-gray-700">{col.label}</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{col.label}</span>
                         </label>
                       ))}
                     </div>
@@ -1416,12 +1331,12 @@ export function AdminSettings({ user }: AdminSettingsProps) {
 
           {/* ==================== BILLING TAB ==================== */}
           {activeTab === 'billing' && (
-            <div className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="rounded-lg border p-6" style={{ backgroundColor: 'var(--surface)' }}>
               {user.role === 'SUPER_ADMIN' ? (
                 <div className="text-center py-12">
-                  <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Super Admin Billing</h3>
-                  <p className="text-gray-500 mb-4">
+                  <CreditCard className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Super Admin Billing</h3>
+                  <p className="mb-4" style={{ color: 'var(--text-muted)' }}>
                     Tenant billing is managed from the Super Admin Dashboard.
                   </p>
                   <Button
@@ -1434,8 +1349,8 @@ export function AdminSettings({ user }: AdminSettingsProps) {
               ) : (
                 <>
                   <div className="mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900">Billing & Subscription</h2>
-                    <p className="text-sm text-gray-500 mt-1">Manage your subscription, view usage, and access invoices</p>
+                    <h2 className="text-xl font-medium" style={{ color: 'var(--text-primary)' }}>Billing & Subscription</h2>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Manage your subscription, view usage, and access invoices</p>
                   </div>
                   <BillingManagement />
                 </>
@@ -1493,7 +1408,7 @@ export function AdminSettings({ user }: AdminSettingsProps) {
                     <Save className="h-4 w-4 mr-2" />
                     Save Organization Settings
                   </Button>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
                     Note: Organization settings are managed by Super Admin.
                   </p>
                 </div>

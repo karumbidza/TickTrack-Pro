@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 
 /**
  * POST /api/auth/forgot-password
  * Initiates password reset by verifying email exists
  */
 export async function POST(request: NextRequest) {
+  // Rate limit: prevent brute force email enumeration
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const { email } = await request.json()
 

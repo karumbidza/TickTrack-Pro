@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
+import {
   Phone,
   CreditCard,
   Smartphone,
@@ -68,32 +68,32 @@ export function PaynowPaymentDialog({
   const [instructions, setInstructions] = useState<string>('')
 
   const paymentMethods: PaymentMethod[] = [
-    { 
-      id: 'ecocash', 
-      name: 'EcoCash', 
-      icon: '💚', 
+    {
+      id: 'ecocash',
+      name: 'EcoCash',
+      icon: '💚',
       type: 'mobile_money',
       description: 'Pay with your Econet mobile money',
       popular: true
     },
-    { 
-      id: 'onemoney', 
-      name: 'OneMoney', 
-      icon: '🔵', 
+    {
+      id: 'onemoney',
+      name: 'OneMoney',
+      icon: '🔵',
       type: 'mobile_money',
       description: 'Pay with your NetOne mobile money'
     },
-    { 
-      id: 'innbucks', 
-      name: 'InnBucks', 
-      icon: '🟡', 
+    {
+      id: 'innbucks',
+      name: 'InnBucks',
+      icon: '🟡',
       type: 'mobile_money',
       description: 'Pay with InnBucks wallet'
     },
-    { 
-      id: 'telecash', 
-      name: 'Telecash', 
-      icon: '🔴', 
+    {
+      id: 'telecash',
+      name: 'Telecash',
+      icon: '🔴',
       type: 'mobile_money',
       description: 'Pay with Telecel mobile money'
     }
@@ -111,7 +111,6 @@ export function PaynowPaymentDialog({
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
-      // Wait a bit before resetting to allow animation
       setTimeout(() => {
         setStatus('idle')
         setStatusMessage('')
@@ -126,38 +125,25 @@ export function PaynowPaymentDialog({
   }, [open])
 
   const formatPhoneNumber = (value: string) => {
-    // Remove non-digits
     const digits = value.replace(/\D/g, '')
-    
-    // Format for Zimbabwe numbers
     if (digits.startsWith('263')) {
-      return digits.slice(0, 12) // 263XXXXXXXXX
+      return digits.slice(0, 12)
     } else if (digits.startsWith('0')) {
-      return digits.slice(0, 10) // 07XXXXXXXX
+      return digits.slice(0, 10)
     }
     return digits.slice(0, 10)
   }
 
   const validatePhoneNumber = (phone: string): boolean => {
     const digits = phone.replace(/\D/g, '')
-    
-    // Zimbabwe mobile formats
-    if (digits.startsWith('263')) {
-      return digits.length === 12
-    }
-    if (digits.startsWith('07')) {
-      return digits.length === 10
-    }
+    if (digits.startsWith('263')) return digits.length === 12
+    if (digits.startsWith('07')) return digits.length === 10
     return false
   }
 
   const normalizePhoneNumber = (phone: string): string => {
     const digits = phone.replace(/\D/g, '')
-    
-    // Convert to international format
-    if (digits.startsWith('0')) {
-      return '263' + digits.slice(1)
-    }
+    if (digits.startsWith('0')) return '263' + digits.slice(1)
     return digits
   }
 
@@ -195,8 +181,6 @@ export function PaynowPaymentDialog({
         setInstructions(data.instructions || getDefaultInstructions(paymentMethod))
         setStatus('awaiting_payment')
         setStatusMessage('Payment request sent to your phone')
-        
-        // Start polling for payment status
         startPolling(data.pollUrl, data.paymentId)
       } else {
         throw new Error(data.error || 'Payment initiation failed')
@@ -216,13 +200,13 @@ export function PaynowPaymentDialog({
 
   const startPolling = (url: string, paymentId: string) => {
     setStatus('polling')
-    
+
     let attempts = 0
-    const maxAttempts = 60 // 5 minutes (every 5 seconds)
-    
+    const maxAttempts = 60
+
     const interval = setInterval(async () => {
       attempts++
-      
+
       if (attempts > maxAttempts) {
         clearInterval(interval)
         setPollingInterval(null)
@@ -240,8 +224,6 @@ export function PaynowPaymentDialog({
           setPollingInterval(null)
           setStatus('success')
           setStatusMessage('Payment successful!')
-          
-          // Notify parent component
           setTimeout(() => {
             onSuccess?.()
             onOpenChange(false)
@@ -257,12 +239,10 @@ export function PaynowPaymentDialog({
           setStatus('cancelled')
           setStatusMessage('Payment was cancelled')
         }
-        // Otherwise, continue polling (status is still 'pending')
       } catch (error) {
         console.error('Polling error:', error)
-        // Don't stop polling on network errors, just log
       }
-    }, 5000) // Poll every 5 seconds
+    }, 5000)
 
     setPollingInterval(interval)
   }
@@ -286,51 +266,49 @@ export function PaynowPaymentDialog({
   const renderPaymentForm = () => (
     <div className="space-y-6">
       {/* Order Summary */}
-      <Card className="bg-gray-50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium text-gray-900">{plan} Plan</h4>
-              <p className="text-sm text-gray-500 capitalize">{billingCycle} billing</p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-gray-900">
-                {currency === 'USD' ? '$' : 'ZWL '}{amount.toFixed(2)}
-              </p>
-              <p className="text-xs text-gray-500">
-                {billingCycle === 'yearly' && 'Billed annually'}
-              </p>
-            </div>
+      <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>{plan} Plan</h4>
+            <p className="text-sm capitalize" style={{ color: 'var(--text-muted)' }}>{billingCycle} billing</p>
           </div>
-        </CardContent>
-      </Card>
+          <div className="text-right">
+            <p className="text-2xl font-medium" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
+              {currency === 'USD' ? '$' : 'ZWL '}{amount.toFixed(2)}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {billingCycle === 'yearly' && 'Billed annually'}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Payment Method Selection */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-700">Select Payment Method</Label>
+        <Label className="section-label">Select Payment Method</Label>
         <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-3">
           {paymentMethods.map((method) => (
             <Label
               key={method.id}
               htmlFor={method.id}
-              className={`relative flex items-center gap-3 rounded-lg border-2 p-4 cursor-pointer transition-all ${
-                paymentMethod === method.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+              className="relative flex items-center gap-3 rounded-lg p-4 cursor-pointer transition-all"
+              style={{
+                border: paymentMethod === method.id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                backgroundColor: paymentMethod === method.id ? 'var(--surface2)' : 'var(--surface)',
+              }}
             >
               <RadioGroupItem value={method.id} id={method.id} className="sr-only" />
               <span className="text-2xl">{method.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-900">{method.name}</span>
+                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{method.name}</span>
                   {method.popular && (
                     <Badge variant="secondary" className="text-xs">Popular</Badge>
                   )}
                 </div>
               </div>
               {paymentMethod === method.id && (
-                <CheckCircle className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--ds-green)' }} />
               )}
             </Label>
           ))}
@@ -339,11 +317,9 @@ export function PaynowPaymentDialog({
 
       {/* Phone Number Input */}
       <div className="space-y-2">
-        <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-          Mobile Number
-        </Label>
+        <Label htmlFor="phone" className="section-label">Mobile Number</Label>
         <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
           <Input
             id="phone"
             type="tel"
@@ -353,17 +329,17 @@ export function PaynowPaymentDialog({
             className="pl-10"
           />
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
           Enter your {paymentMethods.find(m => m.id === paymentMethod)?.name} registered number
         </p>
       </div>
 
       {/* Security Note */}
-      <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
-        <Shield className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-green-800">
-          <p className="font-medium">Secure Payment</p>
-          <p className="text-green-700">
+      <div className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--green)' }}>
+        <Shield className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--green)' }} />
+        <div className="text-sm">
+          <p className="font-medium" style={{ color: 'var(--green)' }}>Secure Payment</p>
+          <p style={{ color: 'var(--green)' }}>
             Your payment is processed securely through Paynow Zimbabwe.
           </p>
         </div>
@@ -375,32 +351,32 @@ export function PaynowPaymentDialog({
     <div className="py-12 text-center space-y-4">
       {status === 'processing' && (
         <>
-          <Loader2 className="h-16 w-16 mx-auto text-blue-500 animate-spin" />
-          <h3 className="text-lg font-medium text-gray-900">{statusMessage}</h3>
-          <p className="text-sm text-gray-500">Please wait while we connect to Paynow...</p>
+          <Loader2 className="h-16 w-16 mx-auto animate-spin" style={{ color: 'var(--ds-blue)' }} />
+          <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{statusMessage}</h3>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Please wait while we connect to Paynow...</p>
         </>
       )}
 
       {(status === 'awaiting_payment' || status === 'polling') && (
         <>
           <div className="relative">
-            <Smartphone className="h-20 w-20 mx-auto text-blue-500" />
+            <Smartphone className="h-20 w-20 mx-auto" style={{ color: 'var(--ds-blue)' }} />
             <div className="absolute -top-1 -right-1 w-full h-full flex items-center justify-center">
               <span className="flex h-6 w-6">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-6 w-6 bg-blue-500 items-center justify-center">
-                  <Zap className="h-3 w-3 text-white" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: 'var(--ds-blue)' }}></span>
+                <span className="relative inline-flex rounded-full h-6 w-6 items-center justify-center" style={{ backgroundColor: 'var(--accent)' }}>
+                  <Zap className="h-3 w-3" style={{ color: 'var(--bg)' }} />
                 </span>
               </span>
             </div>
           </div>
-          <h3 className="text-lg font-medium text-gray-900">Check Your Phone</h3>
-          <p className="text-sm text-gray-600 max-w-sm mx-auto">{instructions}</p>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+          <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Check Your Phone</h3>
+          <p className="text-sm max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>{instructions}</p>
+          <div className="flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-muted)' }}>
             <RefreshCw className="h-4 w-4 animate-spin" />
             <span>Waiting for payment confirmation...</span>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Phone number: {phoneNumber}
           </p>
         </>
@@ -413,47 +389,37 @@ export function PaynowPaymentDialog({
       {status === 'success' && (
         <>
           <div className="relative inline-flex">
-            <div className="absolute inset-0 bg-green-100 rounded-full scale-150 opacity-50 animate-pulse"></div>
-            <CheckCircle className="relative h-20 w-20 text-green-500" />
+            <div className="absolute inset-0 rounded-full scale-150 opacity-50 animate-pulse" style={{ backgroundColor: 'var(--green-bg)' }}></div>
+            <CheckCircle className="relative h-20 w-20" style={{ color: 'var(--green)' }} />
           </div>
-          <h3 className="text-lg font-medium text-gray-900">Payment Successful!</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Payment Successful!</h3>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Your {plan} subscription is now active.
           </p>
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            Thank you for your payment
-          </Badge>
+          <Badge variant="success">Thank you for your payment</Badge>
         </>
       )}
 
       {status === 'failed' && (
         <>
-          <XCircle className="h-20 w-20 mx-auto text-red-500" />
-          <h3 className="text-lg font-medium text-gray-900">Payment Failed</h3>
-          <p className="text-sm text-gray-600 max-w-sm mx-auto">{statusMessage}</p>
+          <XCircle className="h-20 w-20 mx-auto" style={{ color: 'var(--ds-red)' }} />
+          <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Payment Failed</h3>
+          <p className="text-sm max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>{statusMessage}</p>
           <div className="flex gap-3 justify-center mt-4">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleRetry}>
-              Try Again
-            </Button>
+            <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+            <Button onClick={handleRetry}>Try Again</Button>
           </div>
         </>
       )}
 
       {status === 'cancelled' && (
         <>
-          <AlertCircle className="h-20 w-20 mx-auto text-yellow-500" />
-          <h3 className="text-lg font-medium text-gray-900">Payment Cancelled</h3>
-          <p className="text-sm text-gray-600">{statusMessage}</p>
+          <AlertCircle className="h-20 w-20 mx-auto" style={{ color: 'var(--ds-amber)' }} />
+          <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>Payment Cancelled</h3>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{statusMessage}</p>
           <div className="flex gap-3 justify-center mt-4">
-            <Button variant="outline" onClick={handleCancel}>
-              Close
-            </Button>
-            <Button onClick={handleRetry}>
-              Try Again
-            </Button>
+            <Button variant="outline" onClick={handleCancel}>Close</Button>
+            <Button onClick={handleRetry}>Try Again</Button>
           </div>
         </>
       )}
@@ -463,19 +429,16 @@ export function PaynowPaymentDialog({
   return (
     <Dialog open={open} onOpenChange={(value) => {
       if (!value && (status === 'processing' || status === 'awaiting_payment' || status === 'polling')) {
-        // Confirm before closing during payment
-        if (!confirm('Payment is in progress. Are you sure you want to cancel?')) {
-          return
-        }
+        if (!confirm('Payment is in progress. Are you sure you want to cancel?')) return
       }
       onOpenChange(value)
     }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-blue-500" />
-            {status === 'idle' ? 'Complete Payment' : 
-             status === 'success' ? 'Payment Complete' : 
+            <CreditCard className="h-5 w-5" style={{ color: 'var(--ds-blue)' }} />
+            {status === 'idle' ? 'Complete Payment' :
+             status === 'success' ? 'Payment Complete' :
              status === 'failed' || status === 'cancelled' ? 'Payment Status' :
              'Processing Payment'}
           </DialogTitle>
@@ -494,10 +457,8 @@ export function PaynowPaymentDialog({
 
         {status === 'idle' && (
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button 
+            <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+            <Button
               onClick={initiatePayment}
               disabled={!phoneNumber || !validatePhoneNumber(phoneNumber)}
               className="gap-2"
@@ -510,9 +471,7 @@ export function PaynowPaymentDialog({
 
         {(status === 'awaiting_payment' || status === 'polling') && (
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel Payment
-            </Button>
+            <Button variant="outline" onClick={handleCancel}>Cancel Payment</Button>
           </DialogFooter>
         )}
       </DialogContent>

@@ -260,11 +260,11 @@ export default function BillingPage() {
 
   const getStatusMessage = (status: string) => {
     switch (status.toUpperCase()) {
-      case 'ACTIVE': return { text: 'Your subscription is active', color: 'text-green-600' }
-      case 'TRIAL': return { text: 'You are on a free trial', color: 'text-blue-600' }
-      case 'GRACE': return { text: 'Payment overdue - grace period active', color: 'text-yellow-600' }
-      case 'READ_ONLY': return { text: 'Account is read-only - payment required', color: 'text-red-600' }
-      case 'SUSPENDED': return { text: 'Account suspended - contact support', color: 'text-red-600' }
+      case 'ACTIVE': return { text: 'Your subscription is active', color: 'var(--green)' }
+      case 'TRIAL': return { text: 'You are on a free trial', color: 'var(--blue)' }
+      case 'GRACE': return { text: 'Payment overdue - grace period active', color: 'var(--amber)' }
+      case 'READ_ONLY': return { text: 'Account is read-only - payment required', color: 'var(--red)' }
+      case 'SUSPENDED': return { text: 'Account suspended - contact support', color: 'var(--red)' }
       default: return { text: '', color: '' }
     }
   }
@@ -272,13 +272,13 @@ export default function BillingPage() {
   const getPaymentStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4" style={{ color: 'var(--amber)' }} />
       case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+        return <AlertCircle className="h-4 w-4" style={{ color: 'var(--red)' }} />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
     }
   }
 
@@ -308,7 +308,7 @@ export default function BillingPage() {
     return (
       <div className="container mx-auto px-6 py-12">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Error loading billing data</h1>
+          <h1 className="text-2xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Error loading billing data</h1>
         </div>
       </div>
     )
@@ -321,35 +321,32 @@ export default function BillingPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-medium mb-2" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>
             Billing & Subscription
           </h1>
-          <p className="text-gray-600">
+          <p style={{ color: 'var(--text-secondary)' }}>
             Manage your subscription and view payment history
           </p>
         </div>
 
         {/* Trial Warning */}
         {tenant.status === 'TRIAL' && tenant.trialEndsAt && (
-          <Card className="mb-8 border-orange-200 bg-orange-50">
+          <Card className="mb-8 border border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-6 w-6 text-orange-600 mt-0.5" />
+                  <AlertCircle className="h-6 w-6 mt-0.5" style={{ color: 'var(--amber)' }} />
                   <div>
-                    <h3 className="font-semibold text-orange-900">
+                    <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>
                       {isTrialExpiringSoon(tenant.trialEndsAt) ? 'Trial Ending Soon!' : 'Trial Active'}
                     </h3>
-                    <p className="text-orange-800">
-                      Your trial ends on {formatDate(tenant.trialEndsAt)}. 
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Your trial ends on {formatDate(tenant.trialEndsAt)}.
                       {isTrialExpiringSoon(tenant.trialEndsAt) && ' Upgrade now to continue using TickTrack Pro.'}
                     </p>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => setShowUpgradeDialog(true)}
-                  className="bg-orange-600 hover:bg-orange-700"
-                >
+                <Button onClick={() => setShowUpgradeDialog(true)}>
                   Upgrade Now
                 </Button>
               </div>
@@ -359,22 +356,19 @@ export default function BillingPage() {
 
         {/* Grace Period Warning */}
         {subscription?.status === 'GRACE' && (
-          <Card className="mb-8 border-yellow-400 bg-yellow-50">
+          <Card className="mb-8 border border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-6 w-6 text-yellow-600 mt-0.5" />
+                  <AlertCircle className="h-6 w-6 mt-0.5" style={{ color: 'var(--amber)' }} />
                   <div>
-                    <h3 className="font-semibold text-yellow-900">Payment Overdue - Grace Period Active</h3>
-                    <p className="text-yellow-800">
+                    <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Payment Overdue - Grace Period Active</h3>
+                    <p style={{ color: 'var(--text-secondary)' }}>
                       Your subscription payment is overdue. You have 7 days to make a payment before your account becomes read-only.
                     </p>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => setShowUpgradeDialog(true)}
-                  className="bg-yellow-600 hover:bg-yellow-700"
-                >
+                <Button onClick={() => setShowUpgradeDialog(true)}>
                   Pay Now
                 </Button>
               </div>
@@ -384,22 +378,19 @@ export default function BillingPage() {
 
         {/* Read-Only Warning */}
         {subscription?.status === 'READ_ONLY' && (
-          <Card className="mb-8 border-red-400 bg-red-50">
+          <Card className="mb-8 border border-border" style={{ backgroundColor: 'var(--red-bg)' }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-6 w-6 text-red-600 mt-0.5" />
+                  <AlertCircle className="h-6 w-6 mt-0.5" style={{ color: 'var(--red)' }} />
                   <div>
-                    <h3 className="font-semibold text-red-900">Account Read-Only</h3>
-                    <p className="text-red-800">
+                    <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Account Read-Only</h3>
+                    <p style={{ color: 'var(--text-secondary)' }}>
                       Your account is now in read-only mode. You can view existing data but cannot create new tickets or update records. Please make a payment to restore full access.
                     </p>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => setShowUpgradeDialog(true)}
-                  className="bg-red-600 hover:bg-red-700"
-                >
+                <Button onClick={() => setShowUpgradeDialog(true)}>
                   Pay Now
                 </Button>
               </div>
@@ -409,13 +400,13 @@ export default function BillingPage() {
 
         {/* Suspended Warning */}
         {subscription?.status === 'SUSPENDED' && (
-          <Card className="mb-8 border-red-600 bg-red-100">
+          <Card className="mb-8 border border-border" style={{ backgroundColor: 'var(--red-bg)' }}>
             <CardContent className="p-6">
               <div className="flex items-start space-x-3">
-                <AlertCircle className="h-6 w-6 text-red-700 mt-0.5" />
+                <AlertCircle className="h-6 w-6 mt-0.5" style={{ color: 'var(--red)' }} />
                 <div>
-                  <h3 className="font-semibold text-red-900">Account Suspended</h3>
-                  <p className="text-red-800">
+                  <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Account Suspended</h3>
+                  <p style={{ color: 'var(--text-secondary)' }}>
                     Your account has been suspended. Please contact support at support@ticktrackpro.com to resolve this issue.
                   </p>
                 </div>
@@ -443,8 +434,8 @@ export default function BillingPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold">{subscription.plan} Plan</h3>
-                        <p className="text-gray-600">
+                        <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{subscription.plan} Plan</h3>
+                        <p style={{ color: 'var(--text-secondary)' }}>
                           {subscription.currency} ${subscription.amount}/{subscription.billingCycle}
                         </p>
                       </div>
@@ -458,14 +449,14 @@ export default function BillingPage() {
                     
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                       <div>
-                        <p className="text-sm text-gray-600">Current Period</p>
-                        <p className="font-medium">
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Current Period</p>
+                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                           {formatDate(subscription.currentPeriodStart)} - {formatDate(subscription.currentPeriodEnd)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600">Next Billing Date</p>
-                        <p className="font-medium">
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Next Billing Date</p>
+                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
                           {formatDate(subscription.currentPeriodEnd)}
                         </p>
                       </div>
@@ -473,11 +464,11 @@ export default function BillingPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <CreditCard className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <CreditCard className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+                    <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                       No Active Subscription
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                       You're currently on the trial plan. Upgrade to continue using TickTrack Pro.
                     </p>
                     <Button onClick={() => setShowUpgradeDialog(true)}>
@@ -525,7 +516,7 @@ export default function BillingPage() {
                     </tbody>
                   </Table>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                     <Calendar className="h-12 w-12 mx-auto mb-4" />
                     <p>No payment history yet</p>
                   </div>
@@ -543,19 +534,19 @@ export default function BillingPage() {
               <CardContent>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-600">Organization</p>
-                    <p className="font-medium">{tenant.name}</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Organization</p>
+                    <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{tenant.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Account Status</p>
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Account Status</p>
                     <Badge variant={getStatusBadgeVariant(tenant.status)}>
                       {tenant.status}
                     </Badge>
                   </div>
                   {tenant.trialEndsAt && (
                     <div>
-                      <p className="text-sm text-gray-600">Trial Ends</p>
-                      <p className="font-medium">{formatDate(tenant.trialEndsAt)}</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Trial Ends</p>
+                      <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{formatDate(tenant.trialEndsAt)}</p>
                     </div>
                   )}
                 </div>
@@ -567,7 +558,7 @@ export default function BillingPage() {
                 <CardTitle>Need Help?</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                   Have questions about billing or need to customize your plan?
                 </p>
                 <div className="space-y-2">
@@ -588,18 +579,18 @@ export default function BillingPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Upgrade Your Plan</DialogTitle>
-              <p className="text-sm text-gray-600 mt-1">Select a plan and payment method to continue</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Select a plan and payment method to continue</p>
             </DialogHeader>
             
             <div className="space-y-6">
               {/* Payment Error Alert */}
               {paymentError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="border border-border rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)' }}>
                   <div className="flex items-start space-x-3">
-                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--red)' }} />
                     <div>
-                      <h3 className="font-medium text-red-900">Error</h3>
-                      <p className="text-red-800 text-sm mt-1">{paymentError}</p>
+                      <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Error</h3>
+                      <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{paymentError}</p>
                     </div>
                   </div>
                 </div>
@@ -607,16 +598,15 @@ export default function BillingPage() {
 
               {/* Select Plan Section */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Select Plan</h3>
+                <h3 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Select Plan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {plans.map((plan) => (
                     <label
                       key={plan.id}
-                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                        selectedPlan === plan.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className="border-2 rounded-lg p-4 cursor-pointer transition-all"
+                      style={selectedPlan === plan.id
+                        ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' }
+                        : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                     >
                       <div className="flex items-start">
                         <input
@@ -629,15 +619,15 @@ export default function BillingPage() {
                         />
                         <div className="ml-3 flex-1">
                           <div className="flex items-center justify-between">
-                            <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                            <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>{plan.name}</h4>
                             {plan.popular && (
-                              <Badge className="bg-purple-600 text-xs">Popular</Badge>
+                              <Badge className="text-xs" style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>Popular</Badge>
                             )}
                           </div>
-                          <p className="text-xs text-gray-600 mt-1">{plan.description}</p>
-                          <p className="text-lg font-bold text-gray-900 mt-2">
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{plan.description}</p>
+                          <p className="text-lg font-medium mt-2" style={{ color: 'var(--text-primary)', fontWeight: 300 }}>
                             ${plan.pricing[selectedBillingCycle][selectedCurrency]}
-                            <span className="text-sm font-normal text-gray-600">
+                            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                               /{selectedBillingCycle === 'yearly' ? 'year' : 'month'}
                             </span>
                           </p>
@@ -650,7 +640,7 @@ export default function BillingPage() {
 
               {/* Billing Cycle Section */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Billing Cycle</h3>
+                <h3 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Billing Cycle</h3>
                 <div className="flex items-center space-x-4">
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -659,7 +649,7 @@ export default function BillingPage() {
                       onChange={() => setSelectedBillingCycle('monthly')}
                       className="mr-2"
                     />
-                    <span className="text-gray-900">Monthly</span>
+                    <span style={{ color: 'var(--text-primary)' }}>Monthly</span>
                   </label>
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -668,13 +658,13 @@ export default function BillingPage() {
                       onChange={() => setSelectedBillingCycle('yearly')}
                       className="mr-2"
                     />
-                    <span className="text-gray-900">Yearly <span className="text-green-600 text-sm">-17%</span></span>
+                    <span style={{ color: 'var(--text-primary)' }}>Yearly <span className="text-sm" style={{ color: 'var(--green)' }}>-17%</span></span>
                   </label>
                   <div className="flex-1 flex items-center justify-end">
                     <select
                       value={selectedCurrency}
                       onChange={(e) => setSelectedCurrency(e.target.value as 'USD' | 'ZWL')}
-                      className="border border-gray-300 rounded px-3 py-1 text-sm"
+                      className="border border-border rounded px-3 py-1 text-sm" style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                     >
                       <option value="USD">USD ($)</option>
                       <option value="ZWL">ZWL (Z$)</option>
@@ -685,15 +675,14 @@ export default function BillingPage() {
 
               {/* Payment Method Section */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Payment Method</h3>
+                <h3 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Payment Method</h3>
                 <div className="space-y-3">
                   {/* Paynow */}
                   <label
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start ${
-                      selectedPaymentMethod === 'paynow'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className="border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start"
+                    style={selectedPaymentMethod === 'paynow'
+                      ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' }
+                      : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                   >
                     <input
                       type="radio"
@@ -704,18 +693,17 @@ export default function BillingPage() {
                       className="mt-1"
                     />
                     <div className="ml-3">
-                      <h4 className="font-semibold text-gray-900">Mobile Money</h4>
-                      <p className="text-sm text-gray-600">EcoCash, OneMoney, Telecash</p>
+                      <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Mobile Money</h4>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>EcoCash, OneMoney, Telecash</p>
                     </div>
                   </label>
 
                   {/* Bank Transfer */}
                   <label
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start ${
-                      selectedPaymentMethod === 'bank_transfer'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className="border-2 rounded-lg p-4 cursor-pointer transition-all flex items-start"
+                    style={selectedPaymentMethod === 'bank_transfer'
+                      ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' }
+                      : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                   >
                     <input
                       type="radio"
@@ -726,8 +714,8 @@ export default function BillingPage() {
                       className="mt-1"
                     />
                     <div className="ml-3">
-                      <h4 className="font-semibold text-gray-900">Bank Transfer</h4>
-                      <p className="text-sm text-gray-600">Direct bank deposit</p>
+                      <h4 className="font-medium" style={{ color: 'var(--text-primary)' }}>Bank Transfer</h4>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Direct bank deposit</p>
                     </div>
                   </label>
                 </div>
@@ -735,42 +723,39 @@ export default function BillingPage() {
 
               {/* Mobile Money Details */}
               {selectedPaymentMethod === 'paynow' && (
-                <div className="space-y-4 bg-gray-50 border rounded-lg p-4">
+                <div className="space-y-4 border border-border rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Select Provider</label>
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setMobileProvider('ecocash')}
-                        className={`p-3 border rounded-lg text-center transition-all ${
-                          mobileProvider === 'ecocash' 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-300 hover:border-gray-400 bg-white'
-                        }`}
+                        className="p-3 border rounded-lg text-center transition-all"
+                        style={mobileProvider === 'ecocash'
+                          ? { borderColor: 'var(--green)', backgroundColor: 'var(--green-bg)' }
+                          : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
-                        <p className="font-medium text-green-700">EcoCash</p>
+                        <p className="font-medium" style={{ color: 'var(--green)' }}>EcoCash</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setMobileProvider('onemoney')}
-                        className={`p-3 border rounded-lg text-center transition-all ${
-                          mobileProvider === 'onemoney' 
-                            ? 'border-purple-500 bg-purple-50' 
-                            : 'border-gray-300 hover:border-gray-400 bg-white'
-                        }`}
+                        className="p-3 border rounded-lg text-center transition-all"
+                        style={mobileProvider === 'onemoney'
+                          ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' }
+                          : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
-                        <p className="font-medium text-purple-700">OneMoney</p>
+                        <p className="font-medium" style={{ color: 'var(--accent)' }}>OneMoney</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setMobileProvider('telecash')}
-                        className={`p-3 border rounded-lg text-center transition-all ${
-                          mobileProvider === 'telecash' 
-                            ? 'border-orange-500 bg-orange-50' 
-                            : 'border-gray-300 hover:border-gray-400 bg-white'
-                        }`}
+                        className="p-3 border rounded-lg text-center transition-all"
+                        style={mobileProvider === 'telecash'
+                          ? { borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' }
+                          : { borderColor: 'var(--border)', backgroundColor: 'var(--surface)' }}
                       >
-                        <p className="font-medium text-orange-700">Telecash</p>
+                        <p className="font-medium" style={{ color: 'var(--amber)' }}>Telecash</p>
                       </button>
                     </div>
                   </div>
@@ -782,19 +767,19 @@ export default function BillingPage() {
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="0771234567"
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-border rounded-lg" style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                       maxLength={10}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Enter your {mobileProvider === 'ecocash' ? 'Econet' : mobileProvider === 'onemoney' ? 'NetOne' : 'Telecel'} number</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Enter your {mobileProvider === 'ecocash' ? 'Econet' : mobileProvider === 'onemoney' ? 'NetOne' : 'Telecel'} number</p>
                   </div>
 
                   {paymentInstructions && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="p-4 border border-border rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
                       <div className="flex items-start">
-                        <CheckCircle className="h-5 w-5 text-green-600 mr-2 mt-0.5" />
+                        <CheckCircle className="h-5 w-5 mr-2 mt-0.5" style={{ color: 'var(--green)' }} />
                         <div>
-                          <p className="font-medium text-green-800">Payment Request Sent!</p>
-                          <p className="text-sm text-green-700 mt-1">{paymentInstructions}</p>
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>Payment Request Sent!</p>
+                          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{paymentInstructions}</p>
                         </div>
                       </div>
                     </div>
@@ -804,19 +789,19 @@ export default function BillingPage() {
 
               {/* Bank Transfer POP Upload */}
               {selectedPaymentMethod === 'bank_transfer' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Submit Proof of Payment</h4>
-                  <p className="text-sm text-gray-600 mb-3">
+                <div className="border border-border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                  <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Submit Proof of Payment</h4>
+                  <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                     Please upload a screenshot or image of your payment proof. Our admin will review and activate your account.
                   </p>
                   <input
                     type="file"
                     accept="image/*,.pdf"
                     onChange={(e) => setPopFile(e.currentTarget.files?.[0] || null)}
-                    className="block w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                    className="block w-full border border-border rounded px-3 py-2 text-sm" style={{ backgroundColor: 'var(--surface)', color: 'var(--text-primary)' }}
                   />
                   {popFile && (
-                    <p className="text-sm text-green-600 mt-2">✓ {popFile.name} selected</p>
+                    <p className="text-sm mt-2" style={{ color: 'var(--green)' }}>✓ {popFile.name} selected</p>
                   )}
                 </div>
               )}

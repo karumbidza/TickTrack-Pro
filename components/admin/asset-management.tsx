@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -294,19 +295,19 @@ export function AdminAssetManagement() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
-      'ACTIVE': { color: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
-      'MAINTENANCE': { color: 'bg-blue-100 text-blue-800', icon: <Wrench className="h-3 w-3" /> },
-      'OUT_OF_SERVICE': { color: 'bg-gray-100 text-gray-800', icon: <XCircle className="h-3 w-3" /> },
-      'RETIRED': { color: 'bg-gray-100 text-gray-800', icon: <Clock className="h-3 w-3" /> },
-      'REPAIR_NEEDED': { color: 'bg-red-100 text-red-800', icon: <AlertTriangle className="h-3 w-3" /> },
-      'DECOMMISSIONED': { color: 'bg-gray-100 text-gray-600', icon: <XCircle className="h-3 w-3" /> },
-      'TRANSFERRED': { color: 'bg-purple-100 text-purple-800', icon: <TrendingUp className="h-3 w-3" /> },
-      'PENDING_DECOMMISSION': { color: 'bg-amber-100 text-amber-800', icon: <AlertCircle className="h-3 w-3" /> }
+    const statusConfig: Record<string, { style: React.CSSProperties; icon: React.ReactNode }> = {
+      'ACTIVE': { style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <CheckCircle className="h-3 w-3" /> },
+      'MAINTENANCE': { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <Wrench className="h-3 w-3" /> },
+      'OUT_OF_SERVICE': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <XCircle className="h-3 w-3" /> },
+      'RETIRED': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <Clock className="h-3 w-3" /> },
+      'REPAIR_NEEDED': { style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <AlertTriangle className="h-3 w-3" /> },
+      'DECOMMISSIONED': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }, icon: <XCircle className="h-3 w-3" /> },
+      'TRANSFERRED': { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <TrendingUp className="h-3 w-3" /> },
+      'PENDING_DECOMMISSION': { style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <AlertCircle className="h-3 w-3" /> }
     }
-    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', icon: null }
+    const config = statusConfig[status] || { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: null }
     return (
-      <Badge className={`${config.color} flex items-center gap-1`}>
+      <Badge className="flex items-center gap-1" style={config.style}>
         {config.icon}
         {status.replace(/_/g, ' ')}
       </Badge>
@@ -336,10 +337,10 @@ export function AdminAssetManagement() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Total Assets</p>
-                  <p className="text-2xl font-bold">{stats.total}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Assets</p>
+                  <p className="text-2xl font-medium">{stats.total}</p>
                 </div>
-                <Package className="h-8 w-8 text-gray-400" />
+                <Package className="h-8 w-8" style={{ color: 'var(--text-muted)' }} />
               </div>
             </CardContent>
           </Card>
@@ -347,32 +348,21 @@ export function AdminAssetManagement() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Active</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Active</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>{stats.active}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
+                <CheckCircle className="h-8 w-8" style={{ color: 'var(--green)' }} />
               </div>
             </CardContent>
           </Card>
-          <Card className={stats.pendingDecommission > 0 ? 'border-amber-300 bg-amber-50' : ''}>
+          <Card style={stats.pendingDecommission > 0 ? { borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' } : {}}>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Pending Approval</p>
-                  <p className="text-2xl font-bold text-amber-600">{stats.pendingDecommission}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pending Approval</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>{stats.pendingDecommission}</p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-amber-400" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">In Maintenance</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.maintenance}</p>
-                </div>
-                <Wrench className="h-8 w-8 text-blue-400" />
+                <AlertCircle className="h-8 w-8" style={{ color: 'var(--amber)' }} />
               </div>
             </CardContent>
           </Card>
@@ -380,10 +370,10 @@ export function AdminAssetManagement() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Repair Needed</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.repairNeeded}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>In Maintenance</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--blue)' }}>{stats.maintenance}</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-400" />
+                <Wrench className="h-8 w-8" style={{ color: 'var(--blue)' }} />
               </div>
             </CardContent>
           </Card>
@@ -391,10 +381,21 @@ export function AdminAssetManagement() {
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Decommissioned</p>
-                  <p className="text-2xl font-bold text-gray-600">{stats.decommissioned}</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Repair Needed</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--red)' }}>{stats.repairNeeded}</p>
                 </div>
-                <XCircle className="h-8 w-8 text-gray-400" />
+                <AlertTriangle className="h-8 w-8" style={{ color: 'var(--red)' }} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Decommissioned</p>
+                  <p className="text-2xl font-medium" style={{ color: 'var(--text-secondary)' }}>{stats.decommissioned}</p>
+                </div>
+                <XCircle className="h-8 w-8" style={{ color: 'var(--text-muted)' }} />
               </div>
             </CardContent>
           </Card>
@@ -407,7 +408,7 @@ export function AdminAssetManagement() {
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   placeholder="Search assets..."
                   value={searchQuery}
@@ -462,9 +463,9 @@ export function AdminAssetManagement() {
 
       {/* Pending Decommission Requests - Highlighted */}
       {assets.filter(a => a.status === 'PENDING_DECOMMISSION').length > 0 && (
-        <Card className="border-amber-300 bg-amber-50">
+        <Card style={{ borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' }}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-800">
+            <CardTitle className="flex items-center gap-2" style={{ color: 'var(--amber)' }}>
               <AlertCircle className="h-5 w-5" />
               Pending Decommission Requests ({assets.filter(a => a.status === 'PENDING_DECOMMISSION').length})
             </CardTitle>
@@ -472,18 +473,18 @@ export function AdminAssetManagement() {
           <CardContent>
             <div className="space-y-3">
               {assets.filter(a => a.status === 'PENDING_DECOMMISSION').map(asset => (
-                <div key={asset.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-amber-200">
+                <div key={asset.id} className="flex items-center justify-between p-4 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--amber)' }}>
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{asset.assetNumber}</span>
-                      <span className="text-gray-600">{asset.name}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{asset.name}</span>
                       {asset.category && (
                         <Badge variant="outline" style={{ borderColor: asset.category.color }}>
                           {asset.category.name}
                         </Badge>
                       )}
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                       <span>Requested by: {asset.decommissionRequestedBy?.name || 'Unknown'}</span>
                       <span className="mx-2">•</span>
                       <span>Reason: {asset.decommissionReason}</span>
@@ -502,7 +503,7 @@ export function AdminAssetManagement() {
                     </Button>
                     <Button 
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      style={{ backgroundColor: 'var(--green)' }}
                       onClick={() => handleApproveDecommission(asset.id)}
                       disabled={actionLoading}
                     >
@@ -540,17 +541,17 @@ export function AdminAssetManagement() {
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+              <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--text-muted)' }} />
             </div>
           ) : assets.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
               No assets found
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b text-center text-sm text-gray-500">
+                  <tr className="border-b text-center text-sm" style={{ color: 'var(--text-muted)' }}>
                     <th className="pb-3 font-medium text-center">Asset</th>
                     <th className="pb-3 font-medium text-center">Asset ID</th>
                     <th className="pb-3 font-medium text-center">Category</th>
@@ -564,17 +565,17 @@ export function AdminAssetManagement() {
                 </thead>
                 <tbody>
                   {assets.map(asset => (
-                    <tr key={asset.id} className="border-b hover:bg-gray-50">
+                    <tr key={asset.id} className="border-b" style={{ ['--tw-hover-bg' as string]: 'var(--surface2)' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface2)'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = ''}>
                       <td className="py-3 text-center">
                         <div>
                           <p className="font-medium">{asset.name}</p>
                           {asset.brand && asset.model && (
-                            <p className="text-xs text-gray-400">{asset.brand} {asset.model}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{asset.brand} {asset.model}</p>
                           )}
                         </div>
                       </td>
                       <td className="py-3 text-center">
-                        <span className="text-sm font-mono text-gray-600">{asset.assetNumber}</span>
+                        <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>{asset.assetNumber}</span>
                       </td>
                       <td className="py-3 text-center">
                         {asset.category ? (
@@ -582,12 +583,12 @@ export function AdminAssetManagement() {
                             {asset.category.name}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span style={{ color: 'var(--text-muted)' }}>-</span>
                         )}
                       </td>
                       <td className="py-3 text-center">
                         <div className="flex items-center justify-center gap-1 text-sm">
-                          <MapPin className="h-3 w-3 text-gray-400" />
+                          <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
                           {asset.branch?.name || asset.location || '-'}
                         </div>
                       </td>
@@ -597,7 +598,7 @@ export function AdminAssetManagement() {
                         <div className="text-sm">
                           <p className="font-medium">{formatCurrency(asset.totalCost)}</p>
                           {asset.totalRepairCost > 0 && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-text-muted">
                               Repairs: {formatCurrency(asset.totalRepairCost)}
                             </p>
                           )}
@@ -635,7 +636,7 @@ export function AdminAssetManagement() {
                 <DialogTitle className="flex items-center gap-3">
                   <Package className="h-6 w-6" />
                   {selectedAsset.name}
-                  <span className="text-gray-500 font-normal">({selectedAsset.assetNumber})</span>
+                  <span className="text-text-muted font-normal">({selectedAsset.assetNumber})</span>
                   {getStatusBadge(selectedAsset.status)}
                 </DialogTitle>
               </DialogHeader>
@@ -651,21 +652,21 @@ export function AdminAssetManagement() {
                 <TabsContent value="overview" className="space-y-4 mt-4">
                   {/* Pending Decommission Alert */}
                   {selectedAsset.status === 'PENDING_DECOMMISSION' && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
                       <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <AlertCircle className="h-5 w-5 mt-0.5" style={{ color: 'var(--amber)' }} />
                         <div className="flex-1">
-                          <p className="font-medium text-amber-800">Decommission Request Pending</p>
-                          <p className="text-sm text-amber-700 mt-1">
+                          <p className="font-medium" style={{ color: 'var(--amber)' }}>Decommission Request Pending</p>
+                          <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>
                             Requested by {selectedAsset.decommissionRequestedBy?.name || 'Unknown'} on {formatDate(selectedAsset.decommissionRequestedAt)}
                           </p>
-                          <p className="text-sm text-amber-700 mt-1">
+                          <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>
                             <strong>Reason:</strong> {selectedAsset.decommissionReason}
                           </p>
                           <div className="flex gap-2 mt-3">
-                            <Button 
-                              size="sm" 
-                              className="bg-green-600 hover:bg-green-700"
+                            <Button
+                              size="sm"
+                              style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                               onClick={() => handleApproveDecommission(selectedAsset.id)}
                               disabled={actionLoading}
                             >
@@ -691,68 +692,68 @@ export function AdminAssetManagement() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
                       <div>
-                        <Label className="text-gray-500">Category</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Category</Label>
                         <p>{selectedAsset.category?.name || 'Uncategorized'}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Brand / Model</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Brand / Model</Label>
                         <p>{selectedAsset.brand || '-'} {selectedAsset.model || ''}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Serial Number</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Serial Number</Label>
                         <p>{selectedAsset.serialNumber || '-'}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Site / Branch</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Site / Branch</Label>
                         <p className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <MapPin className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                           {selectedAsset.branch?.name || selectedAsset.location || '-'}
                         </p>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <Label className="text-gray-500">Purchase Date</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Purchase Date</Label>
                         <p>{formatDate(selectedAsset.purchaseDate)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Warranty Expires</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Warranty Expires</Label>
                         <p>{formatDate(selectedAsset.warrantyExpires)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">End of Life Date</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>End of Life Date</Label>
                         <p>{formatDate(selectedAsset.endOfLifeDate)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500">Tenant</Label>
+                        <Label style={{ color: 'var(--text-muted)' }}>Tenant</Label>
                         <p>{selectedAsset.tenant?.name || '-'}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Financial Summary */}
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
                     <h4 className="font-medium mb-3 flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
                       Financial Summary
                     </h4>
                     <div className="grid grid-cols-4 gap-4">
                       <div>
-                        <Label className="text-gray-500 text-xs">Purchase Price</Label>
-                        <p className="text-lg font-semibold">{formatCurrency(selectedAsset.purchasePrice)}</p>
+                        <Label className="text-xs" style={{ color: 'var(--text-muted)' }}>Purchase Price</Label>
+                        <p className="text-lg font-medium">{formatCurrency(selectedAsset.purchasePrice)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500 text-xs">Repair Costs</Label>
-                        <p className="text-lg font-semibold text-red-600">{formatCurrency(selectedAsset.totalRepairCost)}</p>
+                        <Label className="text-xs" style={{ color: 'var(--text-muted)' }}>Repair Costs</Label>
+                        <p className="text-lg font-medium" style={{ color: 'var(--red)' }}>{formatCurrency(selectedAsset.totalRepairCost)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500 text-xs">Maintenance Costs</Label>
-                        <p className="text-lg font-semibold text-blue-600">{formatCurrency(selectedAsset.totalMaintenanceCost)}</p>
+                        <Label className="text-xs" style={{ color: 'var(--text-muted)' }}>Maintenance Costs</Label>
+                        <p className="text-lg font-medium" style={{ color: 'var(--blue)' }}>{formatCurrency(selectedAsset.totalMaintenanceCost)}</p>
                       </div>
                       <div>
-                        <Label className="text-gray-500 text-xs">Total Service Cost</Label>
-                        <p className="text-lg font-bold text-orange-600">{formatCurrency(selectedAsset.totalCost)}</p>
-                        <p className="text-[10px] text-gray-400">Repairs + Maintenance</p>
+                        <Label className="text-xs" style={{ color: 'var(--text-muted)' }}>Total Service Cost</Label>
+                        <p className="text-lg font-medium" style={{ color: 'var(--amber)' }}>{formatCurrency(selectedAsset.totalCost)}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Repairs + Maintenance</p>
                       </div>
                     </div>
                   </div>
@@ -760,8 +761,8 @@ export function AdminAssetManagement() {
                   {/* Description */}
                   {selectedAsset.description && (
                     <div>
-                      <Label className="text-gray-500">Description</Label>
-                      <p className="mt-1 text-gray-700">{selectedAsset.description}</p>
+                      <Label style={{ color: 'var(--text-muted)' }}>Description</Label>
+                      <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>{selectedAsset.description}</p>
                     </div>
                   )}
                 </TabsContent>
@@ -774,24 +775,24 @@ export function AdminAssetManagement() {
                         {selectedAsset.assetHistory.map((entry, index) => (
                           <div key={entry.id} className="flex gap-3">
                             <div className="flex flex-col items-center">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                <History className="h-4 w-4 text-blue-600" />
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                                <History className="h-4 w-4" style={{ color: 'var(--blue)' }} />
                               </div>
                               {index < selectedAsset.assetHistory!.length - 1 && (
-                                <div className="w-px h-full bg-gray-200 my-1" />
+                                <div className="w-px h-full my-1" style={{ backgroundColor: 'var(--border)' }} />
                               )}
                             </div>
                             <div className="flex-1 pb-4">
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline">{entry.action.replace(/_/g, ' ')}</Badge>
                                 {entry.cost && (
-                                  <span className="text-sm text-green-600">
+                                  <span className="text-sm" style={{ color: 'var(--green)' }}>
                                     {formatCurrency(entry.cost)}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-700 mt-1">{entry.description}</p>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{entry.description}</p>
+                              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                 {entry.performedBy?.name || 'System'} • {formatDate(entry.createdAt)}
                               </p>
                             </div>
@@ -799,7 +800,7 @@ export function AdminAssetManagement() {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                         No history records found
                       </div>
                     )}
@@ -819,16 +820,16 @@ export function AdminAssetManagement() {
                                   <Badge variant="outline">{mh.type}</Badge>
                                   <p className="text-sm mt-1">{mh.description}</p>
                                   {mh.contractor && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                       Performed by: {mh.contractor.user.name}
                                     </p>
                                   )}
                                 </div>
                                 <div className="text-right">
                                   {mh.cost && (
-                                    <p className="font-medium text-green-600">{formatCurrency(mh.cost)}</p>
+                                    <p className="font-medium" style={{ color: 'var(--green)' }}>{formatCurrency(mh.cost)}</p>
                                   )}
-                                  <p className="text-xs text-gray-500">{formatDate(mh.performedDate)}</p>
+                                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatDate(mh.performedDate)}</p>
                                 </div>
                               </div>
                             </div>
@@ -847,12 +848,12 @@ export function AdminAssetManagement() {
                           <div className="flex justify-between items-start">
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-sm text-gray-500">{ticket.ticketNumber}</span>
+                                <span className="font-mono text-sm" style={{ color: 'var(--text-muted)' }}>{ticket.ticketNumber}</span>
                                 <Badge variant="outline">{ticket.status}</Badge>
                               </div>
                               <p className="font-medium mt-1">{ticket.title}</p>
                               {ticket.assignedTo && (
-                                <p className="text-sm text-gray-500 mt-1">
+                                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                                   <User className="h-3 w-3 inline mr-1" />
                                   {ticket.assignedTo.name}
                                 </p>
@@ -860,11 +861,11 @@ export function AdminAssetManagement() {
                             </div>
                             <div className="text-right">
                               {ticket.invoices?.[0] && (
-                                <p className="font-medium text-green-600">
+                                <p className="font-medium" style={{ color: 'var(--green)' }}>
                                   {formatCurrency(ticket.invoices[0].amount)}
                                 </p>
                               )}
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {formatDate(ticket.completedAt || ticket.createdAt)}
                               </p>
                             </div>
@@ -873,7 +874,7 @@ export function AdminAssetManagement() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                       No tickets found for this asset
                     </div>
                   )}
@@ -903,7 +904,7 @@ export function AdminAssetManagement() {
                     )}
                     {(!selectedAsset.images || selectedAsset.images.length === 0) && 
                      (!selectedAsset.manuals || selectedAsset.manuals.length === 0) && (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                         No media files attached
                       </div>
                     )}
@@ -922,7 +923,7 @@ export function AdminAssetManagement() {
             <DialogTitle>Reject Decommission Request</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               Please provide a reason for rejecting the decommission request for{' '}
               <strong>{selectedAsset?.name}</strong>.
             </p>

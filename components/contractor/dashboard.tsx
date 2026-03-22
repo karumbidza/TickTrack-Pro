@@ -1,7 +1,7 @@
 'use client'
 
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -691,40 +691,40 @@ export function ContractorDashboard() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      AWAITING_QUOTE: 'bg-amber-100 text-amber-800',
-      QUOTE_SUBMITTED: 'bg-indigo-100 text-indigo-800',
-      PROCESSING: 'bg-yellow-100 text-yellow-800',
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      ACCEPTED: 'bg-blue-100 text-blue-800',
-      IN_PROGRESS: 'bg-orange-100 text-orange-800',
-      ON_SITE: 'bg-purple-100 text-purple-800',
-      AWAITING_DESCRIPTION: 'bg-amber-100 text-amber-800',
-      AWAITING_WORK_APPROVAL: 'bg-indigo-100 text-indigo-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CLOSED: 'bg-gray-100 text-gray-800'
+  const getStatusColor = (status: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      AWAITING_QUOTE: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      QUOTE_SUBMITTED: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      PROCESSING: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      PENDING: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ACCEPTED: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      IN_PROGRESS: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ON_SITE: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_DESCRIPTION: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      AWAITING_WORK_APPROVAL: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      COMPLETED: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      CLOSED: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' },
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return colors[status] || { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
   }
 
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      LOW: 'bg-green-100 text-green-800',
-      MEDIUM: 'bg-yellow-100 text-yellow-800',
-      HIGH: 'bg-orange-100 text-orange-800',
-      CRITICAL: 'bg-red-100 text-red-800',
-      URGENT: 'bg-red-200 text-red-900'
+  const getPriorityColor = (priority: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      LOW: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      MEDIUM: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      HIGH: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      CRITICAL: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
+      URGENT: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
     }
-    return colors[priority] || 'bg-gray-100 text-gray-800'
+    return colors[priority] || { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED': case 'CLOSED': return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'PROCESSING': case 'PENDING': return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      case 'ACCEPTED': case 'IN_PROGRESS': case 'ON_SITE': return <Clock className="h-4 w-4 text-orange-500" />
-      default: return <FileText className="h-4 w-4 text-blue-500" />
+      case 'COMPLETED': case 'CLOSED': return <CheckCircle className="h-4 w-4" style={{ color: 'var(--green)' }} />
+      case 'PROCESSING': case 'PENDING': return <AlertCircle className="h-4 w-4" style={{ color: 'var(--amber)' }} />
+      case 'ACCEPTED': case 'IN_PROGRESS': case 'ON_SITE': return <Clock className="h-4 w-4" style={{ color: 'var(--amber)' }} />
+      default: return <FileText className="h-4 w-4" style={{ color: 'var(--accent)' }} />
     }
   }
 
@@ -763,8 +763,8 @@ export function ContractorDashboard() {
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
         <Box sx={{ py: 1, textAlign: 'center', width: '100%' }}>
-          <p className="font-medium text-gray-900 text-sm truncate">{params.row.title}</p>
-          <p className="text-xs text-blue-600">{params.row.ticketNumber}</p>
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{params.row.title}</p>
+          <p className="text-xs" style={{ color: 'var(--accent)' }}>{params.row.ticketNumber}</p>
         </Box>
       ),
     },
@@ -776,7 +776,7 @@ export function ContractorDashboard() {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
-        <span className="text-xs font-mono text-gray-600">
+        <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
           {params.row.id.slice(0, 8).toUpperCase()}
         </span>
       ),
@@ -810,7 +810,7 @@ export function ContractorDashboard() {
               },
             }}
           >
-            <p className="text-xs text-gray-600 truncate cursor-pointer text-center" style={{ maxWidth: '100%' }}>
+            <p className="text-xs truncate cursor-pointer text-center" style={{ maxWidth: '100%', color: 'var(--text-secondary)' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -943,11 +943,11 @@ export function ContractorDashboard() {
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
         <Box sx={{ textAlign: 'center' }}>
-          <p className="text-xs font-medium text-gray-900 truncate">
+          <p className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
             {params.row.tenant?.name || 'N/A'}
           </p>
           {params.row.user && (
-            <p className="text-xs text-gray-500 truncate">{params.row.user.name}</p>
+            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{params.row.user.name}</p>
           )}
         </Box>
       ),
@@ -962,11 +962,11 @@ export function ContractorDashboard() {
       renderCell: (params: GridRenderCellParams<Job>) => (
         params.row.location ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-            <MapPin className="h-3 w-3 text-gray-400" />
-            <span className="text-xs text-gray-700 truncate">{params.row.location}</span>
+            <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+            <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{params.row.location}</span>
           </Box>
         ) : (
-          <span className="text-xs text-gray-400">-</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
         )
       ),
     },
@@ -978,7 +978,7 @@ export function ContractorDashboard() {
       align: 'center',
       headerAlign: 'center',
       renderCell: (params: GridRenderCellParams<Job>) => (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -1010,10 +1010,10 @@ export function ContractorDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading contractor dashboard...</p>
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" style={{ color: 'var(--accent)' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Loading contractor dashboard...</p>
         </div>
       </div>
     )
@@ -1021,10 +1021,10 @@ export function ContractorDashboard() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You need to be logged in as a contractor to access this page.</p>
+          <h2 className="text-2xl font-medium mb-4" style={{ color: 'var(--text-primary)' }}>Access Denied</h2>
+          <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>You need to be logged in as a contractor to access this page.</p>
           <Button onClick={() => window.location.href = '/auth/login'}>
             Go to Login
           </Button>
@@ -1034,15 +1034,15 @@ export function ContractorDashboard() {
   }
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>
               Welcome, {session.user.name}!
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base">Manage your assigned jobs and track your work</p>
+            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Manage your assigned jobs and track your work</p>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={fetchContractorData} variant="outline" size="sm">
@@ -1054,61 +1054,61 @@ export function ContractorDashboard() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+          <Card style={{ backgroundColor: 'var(--blue-bg)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100">Total Jobs</CardTitle>
-              <Package className="h-5 w-5 text-blue-200" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--blue)' }}>Total Jobs</CardTitle>
+              <Package className="h-5 w-5" style={{ color: 'var(--blue)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{jobs.length}</div>
-              <p className="text-xs text-blue-200 mt-1">All assigned</p>
+              <div className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>{jobs.length}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>All assigned</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-500 to-orange-500 text-white">
+          <Card style={{ backgroundColor: 'var(--amber-bg)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-amber-100">Pending Acceptance</CardTitle>
-              <AlertCircle className="h-5 w-5 text-amber-200" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--amber)' }}>Pending Acceptance</CardTitle>
+              <AlertCircle className="h-5 w-5" style={{ color: 'var(--amber)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{jobs.filter(job => job.status === 'PENDING' || job.status === 'PROCESSING').length}</div>
-              <p className="text-xs text-amber-200 mt-1">Needs action</p>
+              <div className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>{jobs.filter(job => job.status === 'PENDING' || job.status === 'PROCESSING').length}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Needs action</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+          <Card style={{ backgroundColor: 'var(--blue-bg)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-100">In Progress</CardTitle>
-              <Clock className="h-5 w-5 text-purple-200" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--blue)' }}>In Progress</CardTitle>
+              <Clock className="h-5 w-5" style={{ color: 'var(--blue)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{jobs.filter(job => job.status === 'ACCEPTED' || job.status === 'IN_PROGRESS' || job.status === 'ON_SITE').length}</div>
-              <p className="text-xs text-purple-200 mt-1">Active work</p>
+              <div className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>{jobs.filter(job => job.status === 'ACCEPTED' || job.status === 'IN_PROGRESS' || job.status === 'ON_SITE').length}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Active work</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+          <Card style={{ backgroundColor: 'var(--green-bg)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-100">Completed</CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-200" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--green)' }}>Completed</CardTitle>
+              <CheckCircle className="h-5 w-5" style={{ color: 'var(--green)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{jobs.filter(job => job.status === 'COMPLETED').length}</div>
-              <p className="text-xs text-green-200 mt-1">Well done!</p>
+              <div className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>{jobs.filter(job => job.status === 'COMPLETED').length}</div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Well done!</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-400 to-yellow-500 text-white">
+          <Card style={{ backgroundColor: 'var(--amber-bg)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-100">Overall Rating</CardTitle>
-              <Star className="h-5 w-5 text-yellow-200" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--amber)' }}>Overall Rating</CardTitle>
+              <Star className="h-5 w-5" style={{ color: 'var(--amber)' }} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold flex items-center">
+              <div className="text-3xl font-medium flex items-center" style={{ color: 'var(--text-primary)' }}>
                 {ratingStats.avgOverall.toFixed(1)}
-                <Star className="h-5 w-5 ml-1 fill-current" />
+                <Star className="h-5 w-5 ml-1 fill-current" style={{ color: 'var(--amber)' }} />
               </div>
-              <p className="text-xs text-yellow-100 mt-1">{ratingStats.totalRatings} reviews</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{ratingStats.totalRatings} reviews</p>
             </CardContent>
           </Card>
         </div>
@@ -1118,75 +1118,47 @@ export function ContractorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Award className="h-5 w-5 mr-2 text-yellow-500" />
+                <Award className="h-5 w-5 mr-2" style={{ color: 'var(--amber)' }} />
                 Your Performance Metrics
               </CardTitle>
               <CardDescription>Based on {ratingStats.totalRatings} customer reviews</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{ratingStats.avgPunctuality.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Punctuality</div>
-                  <div className="flex justify-center mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-3 w-3 ${star <= ratingStats.avgPunctuality ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
+                {[
+                  { label: 'Punctuality', value: ratingStats.avgPunctuality },
+                  { label: 'Customer Service', value: ratingStats.avgCustomerService },
+                  { label: 'Workmanship', value: ratingStats.avgWorkmanship },
+                  { label: 'Overall', value: ratingStats.avgOverall },
+                ].map(({ label, value }) => (
+                  <div key={label} className="text-center">
+                    <div className="text-2xl font-medium" style={{ color: 'var(--accent)' }}>{value.toFixed(1)}</div>
+                    <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</div>
+                    <div className="flex justify-center mt-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className="h-3 w-3"
+                          style={{ color: star <= value ? 'var(--amber)' : 'var(--border-strong)' }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{ratingStats.avgCustomerService.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Customer Service</div>
-                  <div className="flex justify-center mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-3 w-3 ${star <= ratingStats.avgCustomerService ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{ratingStats.avgWorkmanship.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Workmanship</div>
-                  <div className="flex justify-center mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-3 w-3 ${star <= ratingStats.avgWorkmanship ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{ratingStats.avgOverall.toFixed(1)}</div>
-                  <div className="text-sm text-gray-600">Overall</div>
-                  <div className="flex justify-center mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-3 w-3 ${star <= ratingStats.avgOverall ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
               <div className="mt-6 pt-4 border-t grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-center p-3 bg-green-50 rounded-lg">
-                  <Shield className="h-5 w-5 text-green-600 mr-2" />
+                <div className="flex items-center justify-center p-3 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                  <Shield className="h-5 w-5 mr-2" style={{ color: 'var(--green)' }} />
                   <div>
-                    <div className="font-semibold text-green-800">{ratingStats.ppeComplianceRate}%</div>
-                    <div className="text-xs text-green-600">PPE Compliance</div>
+                    <div className="font-medium" style={{ color: 'var(--green)' }}>{ratingStats.ppeComplianceRate}%</div>
+                    <div className="text-xs" style={{ color: 'var(--green)' }}>PPE Compliance</div>
                   </div>
                 </div>
-                <div className="flex items-center justify-center p-3 bg-blue-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-blue-600 mr-2" />
+                <div className="flex items-center justify-center p-3 rounded-lg" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                  <CheckCircle className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
                   <div>
-                    <div className="font-semibold text-blue-800">{ratingStats.procedureComplianceRate}%</div>
-                    <div className="text-xs text-blue-600">Procedure Compliance</div>
+                    <div className="font-medium" style={{ color: 'var(--blue)' }}>{ratingStats.procedureComplianceRate}%</div>
+                    <div className="text-xs" style={{ color: 'var(--blue)' }}>Procedure Compliance</div>
                   </div>
                 </div>
               </div>
@@ -1199,7 +1171,7 @@ export function ContractorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <ToggleLeft className="h-5 w-5 mr-2 text-blue-500" />
+                <ToggleLeft className="h-5 w-5 mr-2" style={{ color: 'var(--accent)' }} />
                 Service Category Availability
               </CardTitle>
               <CardDescription>Toggle your availability for each service category. When unavailable, you won't be assigned to new tickets in that category.</CardDescription>
@@ -1209,20 +1181,19 @@ export function ContractorDashboard() {
                 {categories.map((category) => (
                   <div
                     key={category.categoryId}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      category.isAvailable 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-gray-50 border-gray-200'
-                    }`}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                    style={category.isAvailable
+                      ? { backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }
+                      : { backgroundColor: 'var(--surface2)', borderColor: 'var(--border)' }}
                   >
                     <div className="flex items-center space-x-3">
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: category.categoryColor || '#6b7280' }}
                       />
                       <div>
-                        <p className="font-medium text-gray-900">{category.categoryName}</p>
-                        <p className={`text-xs ${category.isAvailable ? 'text-green-600' : 'text-gray-500'}`}>
+                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{category.categoryName}</p>
+                        <p className="text-xs" style={{ color: category.isAvailable ? 'var(--green)' : 'var(--text-muted)' }}>
                           {category.isAvailable ? 'Available for assignments' : 'Not accepting assignments'}
                         </p>
                       </div>
@@ -1250,9 +1221,9 @@ export function ContractorDashboard() {
           <CardContent className="p-0">
             {jobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Package className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs assigned yet</h3>
-                <p className="text-gray-600 mb-4">Jobs assigned by administrators will appear here.</p>
+                <Package className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No jobs assigned yet</h3>
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Jobs assigned by administrators will appear here.</p>
                 <Button onClick={fetchContractorData} variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Check for New Jobs
@@ -1288,10 +1259,10 @@ export function ContractorDashboard() {
                 <span>Job Details</span>
                 {selectedJob && (
                   <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(selectedJob.status)}>
+                    <Badge style={getStatusColor(selectedJob.status)}>
                       {selectedJob.status.replace('_', ' ')}
                     </Badge>
-                    <Badge className={getPriorityColor(selectedJob.priority)}>
+                    <Badge style={getPriorityColor(selectedJob.priority)}>
                       {selectedJob.priority}
                     </Badge>
                   </div>
@@ -1304,37 +1275,37 @@ export function ContractorDashboard() {
                 {/* Job Header */}
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                       {selectedJob.title}
                     </h3>
-                    <div className="space-y-1 text-sm text-gray-600">
+                    <div className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
                       <p><span className="font-medium">Job ID:</span> {selectedJob.ticketNumber}</p>
                       <p><span className="font-medium">Type:</span> {selectedJob.type?.replace(/_/g, ' ')}</p>
                       <p><span className="font-medium">Assigned:</span> {new Date(selectedJob.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="space-y-3">
                       {selectedJob.tenant && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Client:</p>
-                          <p className="text-sm text-gray-900">{selectedJob.tenant.name}</p>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Client:</p>
+                          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedJob.tenant.name}</p>
                         </div>
                       )}
-                      
+
                       {selectedJob.user && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Reporter:</p>
-                          <p className="text-sm text-gray-900">{selectedJob.user.name}</p>
-                          <p className="text-xs text-gray-500">{selectedJob.user.email}</p>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Reporter:</p>
+                          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedJob.user.name}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedJob.user.email}</p>
                         </div>
                       )}
-                      
+
                       {selectedJob.location && (
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Location:</p>
-                          <p className="text-sm text-gray-900">{selectedJob.location}</p>
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Location:</p>
+                          <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedJob.location}</p>
                         </div>
                       )}
                     </div>
@@ -1357,71 +1328,66 @@ export function ContractorDashboard() {
                   const isCompleted = ['COMPLETED', 'CLOSED', 'RESOLVED'].includes(selectedJob.status)
                   const currentStatus = slaInfo.resolutionStatus
                   
+                  const slaStyle: React.CSSProperties = isCompleted
+                    ? { backgroundColor: 'var(--surface2)', borderColor: 'var(--border)' }
+                    : currentStatus === 'red'
+                    ? { backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }
+                    : currentStatus === 'yellow'
+                    ? { backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }
+                    : { backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }
+
+                  const slaIconColor = isCompleted ? 'var(--text-muted)'
+                    : currentStatus === 'red' ? 'var(--red)'
+                    : currentStatus === 'yellow' ? 'var(--amber)'
+                    : 'var(--green)'
+
                   return (
-                    <div className={`p-4 rounded-lg border-2 ${
-                      isCompleted ? 'bg-gray-50 border-gray-200' :
-                      currentStatus === 'red' ? 'bg-red-50 border-red-300' :
-                      currentStatus === 'yellow' ? 'bg-yellow-50 border-yellow-300' :
-                      'bg-green-50 border-green-300'
-                    }`}>
+                    <div className="p-4 rounded-lg border-2" style={slaStyle}>
                       <div className="flex items-center gap-2 mb-3">
-                        <Timer className={`h-5 w-5 ${
-                          isCompleted ? 'text-gray-500' :
-                          currentStatus === 'red' ? 'text-red-600' :
-                          currentStatus === 'yellow' ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`} />
-                        <h4 className="text-sm font-semibold text-gray-900">SLA Status</h4>
+                        <Timer className="h-5 w-5" style={{ color: slaIconColor }} />
+                        <h4 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>SLA Status</h4>
                         <Chip
                           label={slaInfo.formattedResolutionRemaining}
                           size="small"
                           color={getSLAChipColor(currentStatus)}
-                          sx={{ fontWeight: 600, fontSize: '0.75rem' }}
+                          sx={{ fontWeight: 500, fontSize: '0.75rem' }}
                         />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-gray-600 font-medium">Response Due:</p>
-                          <p className={`font-semibold ${
-                            slaInfo.responseStatus === 'red' ? 'text-red-600' :
-                            slaInfo.responseStatus === 'yellow' ? 'text-yellow-600' :
-                            'text-green-600'
-                          }`}>
-                            {selectedJob.responseDeadline 
+                          <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>Response Due:</p>
+                          <p className="font-medium" style={{ color: slaInfo.responseStatus === 'red' ? 'var(--red)' : slaInfo.responseStatus === 'yellow' ? 'var(--amber)' : 'var(--green)' }}>
+                            {selectedJob.responseDeadline
                               ? new Date(selectedJob.responseDeadline).toLocaleString()
                               : 'Not set'
                             }
                           </p>
                           {!isCompleted && selectedJob.responseDeadline && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                               {slaInfo.responseTimeRemaining}
                             </p>
                           )}
                         </div>
-                        
+
                         <div>
-                          <p className="text-gray-600 font-medium">Resolution Due:</p>
-                          <p className={`font-semibold ${
-                            slaInfo.resolutionStatus === 'red' ? 'text-red-600' :
-                            slaInfo.resolutionStatus === 'yellow' ? 'text-yellow-600' :
-                            'text-green-600'
-                          }`}>
-                            {selectedJob.resolutionDeadline 
+                          <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>Resolution Due:</p>
+                          <p className="font-medium" style={{ color: slaInfo.resolutionStatus === 'red' ? 'var(--red)' : slaInfo.resolutionStatus === 'yellow' ? 'var(--amber)' : 'var(--green)' }}>
+                            {selectedJob.resolutionDeadline
                               ? new Date(selectedJob.resolutionDeadline).toLocaleString()
                               : 'Not set'
                             }
                           </p>
                           {!isCompleted && selectedJob.resolutionDeadline && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                               {slaInfo.resolutionTimeRemaining}
                             </p>
                           )}
                         </div>
                       </div>
-                      
+
                       {!isCompleted && currentStatus === 'red' && (
-                        <div className="mt-3 p-2 bg-red-100 rounded text-red-700 text-sm flex items-center gap-2">
+                        <div className="mt-3 p-2 rounded text-sm flex items-center gap-2" style={{ backgroundColor: 'var(--red-bg)', color: 'var(--red)' }}>
                           <AlertCircle className="h-4 w-4" />
                           <span className="font-medium">SLA breached! Immediate action required.</span>
                         </div>
@@ -1432,8 +1398,8 @@ export function ContractorDashboard() {
 
                 {/* Description */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Description</h4>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                  <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Description</h4>
+                  <p className="text-sm p-3 rounded-lg" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>
                     {selectedJob.description}
                   </p>
                 </div>
@@ -1441,11 +1407,11 @@ export function ContractorDashboard() {
                 {/* Asset Info */}
                 {selectedJob.asset && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                       <Package className="h-4 w-4" />
                       Related Asset
                     </h4>
-                    <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--surface2)' }}>
                       {/* Asset Header with Image */}
                       <div className="flex gap-4">
                         {/* Asset Image */}
@@ -1457,21 +1423,21 @@ export function ContractorDashboard() {
                               className="w-24 h-24 object-cover rounded-lg border shadow-sm"
                             />
                             {selectedJob.asset.images.length > 1 && (
-                              <p className="text-xs text-center text-gray-500 mt-1">
+                              <p className="text-xs text-center mt-1" style={{ color: 'var(--text-muted)' }}>
                                 +{selectedJob.asset.images.length - 1} more
                               </p>
                             )}
                           </div>
                         ) : (
-                          <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Package className="h-8 w-8 text-gray-400" />
+                          <div className="w-24 h-24 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--border)' }}>
+                            <Package className="h-8 w-8" style={{ color: 'var(--text-muted)' }} />
                           </div>
                         )}
                         
                         {/* Asset Details */}
                         <div className="flex-1 space-y-2 text-sm">
                           <div className="flex items-center justify-between">
-                            <p className="font-semibold text-gray-900 text-base">{selectedJob.asset.name}</p>
+                            <p className="font-medium text-base" style={{ color: 'var(--text-primary)' }}>{selectedJob.asset.name}</p>
                             {selectedJob.asset.category && (
                               <span 
                                 className="px-2 py-0.5 rounded text-xs font-medium"
@@ -1484,21 +1450,21 @@ export function ContractorDashboard() {
                               </span>
                             )}
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-gray-600">
-                            <p><span className="font-medium text-gray-700">Asset #:</span> {selectedJob.asset.assetNumber}</p>
-                            <p><span className="font-medium text-gray-700">Status:</span> {selectedJob.asset.status?.replace('_', ' ') || 'N/A'}</p>
+                          <div className="grid grid-cols-2 gap-2" style={{ color: 'var(--text-secondary)' }}>
+                            <p><span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Asset #:</span> {selectedJob.asset.assetNumber}</p>
+                            <p><span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Status:</span> {selectedJob.asset.status?.replace('_', ' ') || 'N/A'}</p>
                             {selectedJob.asset.brand && (
-                              <p><span className="font-medium text-gray-700">Brand:</span> {selectedJob.asset.brand}</p>
+                              <p><span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Brand:</span> {selectedJob.asset.brand}</p>
                             )}
                             {selectedJob.asset.model && (
-                              <p><span className="font-medium text-gray-700">Model:</span> {selectedJob.asset.model}</p>
+                              <p><span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Model:</span> {selectedJob.asset.model}</p>
                             )}
                             {selectedJob.asset.serialNumber && (
-                              <p className="col-span-2"><span className="font-medium text-gray-700">Serial #:</span> {selectedJob.asset.serialNumber}</p>
+                              <p className="col-span-2"><span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Serial #:</span> {selectedJob.asset.serialNumber}</p>
                             )}
                             <p className="col-span-2 flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-gray-400" />
-                              <span className="font-medium text-gray-700">Location:</span> {selectedJob.asset.location}
+                              <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                              <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Location:</span> {selectedJob.asset.location}
                             </p>
                           </div>
                         </div>
@@ -1507,97 +1473,94 @@ export function ContractorDashboard() {
                       {/* Repair History */}
                       {selectedJob.asset.repairHistory && selectedJob.asset.repairHistory.length > 0 && (
                         <div className="mt-4 pt-3 border-t">
-                          <h5 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <h5 className="text-sm font-medium mb-2 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                             <Wrench className="h-4 w-4" />
                             Repair History ({selectedJob.asset.repairHistory.length})
                           </h5>
                           <div className="space-y-2 max-h-96 overflow-y-auto">
                             {selectedJob.asset.repairHistory.map((repair, idx) => (
-                              <div 
-                                key={repair.id || idx} 
-                                className="bg-white rounded border overflow-hidden"
+                              <div
+                                key={repair.id || idx}
+                                className="rounded border overflow-hidden"
+                                style={{ backgroundColor: 'var(--surface)' }}
                               >
                                 {/* Clickable Header */}
-                                <div 
-                                  className="flex items-center justify-between p-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                <div
+                                  className="flex items-center justify-between p-2 cursor-pointer transition-colors"
                                   onClick={() => setExpandedRepairId(expandedRepairId === repair.id ? null : repair.id)}
                                 >
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                      <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} />
-                                      <span className="font-mono text-xs text-blue-600">#{repair.ticketNumber}</span>
-                                      <span className="font-medium text-gray-800 text-sm">{repair.title}</span>
+                                      <ChevronRight className={`h-4 w-4 transition-transform ${expandedRepairId === repair.id ? 'rotate-90' : ''}`} style={{ color: 'var(--text-muted)' }} />
+                                      <span className="font-mono text-xs" style={{ color: 'var(--accent)' }}>#{repair.ticketNumber}</span>
+                                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{repair.title}</span>
                                     </div>
                                     <div className="flex items-center gap-2 ml-6 mt-0.5">
-                                      <span className="text-xs text-gray-500">
+                                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                         {new Date(repair.createdAt).toLocaleDateString()}
                                         {repair.completedAt && ` → ${new Date(repair.completedAt).toLocaleDateString()}`}
                                       </span>
                                       {repair.contractorName && (
-                                        <span className="text-xs text-gray-500">• {repair.contractorName}</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>• {repair.contractorName}</span>
                                       )}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                      repair.status === 'COMPLETED' || repair.status === 'CLOSED' 
-                                        ? 'bg-green-100 text-green-700'
-                                        : repair.status === 'IN_PROGRESS' 
-                                        ? 'bg-blue-100 text-blue-700'
-                                        : 'bg-gray-100 text-gray-700'
-                                    }`}>
+                                    <span
+                                      className="px-1.5 py-0.5 rounded text-xs font-medium"
+                                      style={repair.status === 'COMPLETED' || repair.status === 'CLOSED'
+                                        ? { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+                                        : repair.status === 'IN_PROGRESS'
+                                        ? { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+                                        : { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }}
+                                    >
                                       {repair.status?.replace('_', ' ')}
                                     </span>
                                   </div>
                                 </div>
-                                
+
                                 {/* Expanded Details */}
                                 {expandedRepairId === repair.id && (
-                                  <div className="px-4 pb-3 pt-1 bg-gray-50 border-t text-sm space-y-3">
+                                  <div className="px-4 pb-3 pt-1 border-t text-sm space-y-3" style={{ backgroundColor: 'var(--surface2)' }}>
                                     {/* Basic Info */}
                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                       <div>
-                                        <span className="font-medium text-gray-600">Type:</span>{' '}
-                                        <span className="text-gray-800">{repair.type?.replace('_', ' ')}</span>
+                                        <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Type:</span>{' '}
+                                        <span style={{ color: 'var(--text-primary)' }}>{repair.type?.replace('_', ' ')}</span>
                                       </div>
                                       <div>
-                                        <span className="font-medium text-gray-600">Priority:</span>{' '}
-                                        <span className={`font-medium ${
-                                          repair.priority === 'CRITICAL' ? 'text-red-600' :
-                                          repair.priority === 'HIGH' ? 'text-orange-600' :
-                                          repair.priority === 'MEDIUM' ? 'text-yellow-600' :
-                                          'text-green-600'
-                                        }`}>{repair.priority}</span>
+                                        <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Priority:</span>{' '}
+                                        <span className="font-medium" style={{ color: repair.priority === 'CRITICAL' ? 'var(--red)' : repair.priority === 'HIGH' ? 'var(--amber)' : repair.priority === 'MEDIUM' ? 'var(--amber)' : 'var(--green)' }}>{repair.priority}</span>
                                       </div>
                                       {repair.contractorName && (
                                         <div className="col-span-2">
-                                          <span className="font-medium text-gray-600">Assigned Contractor:</span>{' '}
-                                          <span className="text-gray-800">{repair.contractorName}</span>
+                                          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Assigned Contractor:</span>{' '}
+                                          <span style={{ color: 'var(--text-primary)' }}>{repair.contractorName}</span>
                                         </div>
                                       )}
                                     </div>
-                                    
+
                                     {/* Original Issue Description */}
                                     {repair.description && (
                                       <div>
-                                        <p className="text-xs font-medium text-gray-600 mb-1">Original Issue:</p>
-                                        <p className="text-xs text-gray-700 bg-white p-2 rounded border">{repair.description}</p>
+                                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Original Issue:</p>
+                                        <p className="text-xs p-2 rounded border" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface)' }}>{repair.description}</p>
                                       </div>
                                     )}
-                                    
+
                                     {/* Approved Work Description */}
                                     {repair.workDescription && (
                                       <div>
-                                        <p className="text-xs font-medium text-green-700 mb-1 flex items-center gap-1">
+                                        <p className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--green)' }}>
                                           <CheckCircle className="h-3 w-3" />
                                           Approved Work Description:
                                         </p>
-                                        <p className="text-xs text-gray-700 bg-green-50 p-2 rounded border border-green-200 whitespace-pre-wrap">{repair.workDescription}</p>
+                                        <p className="text-xs p-2 rounded border whitespace-pre-wrap" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>{repair.workDescription}</p>
                                       </div>
                                     )}
-                                    
+
                                     {/* Timeline */}
-                                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-1 border-t">
+                                    <div className="flex items-center gap-4 text-xs pt-1 border-t" style={{ color: 'var(--text-muted)' }}>
                                       <span>Created: {new Date(repair.createdAt).toLocaleString()}</span>
                                       {repair.completedAt && (
                                         <span>Completed: {new Date(repair.completedAt).toLocaleString()}</span>
@@ -1646,31 +1609,31 @@ export function ContractorDashboard() {
                   {/* Quote Submission - Admin requested quote (multi-contractor or direct) */}
                   {(selectedJob.status === 'AWAITING_QUOTE' || 
                     (selectedJob.myQuoteRequest && selectedJob.myQuoteRequest.status === 'pending')) && (
-                    <div className="w-full bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="font-medium text-amber-800 mb-2 flex items-center">
+                    <div className="w-full border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
                         <FileText className="h-5 w-5 mr-2" />
                         Quote/Estimate Required
                       </h4>
-                      <p className="text-sm text-amber-700 mb-3">
-                        {selectedJob.myQuoteRequest 
+                      <p className="text-sm mb-3" style={{ color: 'var(--amber)' }}>
+                        {selectedJob.myQuoteRequest
                           ? 'You have been invited to submit a quote for this job. Other contractors may also be quoting.'
                           : 'The admin has requested a quote for this job. Please review the details and submit your estimate.'}
                       </p>
                       {selectedJob.myQuoteRequest?.notes && (
-                        <div className="bg-white border border-amber-200 rounded p-3 mb-3">
-                          <p className="text-xs text-gray-500 font-medium">Admin Notes:</p>
-                          <p className="text-sm text-gray-700">{selectedJob.myQuoteRequest.notes}</p>
+                        <div className="rounded p-3 mb-3 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--amber)' }}>
+                          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Admin Notes:</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{selectedJob.myQuoteRequest.notes}</p>
                         </div>
                       )}
                       {selectedJob.quoteRejectionReason && (
-                        <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
-                          <p className="text-sm text-red-700 font-medium">Previous quote was rejected:</p>
-                          <p className="text-sm text-red-600">{selectedJob.quoteRejectionReason}</p>
+                        <div className="rounded p-3 mb-3 border" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                          <p className="text-sm font-medium" style={{ color: 'var(--red)' }}>Previous quote was rejected:</p>
+                          <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedJob.quoteRejectionReason}</p>
                         </div>
                       )}
-                      <Button 
+                      <Button
                         onClick={() => setShowQuoteDialog(true)}
-                        className="bg-amber-600 hover:bg-amber-700"
+                        style={{ backgroundColor: 'var(--amber)', color: '#fff' }}
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Submit Quote
@@ -1680,27 +1643,27 @@ export function ContractorDashboard() {
 
                   {/* Quote Submitted - Waiting for approval (multi-contractor) */}
                   {selectedJob.myQuoteRequest && selectedJob.myQuoteRequest.status === 'submitted' && (
-                    <div className="w-full bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                      <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
+                    <div className="w-full border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
                         <Clock className="h-5 w-5 mr-2" />
                         Quote Submitted - Awaiting Decision
                       </h4>
-                      <p className="text-sm text-indigo-700 mb-2">
+                      <p className="text-sm mb-2" style={{ color: 'var(--blue)' }}>
                         Your quote has been submitted. The admin will review all quotes and award the job.
                       </p>
-                      <div className="bg-white rounded p-3 border border-indigo-200">
-                        <p className="text-lg font-bold text-indigo-800">
+                      <div className="rounded p-3 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' }}>
+                        <p className="text-lg font-medium" style={{ color: 'var(--blue)' }}>
                           ${selectedJob.myQuoteRequest.quoteAmount?.toFixed(2)}
                         </p>
                         {selectedJob.myQuoteRequest.quoteDescription && (
-                          <p className="text-sm text-gray-600 mt-1">{selectedJob.myQuoteRequest.quoteDescription}</p>
+                          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{selectedJob.myQuoteRequest.quoteDescription}</p>
                         )}
                         {selectedJob.myQuoteRequest.estimatedDays && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                             Estimated completion: {selectedJob.myQuoteRequest.estimatedDays} day(s)
                           </p>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                           Submitted: {selectedJob.myQuoteRequest.submittedAt && new Date(selectedJob.myQuoteRequest.submittedAt).toLocaleString()}
                         </p>
                       </div>
@@ -1709,20 +1672,20 @@ export function ContractorDashboard() {
 
                   {/* Quote Submitted - Single contractor flow (old) */}
                   {selectedJob.status === 'QUOTE_SUBMITTED' && !selectedJob.myQuoteRequest && (
-                    <div className="w-full bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                      <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
+                    <div className="w-full border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
                         <Clock className="h-5 w-5 mr-2" />
                         Quote Pending Approval
                       </h4>
-                      <p className="text-sm text-indigo-700 mb-2">
+                      <p className="text-sm mb-2" style={{ color: 'var(--blue)' }}>
                         Your quote has been submitted. Waiting for admin approval.
                       </p>
-                      <div className="bg-white rounded p-3 border border-indigo-200">
-                        <p className="text-lg font-bold text-indigo-800">${selectedJob.quoteAmount?.toFixed(2)}</p>
+                      <div className="rounded p-3 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' }}>
+                        <p className="text-lg font-medium" style={{ color: 'var(--blue)' }}>${selectedJob.quoteAmount?.toFixed(2)}</p>
                         {selectedJob.quoteDescription && (
-                          <p className="text-sm text-gray-600 mt-1">{selectedJob.quoteDescription}</p>
+                          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{selectedJob.quoteDescription}</p>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                           Submitted: {selectedJob.quoteSubmittedAt && new Date(selectedJob.quoteSubmittedAt).toLocaleString()}
                         </p>
                       </div>
@@ -1731,17 +1694,17 @@ export function ContractorDashboard() {
 
                   {(selectedJob.status === 'PENDING' || selectedJob.status === 'PROCESSING') && (
                     <>
-                      <Button 
+                      <Button
                         variant="outline"
                         onClick={() => setShowRejectDialog(true)}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
                       >
                         <X className="h-4 w-4 mr-2" />
                         Reject Job
                       </Button>
-                      <Button 
+                      <Button
                         onClick={() => setShowAcceptDialog(true)}
-                        className="bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Accept Job
@@ -1750,36 +1713,36 @@ export function ContractorDashboard() {
                   )}
                   
                   {selectedJob.status === 'ACCEPTED' && (
-                    <div className="text-sm text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
+                    <div className="text-sm px-4 py-2 rounded-lg" style={{ color: 'var(--blue)', backgroundColor: 'var(--blue-bg)' }}>
                       Waiting for user to confirm your arrival on site
                     </div>
                   )}
-                  
+
                   {selectedJob.status === 'ON_SITE' && (
-                    <div className="text-sm text-purple-600 bg-purple-50 px-4 py-2 rounded-lg">
+                    <div className="text-sm px-4 py-2 rounded-lg" style={{ color: 'var(--blue)', backgroundColor: 'var(--blue-bg)' }}>
                       On site - waiting for user to confirm job completion
                     </div>
                   )}
                   
                   {/* Work Description Required - User marked job complete */}
                   {selectedJob.status === 'AWAITING_DESCRIPTION' && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="font-medium text-amber-800 mb-2 flex items-center">
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
                         <FileText className="h-5 w-5 mr-2" />
                         Work Description Required
                       </h4>
-                      <p className="text-sm text-amber-700 mb-3">
+                      <p className="text-sm mb-3" style={{ color: 'var(--amber)' }}>
                         The user has marked this job as complete. Please provide a detailed description of the work done.
                       </p>
                       {selectedJob.workDescriptionRejectionReason && (
-                        <div className="bg-red-50 border border-red-200 rounded p-3 mb-3">
-                          <p className="text-sm text-red-700 font-medium">Previous description was rejected:</p>
-                          <p className="text-sm text-red-600">{selectedJob.workDescriptionRejectionReason}</p>
+                        <div className="rounded p-3 mb-3 border" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                          <p className="text-sm font-medium" style={{ color: 'var(--red)' }}>Previous description was rejected:</p>
+                          <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedJob.workDescriptionRejectionReason}</p>
                         </div>
                       )}
-                      <Button 
+                      <Button
                         onClick={() => setShowWorkDescriptionDialog(true)}
-                        className="bg-amber-600 hover:bg-amber-700"
+                        style={{ backgroundColor: 'var(--amber)', color: '#fff' }}
                       >
                         <FileText className="h-4 w-4 mr-2" />
                         Submit Work Description
@@ -1789,45 +1752,45 @@ export function ContractorDashboard() {
                   
                   {/* Awaiting User Approval */}
                   {selectedJob.status === 'AWAITING_WORK_APPROVAL' && (
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                      <h4 className="font-medium text-indigo-800 mb-2 flex items-center">
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
                         <Clock className="h-5 w-5 mr-2" />
                         Awaiting User Approval
                       </h4>
-                      <p className="text-sm text-indigo-700 mb-3">
+                      <p className="text-sm mb-3" style={{ color: 'var(--blue)' }}>
                         Your work description has been submitted. Waiting for the user to review and approve.
                       </p>
                       {selectedJob.workDescription && (
-                        <div className="bg-white border border-indigo-100 rounded p-3">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Your submitted description:</p>
-                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedJob.workDescription}</p>
+                        <div className="rounded p-3 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' }}>
+                          <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Your submitted description:</p>
+                          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedJob.workDescription}</p>
                         </div>
                       )}
                     </div>
                   )}
                   
                   {selectedJob.status === 'COMPLETED' && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <h4 className="font-medium text-green-800 mb-2 flex items-center">
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                      <h4 className="font-medium mb-2 flex items-center" style={{ color: 'var(--green)' }}>
                         <CheckCircle className="h-5 w-5 mr-2" />
                         Work Description Approved
                       </h4>
-                      <p className="text-sm text-green-700 mb-3">
+                      <p className="text-sm mb-3" style={{ color: 'var(--green)' }}>
                         Your work has been approved! You can now upload your invoice.
                       </p>
                       {selectedJob.workDescription && (
-                        <div className="bg-white border border-green-100 rounded p-3 mb-3">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Approved work description:</p>
-                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedJob.workDescription}</p>
+                        <div className="rounded p-3 mb-3 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--green)' }}>
+                          <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Approved work description:</p>
+                          <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedJob.workDescription}</p>
                         </div>
                       )}
                       {!selectedJob.invoice && (
-                        <Button 
+                        <Button
                           onClick={() => {
                             setInvoiceForm(prev => ({ ...prev, workDescription: selectedJob.workDescription || '' }))
                             setShowInvoiceDialog(true)
                           }}
-                          className="bg-blue-600 hover:bg-blue-700"
+                          style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Upload Invoice
@@ -1835,14 +1798,16 @@ export function ContractorDashboard() {
                       )}
                       {selectedJob.invoice && (
                         <div className="flex items-center space-x-3">
-                          <div className="text-sm text-green-600 flex items-center">
+                          <div className="text-sm flex items-center" style={{ color: 'var(--green)' }}>
                             <Receipt className="h-4 w-4 mr-2" />
                             Invoice #{selectedJob.invoice.invoiceNumber} - ${selectedJob.invoice.amount}
                           </div>
-                          <Badge className={
-                            selectedJob.invoice.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                            selectedJob.invoice.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
+                          <Badge style={
+                            selectedJob.invoice.status === 'PAID'
+                              ? { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+                              : selectedJob.invoice.status === 'APPROVED'
+                              ? { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+                              : { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
                           }>
                             {selectedJob.invoice.status}
                           </Badge>
@@ -1855,25 +1820,27 @@ export function ContractorDashboard() {
                     <div className="flex items-center space-x-3">
                       {selectedJob.invoice ? (
                         <div className="flex items-center space-x-3">
-                          <div className="text-sm text-green-600 bg-green-50 px-4 py-2 rounded-lg flex items-center">
+                          <div className="text-sm px-4 py-2 rounded-lg flex items-center" style={{ color: 'var(--green)', backgroundColor: 'var(--green-bg)' }}>
                             <Receipt className="h-4 w-4 mr-2" />
                             Invoice #{selectedJob.invoice.invoiceNumber} submitted - ${selectedJob.invoice.amount}
                           </div>
-                          <Badge className={
-                            selectedJob.invoice.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                            selectedJob.invoice.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
+                          <Badge style={
+                            selectedJob.invoice.status === 'PAID'
+                              ? { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+                              : selectedJob.invoice.status === 'APPROVED'
+                              ? { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+                              : { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
                           }>
                             {selectedJob.invoice.status}
                           </Badge>
                         </div>
                       ) : (
-                        <Button 
+                        <Button
                           onClick={() => {
                             setInvoiceForm(prev => ({ ...prev, workDescription: selectedJob.workDescription || '' }))
                             setShowInvoiceDialog(true)
                           }}
-                          className="bg-blue-600 hover:bg-blue-700"
+                          style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Upload Invoice
@@ -1903,22 +1870,22 @@ export function ContractorDashboard() {
             <div className="space-y-4">
               {/* SLA Deadline Warning */}
               {selectedJob?.resolutionDeadline && (
-                <div className={`p-3 rounded-lg border-2 ${
-                  new Date(selectedJob.resolutionDeadline) < new Date() 
-                    ? 'bg-red-50 border-red-300' 
-                    : 'bg-amber-50 border-amber-300'
-                }`}>
+                <div
+                  className="p-3 rounded-lg border-2"
+                  style={new Date(selectedJob.resolutionDeadline) < new Date()
+                    ? { backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }
+                    : { backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}
+                >
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className={`h-5 w-5 ${
-                      new Date(selectedJob.resolutionDeadline) < new Date()
-                        ? 'text-red-600'
-                        : 'text-amber-600'
-                    }`} />
-                    <span className="font-semibold text-gray-900">SLA Deadline</span>
+                    <AlertCircle
+                      className="h-5 w-5"
+                      style={{ color: new Date(selectedJob.resolutionDeadline) < new Date() ? 'var(--red)' : 'var(--amber)' }}
+                    />
+                    <span className="font-medium" style={{ color: 'var(--text-primary)' }}>SLA Deadline</span>
                   </div>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     This ticket must be closed by{' '}
-                    <span className="font-bold">
+                    <span className="font-medium">
                       {new Date(selectedJob.resolutionDeadline).toLocaleString()}
                     </span>
                   </p>
@@ -1928,7 +1895,7 @@ export function ContractorDashboard() {
                     const diffMs = deadline.getTime() - now.getTime()
                     if (diffMs <= 0) {
                       return (
-                        <p className="text-sm text-red-600 font-semibold mt-1">
+                        <p className="text-sm font-medium mt-1" style={{ color: 'var(--red)' }}>
                           ⚠️ SLA already breached!
                         </p>
                       )
@@ -1936,8 +1903,8 @@ export function ContractorDashboard() {
                     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60))
                     const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
                     return (
-                      <p className="text-sm text-amber-700 mt-1">
-                        Time remaining: <span className="font-semibold">{diffHrs}h {diffMins}m</span>
+                      <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>
+                        Time remaining: <span className="font-medium">{diffHrs}h {diffMins}m</span>
                       </p>
                     )
                   })()}
@@ -1948,16 +1915,16 @@ export function ContractorDashboard() {
                       id="deadlineConfirm"
                       checked={deadlineConfirmed}
                       onChange={(e) => setDeadlineConfirmed(e.target.checked)}
-                      className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      className="h-4 w-4 rounded"
                     />
-                    <label htmlFor="deadlineConfirm" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="deadlineConfirm" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                       I confirm I can meet this deadline
                     </label>
                   </div>
                 </div>
               )}
               
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Please provide the job plan details before accepting this job.
               </p>
               
@@ -1976,7 +1943,7 @@ export function ContractorDashboard() {
                   <Label htmlFor="arrivalDate">Arrival Date & Time *</Label>
                   {/* Deadline reminder on calendar */}
                   {selectedJob?.resolutionDeadline && (
-                    <p className="text-xs text-amber-600 mb-1 flex items-center gap-1">
+                    <p className="text-xs mb-1 flex items-center gap-1" style={{ color: 'var(--amber)' }}>
                       <Calendar className="h-3 w-3" />
                       Must complete by: {new Date(selectedJob.resolutionDeadline).toLocaleString()}
                     </p>
@@ -2004,7 +1971,7 @@ export function ContractorDashboard() {
                         setJobPlan({ ...jobPlan, arrivalDate: e.target.value })
                         setArrivalDateConfirmed(false)
                       }}
-                      className={arrivalDateConfirmed ? 'border-green-500 bg-green-50' : ''}
+                      style={arrivalDateConfirmed ? { borderColor: 'var(--green)', backgroundColor: 'var(--green-bg)' } : {}}
                     />
                     <Button
                       type="button"
@@ -2028,7 +1995,7 @@ export function ContractorDashboard() {
                           toast.error('Please select a date first')
                         }
                       }}
-                      className={arrivalDateConfirmed ? 'bg-green-600 hover:bg-green-700' : ''}
+                      style={arrivalDateConfirmed ? { backgroundColor: 'var(--green)', color: '#fff' } : {}}
                     >
                       {arrivalDateConfirmed ? (
                         <><CheckCircle className="h-4 w-4 mr-1" /> Set</>
@@ -2038,7 +2005,7 @@ export function ContractorDashboard() {
                     </Button>
                   </div>
                   {arrivalDateConfirmed && jobPlan.arrivalDate && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--green)' }}>
                       <CheckCircle className="h-3 w-3" />
                       Arrival set for {new Date(jobPlan.arrivalDate).toLocaleString()}
                     </p>
@@ -2052,7 +2019,7 @@ export function ContractorDashboard() {
                     
                     if (estimatedCompletion > deadline) {
                       return (
-                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <p className="text-xs mt-1 flex items-center gap-1" style={{ color: 'var(--red)' }}>
                           <AlertCircle className="h-3 w-3" />
                           Warning: Estimated completion ({estimatedCompletion.toLocaleString()}) exceeds deadline!
                         </p>
@@ -2101,17 +2068,17 @@ export function ContractorDashboard() {
               <Button variant="outline" onClick={() => setShowAcceptDialog(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleAcceptJob}
                 disabled={actionLoading || Boolean(selectedJob?.resolutionDeadline && !deadlineConfirmed)}
-                className="bg-green-600 hover:bg-green-700"
+                style={{ backgroundColor: 'var(--green)', color: '#fff' }}
                 title={!deadlineConfirmed && selectedJob?.resolutionDeadline ? 'Please confirm you can meet the deadline' : ''}
               >
                 {actionLoading ? 'Submitting...' : 'Accept & Submit Plan'}
               </Button>
             </DialogFooter>
             {!deadlineConfirmed && selectedJob?.resolutionDeadline && (
-              <p className="text-xs text-amber-600 text-center mt-2">
+              <p className="text-xs text-center mt-2" style={{ color: 'var(--amber)' }}>
                 ☝️ Please confirm you can meet the deadline to enable the Accept button
               </p>
             )}
@@ -2126,7 +2093,7 @@ export function ContractorDashboard() {
             </DialogHeader>
             
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Please provide a reason for rejecting this job. The job will be unassigned and returned to the pool.
               </p>
               
@@ -2146,10 +2113,10 @@ export function ContractorDashboard() {
               <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleRejectJob}
                 disabled={actionLoading}
-                className="bg-red-600 hover:bg-red-700"
+                style={{ backgroundColor: 'var(--red)', color: '#fff' }}
               >
                 {actionLoading ? 'Rejecting...' : 'Reject Job'}
               </Button>
@@ -2162,17 +2129,17 @@ export function ContractorDashboard() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <Receipt className="h-5 w-5 mr-2 text-blue-600" />
+                <Receipt className="h-5 w-5 mr-2" style={{ color: 'var(--accent)' }} />
                 Upload Invoice
               </DialogTitle>
             </DialogHeader>
             
             {selectedJob && (
               <div className="space-y-4">
-                <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                  <p className="font-medium text-gray-900">{selectedJob.title}</p>
-                  <p className="text-gray-600">Ticket: {selectedJob.ticketNumber}</p>
-                  <p className="text-gray-600">Client: {selectedJob.tenant.name}</p>
+                <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedJob.title}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Ticket: {selectedJob.ticketNumber}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Client: {selectedJob.tenant.name}</p>
                 </div>
                 
                 <div className="space-y-4">
@@ -2188,10 +2155,10 @@ export function ContractorDashboard() {
                   
                   {/* Show Quoted Amount if available */}
                   {(selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-blue-800">Quoted Amount:</span>
-                        <span className="text-lg font-bold text-blue-900">
+                        <span className="text-sm font-medium" style={{ color: 'var(--blue)' }}>Quoted Amount:</span>
+                        <span className="text-lg font-medium" style={{ color: 'var(--blue)' }}>
                           ${(selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0).toFixed(2)}
                         </span>
                       </div>
@@ -2211,7 +2178,7 @@ export function ContractorDashboard() {
                     {/* Show warning if invoice exceeds quote */}
                     {invoiceForm.amount && (selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
                       parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) && (
-                      <p className="text-xs text-amber-600 mt-1 flex items-center">
+                      <p className="text-xs mt-1 flex items-center" style={{ color: 'var(--amber)' }}>
                         <span className="mr-1">⚠️</span>
                         Invoice amount exceeds quoted amount. Please provide a variation description below.
                       </p>
@@ -2222,11 +2189,11 @@ export function ContractorDashboard() {
                   {(selectedJob.quoteAmount || selectedJob.myQuoteRequest?.quoteAmount) && 
                     invoiceForm.amount && 
                     parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <Label htmlFor="variationDescription" className="text-amber-800 font-medium">
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                      <Label htmlFor="variationDescription" className="font-medium" style={{ color: 'var(--amber)' }}>
                         Variation Description *
                       </Label>
-                      <p className="text-xs text-amber-700 mt-1 mb-2">
+                      <p className="text-xs mt-1 mb-2" style={{ color: 'var(--amber)' }}>
                         Please explain why the final invoice amount is higher than the quoted amount.
                       </p>
                       <Textarea
@@ -2235,7 +2202,7 @@ export function ContractorDashboard() {
                         value={invoiceForm.variationDescription}
                         onChange={(e) => setInvoiceForm({ ...invoiceForm, variationDescription: e.target.value })}
                         rows={3}
-                        className="bg-white"
+                        style={{ backgroundColor: 'var(--surface)' }}
                       />
                     </div>
                   )}
@@ -2243,7 +2210,7 @@ export function ContractorDashboard() {
                   <div>
                     <Label htmlFor="workDescription">
                       Approved Work Description
-                      <span className="text-xs text-gray-500 ml-2">(Pre-filled from site manager approval)</span>
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>(Pre-filled from site manager approval)</span>
                     </Label>
                     <Textarea
                       id="workDescription"
@@ -2252,10 +2219,11 @@ export function ContractorDashboard() {
                       readOnly
                       disabled
                       rows={4}
-                      className="mt-1 bg-gray-100 text-gray-700 cursor-not-allowed"
+                      className="mt-1 cursor-not-allowed"
+                      style={{ backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }}
                     />
                     {!invoiceForm.workDescription && (
-                      <p className="text-xs text-amber-600 mt-1">Note: No approved work description found for this job.</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--amber)' }}>Note: No approved work description found for this job.</p>
                     )}
                   </div>
                   
@@ -2276,16 +2244,11 @@ export function ContractorDashboard() {
                             setInvoiceForm({ ...invoiceForm, file })
                           }
                         }}
-                        className="block w-full text-sm text-gray-500
-                          file:mr-4 file:py-2 file:px-4
-                          file:rounded-lg file:border-0
-                          file:text-sm file:font-semibold
-                          file:bg-blue-50 file:text-blue-700
-                          hover:file:bg-blue-100
-                          cursor-pointer"
+                        className="block w-full text-sm cursor-pointer"
+                        style={{ color: 'var(--text-muted)' }}
                       />
                       {invoiceForm.file && (
-                        <p className="mt-2 text-sm text-green-600 flex items-center">
+                        <p className="mt-2 text-sm flex items-center" style={{ color: 'var(--green)' }}>
                           <FileText className="h-4 w-4 mr-1" />
                           {invoiceForm.file.name}
                         </p>
@@ -2317,7 +2280,7 @@ export function ContractorDashboard() {
                     parseFloat(invoiceForm.amount) > (selectedJob.myQuoteRequest?.quoteAmount || selectedJob.quoteAmount || 0) &&
                     !invoiceForm.variationDescription.trim())
                 )}
-                className="bg-blue-600 hover:bg-blue-700"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
               >
                 {uploadingInvoice ? 'Uploading...' : 'Submit Invoice'}
               </Button>
@@ -2330,30 +2293,30 @@ export function ContractorDashboard() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-amber-600" />
+                <FileText className="h-5 w-5 mr-2" style={{ color: 'var(--amber)' }} />
                 Submit Work Description
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-5">
-              <p className="text-sm text-gray-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+              <p className="text-sm p-3 rounded-lg border" style={{ color: 'var(--amber)', backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
                 Please complete all required sections below. This structured report will be reviewed by the client before the job can be closed.
               </p>
-              
+
               {selectedJob?.workDescriptionRejectionReason && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm font-medium text-red-700">Previous submission was rejected:</p>
-                  <p className="text-sm text-red-600 mt-1">{selectedJob.workDescriptionRejectionReason}</p>
+                <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                  <p className="text-sm font-medium" style={{ color: 'var(--red)' }}>Previous submission was rejected:</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--red)' }}>{selectedJob.workDescriptionRejectionReason}</p>
                 </div>
               )}
               
               {/* 1. Work Summary */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">1</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>1</span>
                   Work Summary *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">In one or two sentences, clearly state what work was done and why.</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>In one or two sentences, clearly state what work was done and why.</p>
                 <Textarea
                   placeholder="e.g., Replaced faulty submersible pump capacitor at Pump 3 due to intermittent tripping and loss of fuel flow."
                   value={workDescriptionForm.workSummary}
@@ -2363,12 +2326,12 @@ export function ContractorDashboard() {
               </div>
 
               {/* 2. Work Area */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">2</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>2</span>
                   Exact Location of Work *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Specify where the work was carried out.</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>Specify where the work was carried out.</p>
                 <Input
                   placeholder="e.g., Main building rooftop, Server room B2, Parking lot entrance"
                   value={workDescriptionForm.workArea}
@@ -2377,12 +2340,12 @@ export function ContractorDashboard() {
               </div>
 
               {/* 3. Fault Identified */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">3</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>3</span>
                   Fault / Issue Identified *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Describe the actual fault found on site (not just what was reported).</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>Describe the actual fault found on site (not just what was reported).</p>
                 <Textarea
                   placeholder="e.g., Pump motor was operational but capacitor was leaking oil and reading below required microfarad rating."
                   value={workDescriptionForm.faultIdentified}
@@ -2392,12 +2355,12 @@ export function ContractorDashboard() {
               </div>
 
               {/* 4. Work Performed */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">4</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>4</span>
                   Work Performed (Step-by-Step) *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">List the key actions taken. One step per line.</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>List the key actions taken. One step per line.</p>
                 <Textarea
                   placeholder="1. Isolated power supply to equipment&#10;2. Removed damaged component&#10;3. Installed replacement and tested operation"
                   value={workDescriptionForm.workPerformed}
@@ -2407,12 +2370,12 @@ export function ContractorDashboard() {
               </div>
 
               {/* 5. Materials Used */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">5</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>5</span>
                   Materials / Parts Used *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">List all materials used. Enter "None" if no materials were used.</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>List all materials used. Enter "None" if no materials were used.</p>
                 <Textarea
                   placeholder="e.g.,&#10;Capacitor - 40µF, 450V - 1 unit&#10;Cable ties - 200mm - 10 pcs&#10;Electrical tape - 1 roll"
                   value={workDescriptionForm.materialsUsed}
@@ -2422,13 +2385,16 @@ export function ContractorDashboard() {
               </div>
 
               {/* 6. Testing & Verification */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">6</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>6</span>
                   Testing & Verification *
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">Confirm testing was performed and describe what was tested.</p>
-                <label className={`flex items-center gap-2 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.equipmentTested ? 'border-green-500 bg-green-50' : ''}`}>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>Confirm testing was performed and describe what was tested.</p>
+                <label
+                  className="flex items-center gap-2 p-3 border rounded cursor-pointer transition-colors"
+                  style={workDescriptionForm.equipmentTested ? { borderColor: 'var(--green)', backgroundColor: 'var(--green-bg)' } : {}}
+                >
                   <input
                     type="checkbox"
                     checked={workDescriptionForm.equipmentTested}
@@ -2447,14 +2413,17 @@ export function ContractorDashboard() {
               </div>
 
               {/* 7. Outstanding Issues */}
-              <div className="border rounded-lg p-4 bg-white">
-                <Label className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs">7</span>
+              <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--surface)' }}>
+                <Label className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <span className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>7</span>
                   Outstanding Issues / Recommendations
                 </Label>
-                <p className="text-xs text-gray-500 mt-1 mb-2">State if further work is required or if any risks remain.</p>
+                <p className="text-xs mt-1 mb-2" style={{ color: 'var(--text-muted)' }}>State if further work is required or if any risks remain.</p>
                 <div className="space-y-2 mt-2">
-                  <label className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.outstandingIssues === 'none' ? 'border-green-500 bg-green-50' : ''}`}>
+                  <label
+                    className="flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors"
+                    style={workDescriptionForm.outstandingIssues === 'none' ? { borderColor: 'var(--green)', backgroundColor: 'var(--green-bg)' } : {}}
+                  >
                     <input
                       type="radio"
                       name="outstandingIssues"
@@ -2465,7 +2434,10 @@ export function ContractorDashboard() {
                     />
                     <span className="text-sm">No further issues identified - Work completed successfully</span>
                   </label>
-                  <label className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 transition-colors ${workDescriptionForm.outstandingIssues === 'followup' ? 'border-orange-500 bg-orange-50' : ''}`}>
+                  <label
+                    className="flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors"
+                    style={workDescriptionForm.outstandingIssues === 'followup' ? { borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' } : {}}
+                  >
                     <input
                       type="radio"
                       name="outstandingIssues"
@@ -2496,10 +2468,10 @@ export function ContractorDashboard() {
               }}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSubmitWorkDescription}
                 disabled={submittingWorkDescription || !workDescriptionForm.workSummary.trim() || !workDescriptionForm.workArea.trim() || !workDescriptionForm.faultIdentified.trim() || !workDescriptionForm.workPerformed.trim() || !workDescriptionForm.materialsUsed.trim() || !workDescriptionForm.equipmentTested}
-                className="bg-amber-600 hover:bg-amber-700"
+                style={{ backgroundColor: 'var(--amber)', color: '#fff' }}
               >
                 {submittingWorkDescription ? 'Submitting...' : 'Submit for Approval'}
               </Button>
@@ -2512,30 +2484,30 @@ export function ContractorDashboard() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-amber-600" />
+                <FileText className="h-5 w-5 mr-2" style={{ color: 'var(--amber)' }} />
                 Submit Quote/Estimate
               </DialogTitle>
             </DialogHeader>
             
             {selectedJob && (
               <div className="space-y-4">
-                <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                  <p className="font-medium text-gray-900">{selectedJob.title}</p>
-                  <p className="text-gray-600">Ticket: {selectedJob.ticketNumber}</p>
-                  <p className="text-gray-600">Client: {selectedJob.tenant.name}</p>
+                <div className="p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{selectedJob.title}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Ticket: {selectedJob.ticketNumber}</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Client: {selectedJob.tenant.name}</p>
                   {selectedJob.description && (
-                    <p className="text-gray-500 mt-2 text-xs">{selectedJob.description}</p>
+                    <p className="mt-2 text-xs" style={{ color: 'var(--text-muted)' }}>{selectedJob.description}</p>
                   )}
                 </div>
 
-                <p className="text-sm text-gray-600">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   Please provide your quote for this job. The admin will review and approve before the job is formally assigned.
                 </p>
-                
+
                 {selectedJob.quoteRejectionReason && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-sm font-medium text-red-700">Previous quote was rejected:</p>
-                    <p className="text-sm text-red-600 mt-1">{selectedJob.quoteRejectionReason}</p>
+                  <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--red)' }}>Previous quote was rejected:</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--red)' }}>{selectedJob.quoteRejectionReason}</p>
                   </div>
                 )}
                 
@@ -2575,15 +2547,11 @@ export function ContractorDashboard() {
                           setQuoteForm({ ...quoteForm, file })
                         }
                       }}
-                      className="block w-full text-sm text-gray-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-md file:border-0
-                        file:text-sm file:font-medium
-                        file:bg-amber-50 file:text-amber-700
-                        hover:file:bg-amber-100"
+                      className="block w-full text-sm cursor-pointer"
+                      style={{ color: 'var(--text-muted)' }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                     Upload a detailed quote document if available (PDF, Word, Excel)
                   </p>
                 </div>
@@ -2597,10 +2565,10 @@ export function ContractorDashboard() {
               }}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSubmitQuote}
                 disabled={submittingQuote || !quoteForm.amount}
-                className="bg-amber-600 hover:bg-amber-700"
+                style={{ backgroundColor: 'var(--amber)', color: '#fff' }}
               >
                 {submittingQuote ? 'Submitting...' : 'Submit Quote'}
               </Button>

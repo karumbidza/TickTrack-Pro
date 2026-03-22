@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient, SubscriptionStatus } from '@prisma/client'
+import { SubscriptionStatus } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import PaynowService from '@/lib/paynow-service'
 import { authOptions } from '@/lib/auth'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {

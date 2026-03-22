@@ -52,6 +52,23 @@ export const authOptions: AuthOptions = {
               // For backwards compatibility with existing users without status
               break
           }
+
+          // Check trial expiry for tenant users
+          if (user.tenant && user.tenantId) {
+            const now = new Date()
+            const trialEndsAt = user.tenant.trialEndsAt
+            const tenantStatus = user.tenant.status
+
+            // If trial has expired and tenant is still in TRIAL status
+            if (trialEndsAt && trialEndsAt < now && tenantStatus === 'TRIAL') {
+              throw new Error('TRIAL_EXPIRED: Your 14-day free trial has expired. Please subscribe to continue using TickTrack Pro.')
+            }
+
+            // If tenant is in READ_ONLY or SUSPENDED status
+            if (tenantStatus === 'READ_ONLY' || tenantStatus === 'SUSPENDED') {
+              throw new Error('ACCOUNT_LOCKED: Your account has been locked. Please visit the billing page to subscribe.')
+            }
+          }
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -82,7 +99,16 @@ export const authOptions: AuthOptions = {
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    // Session expires after 8 hours of inactivity
+    maxAge: 8 * 60 * 60, // 8 hours in seconds
+    // Update session expiry on each request (sliding window)
+    updateAge: 60 * 60, // Update every 1 hour
+  },
+  // JWT configuration
+  jwt: {
+    // Token expires after 8 hours
+    maxAge: 8 * 60 * 60, // 8 hours in seconds
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {

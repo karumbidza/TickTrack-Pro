@@ -6,7 +6,7 @@ module.exports = {
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
-	],
+  ],
   theme: {
     container: {
       center: true,
@@ -19,45 +19,73 @@ module.exports = {
       screens: {
         'xs': '475px',
       },
+      fontFamily: {
+        sans: ['DM Sans', 'sans-serif'],
+        mono: ['DM Mono', 'monospace'],
+      },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        /* Design system tokens — direct CSS var references (hex, no hsl wrapper) */
+        bg: "var(--bg)",
+        surface: "var(--surface)",
+        surface2: "var(--surface2)",
+        "border-strong": "var(--border-strong)",
+        "text-primary": "var(--text-primary)",
+        "text-secondary": "var(--text-secondary)",
+        "text-muted": "var(--text-muted)",
+        "tag-bg": "var(--tag-bg)",
+        "tag-text": "var(--tag-text)",
+        "ds-green": "var(--green)",
+        "green-bg": "var(--green-bg)",
+        "ds-amber": "var(--amber)",
+        "amber-bg": "var(--amber-bg)",
+        "ds-blue": "var(--blue)",
+        "blue-bg": "var(--blue-bg)",
+        "ds-red": "var(--red)",
+        "red-bg": "var(--red-bg)",
+
+        /* Shadcn-compatible aliases used by generated UI components */
+        border: "var(--border)",
+        input: "var(--border)",
+        ring: "var(--accent)",
+        background: "var(--bg)",
+        foreground: "var(--text-primary)",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "var(--accent)",
+          foreground: "var(--bg)",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "var(--surface2)",
+          foreground: "var(--text-primary)",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "var(--surface2)",
+          foreground: "var(--text-secondary)",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "var(--surface2)",
+          foreground: "var(--text-primary)",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "var(--surface)",
+          foreground: "var(--text-primary)",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "var(--surface)",
+          foreground: "var(--text-primary)",
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "10px",
+        md: "8px",
+        sm: "6px",
+        xl: "16px",
+      },
+      fontSize: {
+        "mono-label": ["11px", { letterSpacing: "0.08em" }],
       },
       keyframes: {
         "accordion-down": {

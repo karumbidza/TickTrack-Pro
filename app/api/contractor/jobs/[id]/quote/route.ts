@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { z } from 'zod'
+
+// Validation schema for quote submission
+const quoteSubmitSchema = z.object({
+  quoteAmount: z.number().positive('Quote amount must be positive'),
+  quoteDescription: z.string().max(2000).optional(),
+  quoteFileUrl: z.string().url().optional().or(z.literal('')),
+  estimatedDays: z.number().int().positive().optional(),
+})
 
 // POST - Submit a quote for a ticket
 export async function POST(
@@ -20,11 +29,17 @@ export async function POST(
     }
 
     const ticketId = params.id
-    const { quoteAmount, quoteDescription, quoteFileUrl, estimatedDays } = await request.json()
-
-    if (!quoteAmount || quoteAmount <= 0) {
-      return NextResponse.json({ error: 'Quote amount is required and must be positive' }, { status: 400 })
+    
+    // Validate request body with Zod schema
+    const body = await request.json()
+    const parseResult = quoteSubmitSchema.safeParse(body)
+    
+    if (!parseResult.success) {
+      const errors = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return NextResponse.json({ error: errors }, { status: 400 })
     }
+
+    const { quoteAmount, quoteDescription, quoteFileUrl, estimatedDays } = parseResult.data
 
     // Check if there's a QuoteRequest for this contractor on this ticket
     const quoteRequest = await prisma.quoteRequest.findFirst({
@@ -41,10 +56,10 @@ export async function POST(
         where: { id: quoteRequest.id },
         data: {
           status: 'submitted',
-          quoteAmount: parseFloat(quoteAmount.toString()),
+          quoteAmount: quoteAmount,
           quoteDescription: quoteDescription || null,
           quoteFileUrl: quoteFileUrl || null,
-          estimatedDays: estimatedDays ? parseInt(estimatedDays.toString()) : null,
+          estimatedDays: estimatedDays || null,
           submittedAt: new Date()
         }
       })
@@ -69,7 +84,7 @@ export async function POST(
       // Create a message about the quote submission
       await prisma.message.create({
         data: {
-          content: `Quote submitted by ${session.user.name || session.user.email}: $${parseFloat(quoteAmount).toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}${estimatedDays ? `. Estimated completion: ${estimatedDays} days` : ''}`,
+          content: `Quote submitted by ${session.user.name || session.user.email}: $${quoteAmount.toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}${estimatedDays ? `. Estimated completion: ${estimatedDays} days` : ''}`,
           ticketId,
           userId: session.user.id,
           isInternal: true

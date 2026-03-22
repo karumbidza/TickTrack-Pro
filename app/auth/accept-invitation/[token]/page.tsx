@@ -92,10 +92,10 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-2 text-gray-600">Validating invitation...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-ds-blue mx-auto" />
+          <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>Validating invitation...</p>
         </div>
       </div>
     )
@@ -103,17 +103,17 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
 
   if (error && !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ backgroundColor: 'var(--bg)' }}>
         <Card className="max-w-md w-full">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                <XCircle className="h-10 w-10 text-red-600" />
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4" style={{ backgroundColor: 'var(--red-bg)' }}>
+                <XCircle className="h-10 w-10" style={{ color: 'var(--red)' }} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
                 Invalid Invitation
               </h2>
-              <p className="text-gray-600 mb-6">{error}</p>
+              <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{error}</p>
               <Button onClick={() => router.push('/auth/signin')} className="w-full">
                 Go to Sign In
               </Button>
@@ -126,22 +126,22 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center py-12 px-4" style={{ backgroundColor: 'var(--bg)' }}>
         <Card className="max-w-md w-full">
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <Clock className="h-10 w-10 text-green-600" />
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <Clock className="h-10 w-10" style={{ color: 'var(--green)' }} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-medium mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '-0.025em' }}>
                 Request Submitted!
               </h2>
-              <p className="text-gray-600 mb-4">
+              <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
                 Your account request has been sent to the administrator at <strong>{tenant?.name}</strong>.
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-                <h3 className="font-medium text-blue-800 mb-2">What happens next?</h3>
-                <ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
+              <div className="border rounded-lg p-4 mb-6 text-left" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--border)' }}>
+                <h3 className="font-medium mb-2" style={{ color: 'var(--blue)' }}>What happens next?</h3>
+                <ol className="text-sm space-y-2 list-decimal list-inside" style={{ color: 'var(--blue)' }}>
                   <li>An administrator will review your request</li>
                   <li>They will assign your role and site/branch</li>
                   <li>You'll receive an email to verify and set your password</li>
@@ -159,20 +159,20 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           {tenant?.logo ? (
             <img src={tenant.logo} alt={tenant.name} className="h-16 mx-auto mb-4" />
           ) : (
             <div className="flex justify-center">
-              <UserPlus className="h-12 w-12 text-blue-600" />
+              <UserPlus className="h-12 w-12" style={{ color: 'var(--accent)' }} />
             </div>
           )}
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>
             Join {tenant?.name}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             You've been invited by <strong>{invitation?.invitedBy}</strong>
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
                   required
                   value={formData.email}
                   disabled
-                  className="bg-gray-50"
+                  style={{ backgroundColor: 'var(--surface2)' }}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   This email was specified in your invitation
@@ -228,16 +228,16 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
                 </p>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-800">
+              <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--border)' }}>
+                <p className="text-sm" style={{ color: 'var(--amber)' }}>
                   <strong>Note:</strong> You will set your password after an administrator approves your account and you verify your email.
                 </p>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="border rounded-lg p-3 flex items-center gap-2" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--border)' }}>
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--red)' }} />
+                  <p className="text-sm" style={{ color: 'var(--red)' }}>{error}</p>
                 </div>
               )}
 
@@ -259,9 +259,9 @@ export default function AcceptInvitationPage({ params }: { params: { token: stri
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>
           Already have an account?{' '}
-          <Link href="/auth/signin" className="text-blue-600 hover:underline">
+          <Link href="/auth/signin" style={{ color: 'var(--accent)' }} className="hover:underline">
             Sign in
           </Link>
         </p>

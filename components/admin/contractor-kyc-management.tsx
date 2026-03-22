@@ -332,18 +332,18 @@ export function ContractorKYCManagement() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { className: string; icon: React.ReactNode }> = {
-      PENDING: { className: 'bg-gray-100 text-gray-800', icon: <Clock className="h-3 w-3" /> },
-      SUBMITTED: { className: 'bg-blue-100 text-blue-800', icon: <FileText className="h-3 w-3" /> },
-      UNDER_REVIEW: { className: 'bg-yellow-100 text-yellow-800', icon: <Eye className="h-3 w-3" /> },
-      APPROVED: { className: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
-      ACTIVE: { className: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
-      REJECTED: { className: 'bg-red-100 text-red-800', icon: <XCircle className="h-3 w-3" /> },
-      SUSPENDED: { className: 'bg-orange-100 text-orange-800', icon: <AlertCircle className="h-3 w-3" /> }
+    const variants: Record<string, { style: React.CSSProperties; icon: React.ReactNode }> = {
+      PENDING: { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <Clock className="h-3 w-3" /> },
+      SUBMITTED: { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <FileText className="h-3 w-3" /> },
+      UNDER_REVIEW: { style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <Eye className="h-3 w-3" /> },
+      APPROVED: { style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <CheckCircle className="h-3 w-3" /> },
+      ACTIVE: { style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <CheckCircle className="h-3 w-3" /> },
+      REJECTED: { style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <XCircle className="h-3 w-3" /> },
+      SUSPENDED: { style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <AlertCircle className="h-3 w-3" /> }
     }
     const variant = variants[status] || variants.PENDING
     return (
-      <Badge className={`${variant.className} flex items-center gap-1`}>
+      <Badge style={variant.style} className="flex items-center gap-1">
         {variant.icon}
         {status.replace('_', ' ')}
       </Badge>
@@ -360,14 +360,14 @@ export function ContractorKYCManagement() {
   })
 
   const DocumentLink = ({ url, label }: { url?: string; label: string }) => {
-    if (!url) return <span className="text-gray-400 text-sm">Not provided</span>
+    if (!url) return <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not provided</span>
     return (
       <MediaHoverPreview file={{ url, filename: label, mimeType: url.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg' }} previewSize="lg">
         <a 
           href={url} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+          className="hover:underline text-sm flex items-center gap-1" style={{ color: 'var(--accent)' }}
         >
           <FileText className="h-3 w-3" />
           View {label}
@@ -385,8 +385,8 @@ export function ContractorKYCManagement() {
           onClick={() => setStatusFilter('')}
         >
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold">{counts.total}</p>
-            <p className="text-xs text-gray-600">Total</p>
+            <p className="text-2xl font-medium">{counts.total}</p>
+            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Total</p>
           </CardContent>
         </Card>
         {(['SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'ACTIVE', 'REJECTED'] as const).map(status => (
@@ -396,8 +396,8 @@ export function ContractorKYCManagement() {
             onClick={() => setStatusFilter(status)}
           >
             <CardContent className="p-4 text-center">
-              <p className="text-2xl font-bold">{counts[status]}</p>
-              <p className="text-xs text-gray-600">{status.replace('_', ' ')}</p>
+              <p className="text-2xl font-medium">{counts[status]}</p>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{status.replace('_', ' ')}</p>
             </CardContent>
           </Card>
         ))}
@@ -418,7 +418,7 @@ export function ContractorKYCManagement() {
         <TabsContent value="applications" className="space-y-4">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
               <Input
                 placeholder="Search by company name or email..."
                 value={searchQuery}
@@ -438,7 +438,7 @@ export function ContractorKYCManagement() {
             </div>
           ) : filteredApplications.length === 0 ? (
             <Card>
-              <CardContent className="py-8 text-center text-gray-500">
+              <CardContent className="py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                 No KYC applications found
               </CardContent>
             </Card>
@@ -462,14 +462,14 @@ export function ContractorKYCManagement() {
                         <div>
                           <p className="font-medium">{app.companyName}</p>
                           {app.tradingName && (
-                            <p className="text-sm text-gray-500">t/a {app.tradingName}</p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>t/a {app.tradingName}</p>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
                           <p>{app.companyEmail}</p>
-                          <p className="text-gray-500">{app.companyPhone}</p>
+                          <p style={{ color: 'var(--text-muted)' }}>{app.companyPhone}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -487,7 +487,7 @@ export function ContractorKYCManagement() {
                         </div>
                       </TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         {new Date(app.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
@@ -512,7 +512,7 @@ export function ContractorKYCManagement() {
         <TabsContent value="invitations" className="space-y-4">
           {invitations.length === 0 ? (
             <Card>
-              <CardContent className="py-8 text-center text-gray-500">
+              <CardContent className="py-8 text-center" style={{ color: 'var(--text-muted)' }}>
                 No invitations sent yet
               </CardContent>
             </Card>
@@ -537,10 +537,10 @@ export function ContractorKYCManagement() {
                           {inv.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         {new Date(inv.createdAt).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         {new Date(inv.expiresAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
@@ -602,7 +602,7 @@ export function ContractorKYCManagement() {
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                   Send this link to the contractor to complete their registration.
                 </p>
               </div>
@@ -660,23 +660,23 @@ export function ContractorKYCManagement() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Company Name</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Company Name</p>
                       <p className="font-medium">{selectedKYC.companyName}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Trading Name</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Trading Name</p>
                       <p className="font-medium">{selectedKYC.tradingName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Email</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Email</p>
                       <p className="font-medium">{selectedKYC.companyEmail}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Phone</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Phone</p>
                       <p className="font-medium">{selectedKYC.companyPhone}</p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-gray-500">Physical Address</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Physical Address</p>
                       <p className="font-medium">{selectedKYC.physicalAddress}</p>
                     </div>
                     <div>
@@ -714,24 +714,24 @@ export function ContractorKYCManagement() {
                     {selectedKYC.directors?.length > 0 ? (
                       <div className="space-y-4">
                         {selectedKYC.directors.map((dir, i) => (
-                          <div key={i} className="grid grid-cols-3 gap-2 text-sm p-3 bg-gray-50 rounded">
+                          <div key={i} className="grid grid-cols-3 gap-2 text-sm p-3 rounded" style={{ backgroundColor: 'var(--surface2)' }}>
                             <div>
-                              <p className="text-gray-500">Name</p>
+                              <p style={{ color: 'var(--text-muted)' }}>Name</p>
                               <p className="font-medium">{dir.fullName}</p>
                             </div>
                             <div>
-                              <p className="text-gray-500">ID</p>
+                              <p style={{ color: 'var(--text-muted)' }}>ID</p>
                               <p className="font-medium">{dir.nationalId || '-'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-500">Shareholding</p>
+                              <p style={{ color: 'var(--text-muted)' }}>Shareholding</p>
                               <p className="font-medium">{dir.shareholdingPercent || '-'}%</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-400 text-sm">No directors provided</p>
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No directors provided</p>
                     )}
                   </CardContent>
                 </Card>
@@ -746,23 +746,23 @@ export function ContractorKYCManagement() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500">Bank</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Bank</p>
                       <p className="font-medium">{selectedKYC.bankName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Branch</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Branch</p>
                       <p className="font-medium">{selectedKYC.bankBranch || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Account Name</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Account Name</p>
                       <p className="font-medium">{selectedKYC.accountName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Account Number</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Account Number</p>
                       <p className="font-medium">{selectedKYC.accountNumber || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Currency</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Currency</p>
                       <p className="font-medium">{selectedKYC.accountCurrency || 'USD'}</p>
                     </div>
                     <div>
@@ -783,7 +783,7 @@ export function ContractorKYCManagement() {
                     <DocumentLink url={selectedKYC.zimraTaxClearanceUrl} label="ZIMRA Tax Clearance" />
                     <DocumentLink url={selectedKYC.vatCertificateUrl} label="VAT Certificate" />
                     <div className="text-sm">
-                      <p className="text-gray-500">NSSA Number</p>
+                      <p style={{ color: 'var(--text-muted)' }}>NSSA Number</p>
                       <p className="font-medium">{selectedKYC.nssaNumber || '-'}</p>
                     </div>
                     <DocumentLink url={selectedKYC.necComplianceUrl} label="NEC Compliance" />
@@ -802,21 +802,21 @@ export function ContractorKYCManagement() {
                   <CardContent className="grid grid-cols-2 gap-4 text-sm">
                     <DocumentLink url={selectedKYC.sheqPolicyUrl} label="SHEQ Policy" />
                     <div>
-                      <p className="text-gray-500">PPE Compliance</p>
+                      <p style={{ color: 'var(--text-muted)' }}>PPE Compliance</p>
                       <p className="font-medium">
                         {selectedKYC.ppeComplianceDeclaration ? (
-                          <Badge className="bg-green-100 text-green-800">Declared</Badge>
+                          <Badge variant="success">Declared</Badge>
                         ) : (
                           <Badge variant="secondary">Not declared</Badge>
                         )}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Safety Officer</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Safety Officer</p>
                       <p className="font-medium">{selectedKYC.safetyOfficerName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Qualifications</p>
+                      <p style={{ color: 'var(--text-muted)' }}>Qualifications</p>
                       <p className="font-medium">{selectedKYC.safetyOfficerQualifications || '-'}</p>
                     </div>
                     <DocumentLink url={selectedKYC.publicLiabilityInsuranceUrl} label="Public Liability Insurance" />
@@ -834,11 +834,11 @@ export function ContractorKYCManagement() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="text-sm">
-                      <p className="text-gray-500">Number of Employees</p>
+                      <p className="text-text-muted">Number of Employees</p>
                       <p className="font-medium">{selectedKYC.numberOfEmployees || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-sm mb-2">Specializations</p>
+                      <p className="text-text-muted text-sm mb-2">Specializations</p>
                       <div className="flex flex-wrap gap-1">
                         {selectedKYC.specializations?.map((s) => (
                           <Badge key={s} variant="secondary">{s}</Badge>
@@ -859,7 +859,7 @@ export function ContractorKYCManagement() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-gray-500 text-sm mb-2">Industry Sectors</p>
+                      <p className="text-text-muted text-sm mb-2">Industry Sectors</p>
                       <div className="flex flex-wrap gap-1">
                         {selectedKYC.industrySectors?.map((s) => (
                           <Badge key={s} variant="outline">{s}</Badge>
@@ -884,43 +884,43 @@ export function ContractorKYCManagement() {
                   <CardContent className="space-y-3 text-sm">
                     <div className="flex items-center gap-2">
                       {selectedKYC.conflictOfInterestDeclared ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-ds-green" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-ds-red" />
                       )}
                       <span>Conflict of Interest Declaration</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {selectedKYC.antiCorruptionDeclared ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-ds-green" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-ds-red" />
                       )}
                       <span>Anti-Corruption & Ethics Declaration</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {selectedKYC.dataPrivacyAcknowledged ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-ds-green" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-ds-red" />
                       )}
                       <span>Data Privacy Acknowledgment</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {selectedKYC.infoAccuracyDeclared ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-ds-green" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-ds-red" />
                       )}
                       <span>Information Accuracy Declaration</span>
                     </div>
                     <div className="pt-2 border-t grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-gray-500">Authorized Signatory</p>
+                        <p className="text-text-muted">Authorized Signatory</p>
                         <p className="font-medium">{selectedKYC.authorizedSignatoryName || '-'}</p>
                       </div>
                       <div>
-                        <p className="text-gray-500">Position</p>
+                        <p className="text-text-muted">Position</p>
                         <p className="font-medium">{selectedKYC.authorizedSignatoryPosition || '-'}</p>
                       </div>
                     </div>
@@ -947,7 +947,7 @@ export function ContractorKYCManagement() {
                   Reject
                 </Button>
                 <Button
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-bg hover:bg-green-bg"
                   onClick={() => {
                     setActionType('approve')
                     setShowActionDialog(true)
@@ -974,9 +974,9 @@ export function ContractorKYCManagement() {
           <div className="space-y-4">
             {approvalLink ? (
               <div className="space-y-4">
-                <div className="bg-green-50 p-4 rounded-lg text-center">
-                  <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
-                  <p className="font-medium text-green-800">KYC Approved Successfully!</p>
+                <div className="bg-green-bg p-4 rounded-lg text-center">
+                  <CheckCircle className="h-12 w-12 text-ds-green mx-auto mb-2" />
+                  <p className="font-medium text-ds-green">KYC Approved Successfully!</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Password Setup Link</Label>
@@ -990,7 +990,7 @@ export function ContractorKYCManagement() {
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-text-muted">
                     Send this link to the contractor so they can set up their password and login.
                   </p>
                 </div>
@@ -1009,7 +1009,7 @@ export function ContractorKYCManagement() {
                 
                 {actionType === 'reject' && (
                   <div className="space-y-2">
-                    <Label>Rejection Reason <span className="text-red-500">*</span></Label>
+                    <Label>Rejection Reason <span className="text-ds-red">*</span></Label>
                     <Textarea
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}

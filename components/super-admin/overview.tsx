@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -94,13 +95,13 @@ export function SuperAdminOverview() {
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string): React.CSSProperties => {
     switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800'
-      case 'TRIAL': return 'bg-blue-100 text-blue-800'
-      case 'SUSPENDED': return 'bg-red-100 text-red-800'
-      case 'EXPIRED': return 'bg-orange-100 text-orange-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'ACTIVE': return { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }
+      case 'TRIAL': return { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }
+      case 'SUSPENDED': return { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
+      case 'EXPIRED': return { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }
+      default: return { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }
     }
   }
 
@@ -108,21 +109,21 @@ export function SuperAdminOverview() {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="flex flex-col items-center space-y-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-500">Loading dashboard...</p>
+          <RefreshCw className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+          <p style={{ color: 'var(--text-muted)' }}>Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen p-5">
+    <div className="min-h-screen p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-            <p className="text-gray-600">Platform overview and quick actions</p>
+            <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)', fontWeight: 300, letterSpacing: '-0.025em' }}>Super Admin Dashboard</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Platform overview and quick actions</p>
           </div>
           <div className="flex items-center space-x-3">
             <Button variant="outline" onClick={fetchDashboardData}>
@@ -140,61 +141,61 @@ export function SuperAdminOverview() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100">Total Tenants</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-white" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Tenants</CardTitle>
+              <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                <Building2 className="h-5 w-5" style={{ color: 'var(--blue)' }} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.totalTenants}</div>
-              <p className="text-sm text-blue-100">
+              <div style={{ fontWeight: 300, fontSize: '2rem', letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{stats.totalTenants}</div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 {stats.activeTenants} active
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-lg">
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-100">Total Users</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Users className="h-5 w-5 text-white" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Total Users</CardTitle>
+              <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <Users className="h-5 w-5" style={{ color: 'var(--green)' }} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.totalUsers}</div>
-              <p className="text-sm text-green-100">
+              <div style={{ fontWeight: 300, fontSize: '2rem', letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{stats.totalUsers}</div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Across all tenants
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-100">Monthly Revenue</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-white" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Monthly Revenue</CardTitle>
+              <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--surface2)' }}>
+                <CreditCard className="h-5 w-5" style={{ color: 'var(--accent)' }} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">${stats.revenue.toLocaleString()}</div>
-              <p className="text-sm text-purple-100">
+              <div style={{ fontWeight: 300, fontSize: '2rem', letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>${stats.revenue.toLocaleString()}</div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Estimated
               </p>
             </CardContent>
           </Card>
 
-          <Card className={`border-0 shadow-lg ${expiringTenants.length > 0 ? 'bg-gradient-to-br from-orange-500 to-red-500 text-white' : 'bg-gradient-to-br from-gray-400 to-gray-500 text-white'}`}>
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/80">Expiring Soon</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-white" />
+              <CardTitle className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Expiring Soon</CardTitle>
+              <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: expiringTenants.length > 0 ? 'var(--amber-bg)' : 'var(--surface2)' }}>
+                <AlertTriangle className="h-5 w-5" style={{ color: expiringTenants.length > 0 ? 'var(--amber)' : 'var(--text-muted)' }} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{expiringTenants.length}</div>
-              <p className="text-sm text-white/80">
+              <div style={{ fontWeight: 300, fontSize: '2rem', letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{expiringTenants.length}</div>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Within 7 days
               </p>
             </CardContent>
@@ -204,46 +205,46 @@ export function SuperAdminOverview() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Link href="/super-admin/tenants">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-blue-200">
+            <Card className="transition-shadow cursor-pointer border border-border" style={{ backgroundColor: 'var(--surface)' }}>
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-4">
-                  <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Building2 className="h-6 w-6 text-blue-600" />
+                  <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                    <Building2 className="h-6 w-6" style={{ color: 'var(--blue)' }} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Tenant Management</h3>
-                    <p className="text-sm text-gray-500">Create, edit, and manage tenants</p>
+                    <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Tenant Management</h3>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Create, edit, and manage tenants</p>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                  <ArrowRight className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-green-200 opacity-60">
+          <Card className="cursor-pointer border border-border opacity-60" style={{ backgroundColor: 'var(--surface)' }}>
             <CardContent className="pt-6">
               <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                  <CreditCard className="h-6 w-6 text-green-600" />
+                <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--green-bg)' }}>
+                  <CreditCard className="h-6 w-6" style={{ color: 'var(--green)' }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">Billing & Payments</h3>
-                  <p className="text-sm text-gray-500">View payment history</p>
+                  <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Billing & Payments</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>View payment history</p>
                 </div>
                 <Badge variant="outline" className="text-xs">Coming Soon</Badge>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-transparent hover:border-purple-200 opacity-60">
+          <Card className="cursor-pointer border border-border opacity-60" style={{ backgroundColor: 'var(--surface)' }}>
             <CardContent className="pt-6">
               <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Settings className="h-6 w-6 text-purple-600" />
+                <div className="h-12 w-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--surface2)' }}>
+                  <Settings className="h-6 w-6" style={{ color: 'var(--text-secondary)' }} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">Platform Settings</h3>
-                  <p className="text-sm text-gray-500">Configure system settings</p>
+                  <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>Platform Settings</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Configure system settings</p>
                 </div>
                 <Badge variant="outline" className="text-xs">Coming Soon</Badge>
               </div>
@@ -253,35 +254,35 @@ export function SuperAdminOverview() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Expiring Subscriptions */}
-          <Card>
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader>
-              <CardTitle className="flex items-center text-orange-600">
+              <CardTitle className="flex items-center" style={{ color: 'var(--amber)' }}>
                 <AlertTriangle className="h-5 w-5 mr-2" />
                 Subscriptions Expiring Soon
               </CardTitle>
-              <CardDescription>
+              <CardDescription style={{ color: 'var(--text-muted)' }}>
                 Tenants that need renewal attention
               </CardDescription>
             </CardHeader>
             <CardContent>
               {expiringTenants.length === 0 ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-green-400 mx-auto mb-3" />
-                  <p className="text-gray-500">No subscriptions expiring soon</p>
-                  <p className="text-sm text-gray-400">All tenants are up to date</p>
+                  <CheckCircle className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--green)' }} />
+                  <p style={{ color: 'var(--text-muted)' }}>No subscriptions expiring soon</p>
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All tenants are up to date</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {expiringTenants.map((tenant) => (
-                    <div key={tenant.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
+                    <div key={tenant.id} className="flex items-center justify-between p-3 rounded-lg border border-border" style={{ backgroundColor: 'var(--amber-bg)' }}>
                       <div>
-                        <p className="font-medium text-gray-900">{tenant.name}</p>
-                        <p className="text-sm text-gray-500">{tenant.subscription?.plan || 'Trial'}</p>
+                        <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{tenant.name}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{tenant.subscription?.plan || 'Trial'}</p>
                       </div>
                       <div className="text-right">
-                        <Badge className="bg-orange-100 text-orange-800">
-                          {tenant.subscription?.daysUntilExpiry === 0 
-                            ? 'Expires today' 
+                        <Badge style={{ backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }}>
+                          {tenant.subscription?.daysUntilExpiry === 0
+                            ? 'Expires today'
                             : `${tenant.subscription?.daysUntilExpiry} days left`}
                         </Badge>
                       </div>
@@ -299,21 +300,21 @@ export function SuperAdminOverview() {
           </Card>
 
           {/* Recent Tenants */}
-          <Card>
+          <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-blue-600" />
+              <CardTitle className="flex items-center" style={{ color: 'var(--text-primary)' }}>
+                <Clock className="h-5 w-5 mr-2" style={{ color: 'var(--accent)' }} />
                 Recent Tenants
               </CardTitle>
-              <CardDescription>
+              <CardDescription style={{ color: 'var(--text-muted)' }}>
                 Latest tenant registrations
               </CardDescription>
             </CardHeader>
             <CardContent>
               {recentTenants.length === 0 ? (
                 <div className="text-center py-8">
-                  <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No tenants yet</p>
+                  <Building2 className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+                  <p style={{ color: 'var(--text-muted)' }}>No tenants yet</p>
                   <Link href="/super-admin/tenants">
                     <Button className="mt-3">Create First Tenant</Button>
                   </Link>
@@ -321,16 +322,16 @@ export function SuperAdminOverview() {
               ) : (
                 <div className="space-y-3">
                   {recentTenants.map((tenant) => (
-                    <div key={tenant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={tenant.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
                       <div className="flex items-center space-x-3">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-blue-600 font-semibold text-sm">
+                        <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--blue-bg)' }}>
+                          <span className="text-sm font-medium" style={{ color: 'var(--blue)' }}>
                             {tenant.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{tenant.name}</p>
-                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{tenant.name}</p>
+                          <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--text-muted)' }}>
                             <Users className="h-3 w-3" />
                             <span>{tenant.userCount}</span>
                             <Ticket className="h-3 w-3 ml-2" />
@@ -338,7 +339,7 @@ export function SuperAdminOverview() {
                           </div>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(tenant.status)}>
+                      <Badge style={getStatusStyle(tenant.status)}>
                         {tenant.status}
                       </Badge>
                     </div>
@@ -356,34 +357,34 @@ export function SuperAdminOverview() {
         </div>
 
         {/* Platform Health */}
-        <Card>
+        <Card className="border border-border" style={{ backgroundColor: 'var(--surface)' }}>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
+            <CardTitle className="flex items-center" style={{ color: 'var(--text-primary)' }}>
+              <TrendingUp className="h-5 w-5 mr-2" style={{ color: 'var(--green)' }} />
               Platform Health
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">API Status</p>
-                <p className="text-xs text-green-600">Operational</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <CheckCircle className="h-8 w-8 mx-auto mb-2" style={{ color: 'var(--green)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>API Status</p>
+                <p className="text-xs" style={{ color: 'var(--green)' }}>Operational</p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">Database</p>
-                <p className="text-xs text-green-600">Connected</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <CheckCircle className="h-8 w-8 mx-auto mb-2" style={{ color: 'var(--green)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Database</p>
+                <p className="text-xs" style={{ color: 'var(--green)' }}>Connected</p>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">Authentication</p>
-                <p className="text-xs text-green-600">Secure</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--green-bg)' }}>
+                <CheckCircle className="h-8 w-8 mx-auto mb-2" style={{ color: 'var(--green)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Authentication</p>
+                <p className="text-xs" style={{ color: 'var(--green)' }}>Secure</p>
               </div>
-              <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                <AlertTriangle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-900">Payments</p>
-                <p className="text-xs text-yellow-600">Configure Paynow</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'var(--amber-bg)' }}>
+                <AlertTriangle className="h-8 w-8 mx-auto mb-2" style={{ color: 'var(--amber)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Payments</p>
+                <p className="text-xs" style={{ color: 'var(--amber)' }}>Configure Paynow</p>
               </div>
             </div>
           </CardContent>

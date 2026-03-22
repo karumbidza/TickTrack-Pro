@@ -84,16 +84,16 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
 
   const getRoleColor = (role: string) => {
     const colors: Record<string, string> = {
-      'END_USER': 'bg-blue-100 text-blue-800',
-      'CONTRACTOR': 'bg-green-100 text-green-800',
-      'TENANT_ADMIN': 'bg-purple-100 text-purple-800',
-      'IT_ADMIN': 'bg-orange-100 text-orange-800',
+      'END_USER': 'bg-blue-bg text-ds-blue',
+      'CONTRACTOR': 'bg-green-bg text-ds-green',
+      'TENANT_ADMIN': 'bg-surface2 text-text-secondary',
+      'IT_ADMIN': 'bg-amber-bg text-ds-amber',
       'SALES_ADMIN': 'bg-pink-100 text-pink-800',
       'RETAIL_ADMIN': 'bg-cyan-100 text-cyan-800',
       'MAINTENANCE_ADMIN': 'bg-lime-100 text-lime-800',
       'PROJECTS_ADMIN': 'bg-indigo-100 text-indigo-800'
     }
-    return colors[role] || 'bg-gray-100 text-gray-800'
+    return colors[role] || 'bg-surface2 text-text-primary'
   }
 
   const formatRole = (role: string) => {
@@ -101,12 +101,12 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
   }
 
   return (
-    <div className="flex flex-col h-96 border rounded-lg bg-white">
+    <div className="flex flex-col h-96 border rounded-lg bg-surface">
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-text-muted py-8">
               No messages yet. Start a conversation!
             </div>
           ) : (
@@ -118,8 +118,8 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
                 }`}
               >
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-gray-600" />
+                  <div className="w-8 h-8 bg-surface2 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-text-secondary" />
                   </div>
                 </div>
                 
@@ -127,7 +127,7 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
                   message.user.id === session?.user?.id ? 'text-right' : ''
                 }`}>
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-text-primary">
                       {message.user.name}
                     </span>
                     <Badge className={getRoleColor(message.user.role)}>
@@ -137,13 +137,13 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
                   
                   <div className={`px-4 py-2 rounded-lg ${
                     message.user.id === session?.user?.id
-                      ? 'bg-blue-500 text-white ml-auto'
-                      : 'bg-gray-100 text-gray-900'
+                      ? 'bg-blue-bg text-bg ml-auto'
+                      : 'bg-surface2 text-text-primary'
                   }`}>
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   </div>
                   
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-text-muted mt-1">
                     {new Date(message.createdAt).toLocaleString()}
                   </div>
                 </div>

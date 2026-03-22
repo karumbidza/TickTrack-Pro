@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -225,6 +226,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [branchFilter, setBranchFilter] = useState('all')
   const [branches, setBranches] = useState<{id: string, name: string}[]>([])
   const [showFilters, setShowFilters] = useState(false)
+  const [showClosedTickets, setShowClosedTickets] = useState(false)
 
   // Assignment states
   const [selectedContractor, setSelectedContractor] = useState('')
@@ -298,7 +300,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   useEffect(() => {
     filterTickets()
-  }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter, branchFilter])
+  }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter, branchFilter, showClosedTickets])
 
   // Fetch filtered contractors when a ticket is selected for assignment
   useEffect(() => {
@@ -560,6 +562,11 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const filterTickets = () => {
     let filtered = tickets
+
+    // Hide closed tickets by default (unless showClosedTickets is true or filtering by CLOSED status)
+    if (!showClosedTickets && statusFilter !== 'CLOSED') {
+      filtered = filtered.filter(ticket => ticket.status !== 'CLOSED')
+    }
 
     // Text search
     if (searchTerm) {
@@ -939,43 +946,43 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     toast.success('Ticket closed and rated successfully')
   }
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      OPEN: 'bg-blue-100 text-blue-800',
-      AWAITING_QUOTE: 'bg-amber-100 text-amber-800',
-      QUOTE_SUBMITTED: 'bg-indigo-100 text-indigo-800',
-      PROCESSING: 'bg-yellow-100 text-yellow-800',
-      ACCEPTED: 'bg-blue-100 text-blue-800',
-      IN_PROGRESS: 'bg-orange-100 text-orange-800',
-      ON_SITE: 'bg-purple-100 text-purple-800',
-      AWAITING_DESCRIPTION: 'bg-amber-100 text-amber-800',
-      AWAITING_WORK_APPROVAL: 'bg-indigo-100 text-indigo-800',
-      AWAITING_APPROVAL: 'bg-amber-100 text-amber-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CLOSED: 'bg-gray-100 text-gray-800',
-      CANCELLED: 'bg-red-100 text-red-800'
+  const getStatusColor = (status: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      OPEN: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_QUOTE: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      QUOTE_SUBMITTED: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      PROCESSING: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ACCEPTED: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      IN_PROGRESS: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      ON_SITE: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_DESCRIPTION: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      AWAITING_WORK_APPROVAL: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' },
+      AWAITING_APPROVAL: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      COMPLETED: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      CLOSED: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' },
+      CANCELLED: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
     }
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+    return colors[status] || { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
   }
 
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      LOW: 'bg-green-100 text-green-800',
-      MEDIUM: 'bg-yellow-100 text-yellow-800',
-      HIGH: 'bg-orange-100 text-orange-800',
-      CRITICAL: 'bg-red-100 text-red-800',
-      URGENT: 'bg-red-200 text-red-900'
+  const getPriorityColor = (priority: string): React.CSSProperties => {
+    const colors: Record<string, React.CSSProperties> = {
+      LOW: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' },
+      MEDIUM: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' },
+      HIGH: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
+      CRITICAL: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' },
+      URGENT: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }
     }
-    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+    return colors[priority] || { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'COMPLETED': case 'CLOSED': return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'PROCESSING': case 'ACCEPTED': case 'IN_PROGRESS': case 'ON_SITE': return <Clock className="h-4 w-4 text-orange-500" />
-      case 'CANCELLED': return <X className="h-4 w-4 text-red-500" />
-      case 'OPEN': return <AlertCircle className="h-4 w-4 text-blue-500" />
-      default: return <Ticket className="h-4 w-4 text-blue-500" />
+      case 'COMPLETED': case 'CLOSED': return <CheckCircle className="h-4 w-4 text-ds-green" />
+      case 'PROCESSING': case 'ACCEPTED': case 'IN_PROGRESS': case 'ON_SITE': return <Clock className="h-4 w-4 text-ds-amber" />
+      case 'CANCELLED': return <X className="h-4 w-4 text-ds-red" />
+      case 'OPEN': return <AlertCircle className="h-4 w-4 text-ds-blue" />
+      default: return <Ticket className="h-4 w-4 text-ds-blue" />
     }
   }
 
@@ -1010,8 +1017,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Box sx={{ py: 1, textAlign: 'left', width: '100%' }}>
-          <p className="font-semibold text-gray-900 text-sm truncate">{params.row.title}</p>
-          <p className="text-sm text-blue-600 font-medium">{params.row.ticketNumber}</p>
+          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{params.row.title}</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>{params.row.ticketNumber}</p>
         </Box>
       ),
     },
@@ -1023,7 +1030,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       align: 'left',
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-sm font-mono text-gray-600">
+        <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
           {params.row.id.slice(0, 8).toUpperCase()}
         </span>
       ),
@@ -1038,7 +1045,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Tooltip title={params.row.branch?.name || params.row.location || 'No site specified'}>
           <Box sx={{ textAlign: 'left' }}>
-            <p className="text-sm text-gray-900 font-medium truncate">
+            <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
               {params.row.branch?.name || params.row.location || '-'}
             </p>
           </Box>
@@ -1074,7 +1081,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               },
             }}
           >
-            <p className="text-sm text-gray-700 truncate cursor-pointer text-left" style={{ maxWidth: '100%' }}>
+            <p className="text-sm truncate cursor-pointer text-left" style={{ maxWidth: '100%', color: 'var(--text-secondary)' }}>
               {params.row.description || 'No description'}
             </p>
           </Tooltip>
@@ -1095,7 +1102,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             size="medium"
             variant="outlined"
             sx={{ 
-              fontWeight: 600, 
+              fontWeight: 500, 
               fontSize: '0.8rem',
               py: 0.5,
               borderRadius: '8px',
@@ -1135,7 +1142,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 setPriorityMenuAnchor(e.currentTarget)
               }}
               sx={{ 
-                fontWeight: 600, 
+                fontWeight: 500, 
                 fontSize: '0.8rem',
                 py: 0.5,
                 borderRadius: '8px',
@@ -1181,7 +1188,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             size="medium"
             color={statusColors[params.row.status] || 'default'}
             sx={{ 
-              fontWeight: 600, 
+              fontWeight: 500, 
               fontSize: '0.8rem',
               py: 0.5,
               borderRadius: '8px',
@@ -1227,7 +1234,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               size="medium"
               color={getSLAChipColor(status)}
               sx={{ 
-                fontWeight: 600, 
+                fontWeight: 500, 
                 fontSize: '0.75rem',
                 py: 0.5,
                 borderRadius: '8px'
@@ -1271,13 +1278,13 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             >
               {params.row.assignedTo ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
-                  <UserCheck className="h-4 w-4 text-green-600" />
-                  <p className="text-sm font-medium text-gray-900 truncate">{params.row.assignedTo.name}</p>
+                  <UserCheck className="h-4 w-4" style={{ color: 'var(--green)' }} />
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{params.row.assignedTo.name}</p>
                 </Box>
               ) : (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
-                  <Plus className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-blue-600 font-semibold">Assign</span>
+                  <Plus className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--accent)' }}>Assign</span>
                 </Box>
               )}
             </Box>
@@ -1294,7 +1301,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
         <Box sx={{ textAlign: 'left' }}>
-          <p className="text-sm text-gray-900 font-medium truncate">{params.row.user.name}</p>
+          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{params.row.user.name}</p>
         </Box>
       ),
     },
@@ -1306,7 +1313,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       align: 'left',
       headerAlign: 'left',
       renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-sm text-gray-600 font-medium">
+        <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
           {new Date(params.row.createdAt).toLocaleDateString()}
         </span>
       ),
@@ -1346,23 +1353,23 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading tickets...</p>
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" style={{ color: 'var(--accent)' }} />
+          <p style={{ color: 'var(--text-secondary)' }}>Loading tickets...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-50 p-5">
+    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Manage Tickets</h1>
-            <p className="text-sm sm:text-base text-gray-600">Review, assign, and manage company tickets</p>
+            <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>Manage Tickets</h1>
+            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Review, assign, and manage company tickets</p>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <Button 
@@ -1381,7 +1388,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           <CardContent className="p-4">
             <div className="flex items-center space-x-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   placeholder="Search tickets by title, description, ticket number, or reporter..."
                   value={searchTerm}
@@ -1393,7 +1400,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className={getActiveFilterCount() > 0 ? 'border-blue-500 bg-blue-50' : ''}
+                style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
               >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
@@ -1416,7 +1423,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               <div className="mt-4 pt-4 border-t">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Status</label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any status" />
@@ -1433,7 +1440,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
                     <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any priority" />
@@ -1450,7 +1457,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Type</label>
                     <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any type" />
@@ -1467,7 +1474,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Assignment</label>
                     <Select value={assignedFilter} onValueChange={setAssignedFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any assignment" />
@@ -1481,7 +1488,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Site / Branch</label>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Site / Branch</label>
                     <Select value={branchFilter} onValueChange={setBranchFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Any branch" />
@@ -1496,6 +1503,26 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  {/* Show Closed Tickets Toggle */}
+                  <div className="flex items-center justify-between col-span-full pt-2 border-t">
+                    <div>
+                      <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Show Closed Tickets</label>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Closed tickets are hidden by default</p>
+                    </div>
+                    <button
+                      onClick={() => setShowClosedTickets(!showClosedTickets)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        showClosedTickets ? 'bg-blue-bg' : 'bg-surface2'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
+                          showClosedTickets ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1504,7 +1531,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
         {/* Results Summary */}
         {getActiveFilterCount() > 0 && (
-          <div className="flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center justify-between text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>Showing {filteredTickets.length} of {tickets.length} tickets</span>
             <span>{getActiveFilterCount()} filter{getActiveFilterCount() > 1 ? 's' : ''} applied</span>
           </div>
@@ -1515,12 +1542,12 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           <CardContent className="p-0">
             {filteredTickets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Ticket className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Ticket className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                   {tickets.length === 0 ? 'No tickets yet' : 'No tickets match your filters'}
                 </h3>
-                <p className="text-gray-600 mb-4">
-                  {tickets.length === 0 
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  {tickets.length === 0
                     ? 'Tickets will appear here once users create them'
                     : 'Try adjusting your search criteria'
                   }
@@ -1552,8 +1579,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   getRowClassName={(params) => {
                     const hasRejection = params.row.rejectedAt && params.row.status === 'OPEN'
                     const hasCancellationRequest = params.row.cancellationRequestedAt && !params.row.cancelledAt
-                    if (hasRejection) return 'bg-red-50'
-                    if (hasCancellationRequest) return 'bg-amber-50'
+                    if (hasRejection) return 'bg-red-bg'
+                    if (hasCancellationRequest) return 'bg-amber-bg'
                     return ''
                   }}
                   sx={{
@@ -1563,10 +1590,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       backgroundColor: '#f8fafc',
                       borderRadius: '12px 12px 0 0',
                       fontSize: '0.875rem',
-                      fontWeight: 600,
+                      fontWeight: 500,
                     },
                     '& .MuiDataGrid-columnHeaderTitle': {
-                      fontWeight: 600,
+                      fontWeight: 500,
                     },
                     '& .MuiDataGrid-cell': {
                       borderBottom: '1px solid #f1f5f9',
@@ -1577,11 +1604,11 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     '& .MuiDataGrid-row:hover': {
                       backgroundColor: '#f8fafc',
                     },
-                    '& .bg-red-50': {
+                    '& .bg-red-bg': {
                       backgroundColor: '#fef2f2 !important',
                       borderLeft: '4px solid #ef4444',
                     },
-                    '& .bg-amber-50': {
+                    '& .bg-amber-bg': {
                       backgroundColor: '#fffbeb !important',
                       borderLeft: '4px solid #f59e0b',
                     },
@@ -1600,10 +1627,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 <span>Ticket Details</span>
                 {selectedTicket && (
                   <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(selectedTicket.status)}>
+                    <Badge style={getStatusColor(selectedTicket.status)}>
                       {selectedTicket.status.replace('_', ' ')}
                     </Badge>
-                    <Badge className={getPriorityColor(selectedTicket.priority)}>
+                    <Badge style={getPriorityColor(selectedTicket.priority)}>
                       {selectedTicket.priority}
                     </Badge>
                   </div>
@@ -1616,10 +1643,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 {/* Ticket Header */}
                 <div className="grid grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                       {selectedTicket.title}
                     </h3>
-                    <div className="space-y-1 text-sm text-gray-600">
+                    <div className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
                       <p><span className="font-medium">Ticket ID:</span> {selectedTicket.ticketNumber}</p>
                       <p><span className="font-medium">Type:</span> {selectedTicket.type}</p>
                       <p><span className="font-medium">Created:</span> {new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
@@ -1630,12 +1657,12 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                   <div>
                     <div className="space-y-3">
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Assigned To:</p>
+                        <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Assigned To:</p>
                         {selectedTicket.assignedTo ? (
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="text-sm text-gray-900">{selectedTicket.assignedTo.name}</p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.assignedTo.name}</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {selectedTicket.hqAssignedAt ? 'HQ Staff' : 'Contractor'}
                               </p>
                             </div>
@@ -1643,7 +1670,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-300 hover:bg-red-50"
+                                style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
                                 onClick={() => setShowUnassignConfirm(true)}
                               >
                                 <X className="h-3 w-3 mr-1" />
@@ -1652,14 +1679,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             )}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500">Unassigned</p>
+                          <p className="text-sm text-text-muted">Unassigned</p>
                         )}
                       </div>
                       
                       {selectedTicket.asset && (
                         <div>
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-700">Related Asset:</p>
+                            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
                             {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && !editingAsset && (
                               <Button
                                 variant="ghost"
@@ -1676,8 +1703,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           </div>
                           {!editingAsset ? (
                             <>
-                              <p className="text-sm text-gray-900">{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
-                              <p className="text-xs text-gray-500">{selectedTicket.asset.location}</p>
+                              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedTicket.asset.location}</p>
                               {selectedTicket.category && (
                                 <Badge variant="outline" className="mt-1" style={{ borderColor: selectedTicket.category.color }}>
                                   {selectedTicket.category.name}
@@ -1716,19 +1743,19 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                   Cancel
                                 </Button>
                               </div>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 * Category will be updated to match the selected asset
                               </p>
                             </div>
                           )}
                         </div>
                       )}
-                      
+
                       {/* Show add asset option if no asset is set */}
                       {!selectedTicket.asset && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
                         <div>
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-700">Related Asset:</p>
+                            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
                             {!editingAsset && (
                               <Button
                                 variant="ghost"
@@ -1744,7 +1771,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             )}
                           </div>
                           {!editingAsset ? (
-                            <p className="text-sm text-gray-500">No asset linked</p>
+                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No asset linked</p>
                           ) : (
                             <div className="space-y-2 mt-2">
                               <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
@@ -1776,7 +1803,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                   Cancel
                                 </Button>
                               </div>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 * Category will be updated to match the selected asset
                               </p>
                             </div>
@@ -1789,14 +1816,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Description */}
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">Description</h4>
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{selectedTicket.description}</p>
+                  <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Description</h4>
+                  <p className="p-4 rounded-lg" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>{selectedTicket.description}</p>
                 </div>
 
                 {/* Attachments */}
                 {selectedTicket.attachments.length > 0 && (
                   <div>
-                    <h4 className="text-lg font-medium text-gray-900 mb-3">Media & Attachments</h4>
+                    <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Media & Attachments</h4>
                     <MediaViewer 
                       files={selectedTicket.attachments}
                       gridCols={3}
@@ -1820,8 +1847,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Assignment Section - Only show for non-cancelled/closed tickets without contractor */}
                 {!selectedTicket.assignedTo && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3">Assign Ticket</h4>
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                    <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Assign Ticket</h4>
                     
                     {/* Assignment Type Toggle */}
                     <div className="flex gap-2 mb-4">
@@ -1845,16 +1872,16 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       <div className="space-y-4">
                         {/* Recommended Contractor */}
                         {recommendedContractor && (
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-green-800 flex items-center gap-1">
-                                <Star className="h-4 w-4 fill-current text-yellow-500" />
+                              <span className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--green)' }}>
+                                <Star className="h-4 w-4 fill-current text-ds-amber" />
                                 Recommended Contractor
                               </span>
                               <Button
                                 size="sm"
                                 variant="default"
-                                className="bg-green-600 hover:bg-green-700"
+                                style={{ backgroundColor: 'var(--green)' }}
                                 onClick={() => setSelectedContractor(recommendedContractor.userId)}
                               >
                                 Auto-Assign
@@ -1862,27 +1889,27 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="flex-1">
-                                <p className="font-medium text-gray-900">{recommendedContractor.name}</p>
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{recommendedContractor.name}</p>
+                                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                                   <Tooltip
                                     title={
                                       recommendedContractor.stats ? (
                                         <Box sx={{ p: 0.5 }}>
-                                          <Box sx={{ fontWeight: 600, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.2)', pb: 0.5 }}>
+                                          <Box sx={{ fontWeight: 500, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.15)', pb: 0.5 }}>
                                             Rating Breakdown
                                           </Box>
                                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: '0.8rem' }}>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                                               <span>Punctuality:</span>
-                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgPunctuality}/5</span>
+                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgPunctuality}/5</span>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                                               <span>Customer Service:</span>
-                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgCustomerService}/5</span>
+                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgCustomerService}/5</span>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
                                               <span>Workmanship:</span>
-                                              <span style={{ fontWeight: 600 }}>{recommendedContractor.stats.avgWorkmanship}/5</span>
+                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgWorkmanship}/5</span>
                                             </Box>
                                           </Box>
                                         </Box>
@@ -1890,7 +1917,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                     }
                                     arrow
                                   >
-                                    <span className="font-semibold text-blue-600 cursor-help">
+                                    <span className="font-medium cursor-help" style={{ color: 'var(--accent)' }}>
                                       {recommendedContractor.rating?.toFixed(1) || '-'}
                                     </span>
                                   </Tooltip>
@@ -1911,13 +1938,13 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         {/* Contractor Loading State */}
                         {loadingContractors && (
                           <div className="text-center py-4">
-                            <RefreshCw className="h-5 w-5 animate-spin mx-auto text-gray-400" />
-                            <p className="text-sm text-gray-500 mt-1">Finding contractors for this category...</p>
+                            <RefreshCw className="h-5 w-5 animate-spin mx-auto text-text-muted" />
+                            <p className="text-sm text-text-muted mt-1">Finding contractors for this category...</p>
                           </div>
                         )}
                         
                         {/* Request Quote Option - Moved to top */}
-                        <div className="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-center space-x-2 p-3 rounded-lg border" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
                           <input
                             type="checkbox"
                             id="requestQuote"
@@ -1928,9 +1955,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 setSelectedContractors([])
                               }
                             }}
-                            className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                            className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
                           />
-                          <Label htmlFor="requestQuote" className="text-sm font-medium text-amber-800 cursor-pointer">
+                          <Label htmlFor="requestQuote" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--amber)' }}>
                             Request Quote/Estimate First (can select multiple contractors)
                           </Label>
                         </div>
@@ -1951,31 +1978,30 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 </Label>
                                 <div className="border rounded-lg max-h-64 overflow-y-auto">
                                   {filteredContractors.length === 0 ? (
-                                    <p className="p-4 text-sm text-gray-500 text-center">
+                                    <p className="p-4 text-sm text-text-muted text-center">
                                       No contractors available for this category
                                     </p>
                                   ) : (
                                     filteredContractors.map(contractor => (
                                       <div
                                         key={contractor.id}
-                                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                                          selectedContractors.includes(contractor.userId) ? 'bg-amber-50 border-l-4 border-l-amber-500' : ''
-                                        }`}
+                                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors`}
+                                        style={selectedContractors.includes(contractor.userId) ? { backgroundColor: 'var(--amber-bg)', borderLeft: '4px solid var(--amber)' } : {}}
                                         onClick={() => toggleContractorSelection(contractor.userId)}
                                       >
                                         <input
                                           type="checkbox"
                                           checked={selectedContractors.includes(contractor.userId)}
                                           onChange={() => {}}
-                                          className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                          className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
                                         />
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
                                             <span className="font-medium">{contractor.name}</span>
-                                            <span className="font-semibold text-blue-600">
+                                            <span className="font-medium" style={{ color: 'var(--accent)' }}>
                                               ★ {contractor.rating?.toFixed(1) || '-'}
                                             </span>
-                                            <span className="text-xs text-gray-400">
+                                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                               ({contractor.totalJobs || 0} jobs)
                                             </span>
                                           </div>
@@ -1999,7 +2025,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                   )}
                                 </div>
                                 {selectedContractors.length > 0 && (
-                                  <p className="text-xs text-amber-600 mt-2">
+                                  <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
                                     Quote requests will be sent to {selectedContractors.length} contractor(s). You can compare and award the job later.
                                   </p>
                                 )}
@@ -2011,7 +2037,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                   <Label htmlFor="contractor">
                                     Select Contractor 
                                     {selectedTicket?.category && (
-                                      <span className="text-xs text-gray-500 ml-2">
+                                      <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                                         (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
                                       </span>
                                     )}
@@ -2030,10 +2056,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                           <SelectItem key={contractor.id} value={contractor.userId}>
                                             <div className="flex items-center gap-2">
                                               <span>{contractor.name}</span>
-                                              <span className="font-semibold text-blue-600">
+                                              <span className="font-medium" style={{ color: 'var(--ds-blue)' }}>
                                                 {contractor.rating?.toFixed(1) || '-'}
                                               </span>
-                                              <span className="text-xs text-gray-400">
+                                              <span className="text-xs text-text-muted">
                                                 ({contractor.totalJobs || 0} jobs)
                                               </span>
                                             </div>
@@ -2046,7 +2072,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 
                                 {/* Selected Contractor Details */}
                                 {selectedContractor && (
-                                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                  <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
                                     {(() => {
                                       const contractor = filteredContractors.find(c => c.userId === selectedContractor)
                                       if (!contractor) return null
@@ -2058,7 +2084,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                               title={
                                             contractor.stats ? (
                                               <Box sx={{ p: 0.5 }}>
-                                                <Box sx={{ fontWeight: 600, mb: 1 }}>Overall Rating</Box>
+                                                <Box sx={{ fontWeight: 500, mb: 1 }}>Overall Rating</Box>
                                                 <Box sx={{ fontSize: '0.8rem' }}>
                                                   Based on {contractor.stats.totalRatings} review{contractor.stats.totalRatings !== 1 ? 's' : ''}
                                                 </Box>
@@ -2067,23 +2093,23 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                           }
                                           arrow
                                         >
-                                          <span className="text-lg font-bold text-blue-600 cursor-help">
+                                          <span className="text-lg font-medium cursor-help" style={{ color: 'var(--accent)' }}>
                                             {contractor.rating?.toFixed(1) || '-'}
                                           </span>
                                         </Tooltip>
                                       </div>
                                       <div className="grid grid-cols-3 gap-2 text-sm">
-                                        <div className="text-center p-2 bg-white rounded">
-                                          <div className="font-semibold text-blue-600">{contractor.stats?.avgPunctuality || '-'}</div>
-                                          <div className="text-xs text-gray-500">Punctuality</div>
+                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                          <div className="font-medium" style={{ color: 'var(--accent)' }}>{contractor.stats?.avgPunctuality || '-'}</div>
+                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</div>
                                         </div>
-                                        <div className="text-center p-2 bg-white rounded">
-                                          <div className="font-semibold text-green-600">{contractor.stats?.avgCustomerService || '-'}</div>
-                                          <div className="text-xs text-gray-500">Service</div>
+                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                          <div className="font-medium" style={{ color: 'var(--green)' }}>{contractor.stats?.avgCustomerService || '-'}</div>
+                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</div>
                                         </div>
-                                        <div className="text-center p-2 bg-white rounded">
-                                          <div className="font-semibold text-purple-600">{contractor.stats?.avgWorkmanship || '-'}</div>
-                                          <div className="text-xs text-gray-500">Workmanship</div>
+                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{contractor.stats?.avgWorkmanship || '-'}</div>
+                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</div>
                                         </div>
                                       </div>
                                       {contractor.categories && contractor.categories.length > 0 && (
@@ -2124,7 +2150,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           <Button 
                             onClick={handleRequestQuotesFromMultiple} 
                             disabled={selectedContractors.length === 0 || loadingContractors}
-                            className="w-full bg-amber-600 hover:bg-amber-700"
+                            className="w-full bg-amber-bg hover:bg-amber-bg"
                           >
                             <FileText className="h-4 w-4 mr-2" />
                             Request Quotes from {selectedContractors.length} Contractor{selectedContractors.length !== 1 ? 's' : ''}
@@ -2142,7 +2168,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <p className="text-sm text-gray-600 mb-2">
+                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                           Assign to yourself or another HQ admin to handle this ticket internally.
                         </p>
                         
@@ -2205,12 +2231,12 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 {selectedTicket.hqAssignedAt && 
                  selectedTicket.assignedTo?.id === user.id && 
                  !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                      <UserCheck className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                      <UserCheck className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
                       HQ Assignment - Your Ticket
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                       This ticket is assigned to you. When you have completed the work, click &quot;Mark Job Complete&quot; 
                       to notify the user for review and rating.
                     </p>
@@ -2227,7 +2253,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                       </div>
                       <Button 
                         onClick={handleHQJobComplete}
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        style={{ backgroundColor: 'var(--green)' }}
+                        className="w-full"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Mark Job Complete
@@ -2238,9 +2265,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Awaiting Quote / Quote Submitted - Show all quote requests */}
                 {(selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED') && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-lg font-medium text-amber-800 flex items-center">
+                      <h4 className="text-lg font-medium flex items-center" style={{ color: 'var(--amber)' }}>
                         <FileText className="h-5 w-5 mr-2" />
                         Quote Requests
                       </h4>
@@ -2256,17 +2283,17 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     
                     {loadingQuoteRequests ? (
                       <div className="text-center py-4">
-                        <RefreshCw className="h-5 w-5 animate-spin mx-auto text-amber-400" />
-                        <p className="text-sm text-amber-600 mt-1">Loading quote requests...</p>
+                        <RefreshCw className="h-5 w-5 animate-spin mx-auto text-ds-amber" />
+                        <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>Loading quote requests...</p>
                       </div>
                     ) : quoteRequests.length === 0 ? (
                       <div className="text-center py-4">
-                        <p className="text-sm text-amber-700">
-                          {selectedTicket.assignedTo 
+                        <p className="text-sm" style={{ color: 'var(--amber)' }}>
+                          {selectedTicket.assignedTo
                             ? `Waiting for ${selectedTicket.assignedTo.name || 'the contractor'} to submit a quote.`
                             : 'No quote requests found. Use the multi-select option to request quotes.'}
                         </p>
-                        <p className="text-xs text-amber-600 mt-2">
+                        <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
                           Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
                         </p>
                       </div>
@@ -2275,20 +2302,21 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         {quoteRequests.map((qr) => (
                           <div 
                             key={qr.id} 
-                            className={`bg-white rounded-lg p-4 border ${
-                              qr.isAwarded ? 'border-green-400 bg-green-50' : 
-                              qr.status === 'submitted' ? 'border-indigo-300' : 
-                              qr.status === 'rejected' ? 'border-red-200 bg-red-50' :
-                              'border-gray-200'
-                            }`}
+                            className="rounded-lg p-4 border"
+                            style={
+                              qr.isAwarded ? { backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' } :
+                              qr.status === 'submitted' ? { backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' } :
+                              qr.status === 'rejected' ? { backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' } :
+                              { backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }
+                            }
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-3">
                                 <span 
-                                  style={{ 
+                                  style={{
                                     fontSize: '0.875rem',
-                                    fontWeight: 700,
-                                    color: '#1976d2',
+                                    fontWeight: 500,
+                                    color: 'var(--accent)',
                                     minWidth: '20px'
                                   }}
                                 >
@@ -2296,7 +2324,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 </span>
                                 <div>
                                   <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
-                                  <p className="text-xs text-gray-500">{qr.contractor?.email}</p>
+                                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{qr.contractor?.email}</p>
                                 </div>
                               </div>
                               <Badge variant={
@@ -2304,7 +2332,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                 qr.status === 'submitted' ? 'secondary' : 
                                 qr.status === 'rejected' ? 'destructive' :
                                 'outline'
-                              } className={qr.isAwarded ? 'bg-green-600' : ''}>
+                              } style={qr.isAwarded ? { backgroundColor: 'var(--green)' } : {}}>
                                 {qr.isAwarded ? '✓ Awarded' : qr.status.toUpperCase()}
                               </Badge>
                             </div>
@@ -2312,21 +2340,21 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             {qr.status === 'submitted' && (
                               <>
                                 <div className="flex justify-between items-center mt-3">
-                                  <span className="text-sm text-gray-600">Quoted Amount:</span>
-                                  <span className="text-xl font-bold text-indigo-800">
+                                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Quoted Amount:</span>
+                                  <span className="text-xl font-medium" style={{ color: 'var(--blue)' }}>
                                     ${qr.quoteAmount?.toFixed(2) || 'N/A'}
                                   </span>
                                 </div>
                                 {qr.estimatedDays && (
                                   <div className="flex justify-between items-center mt-1">
-                                    <span className="text-xs text-gray-500">Est. completion:</span>
-                                    <span className="text-sm text-gray-700">{qr.estimatedDays} day(s)</span>
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Est. completion:</span>
+                                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{qr.estimatedDays} day(s)</span>
                                   </div>
                                 )}
                                 {qr.quoteDescription && (
                                   <div className="mt-3 pt-3 border-t">
-                                    <p className="text-xs text-gray-500 font-medium mb-1">Description:</p>
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{qr.quoteDescription}</p>
+                                    <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Description:</p>
+                                    <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{qr.quoteDescription}</p>
                                   </div>
                                 )}
                                 {qr.quoteFileUrl && (
@@ -2334,31 +2362,33 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                                     href={qr.quoteFileUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
-                                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center mt-2"
+                                    className="text-sm flex items-center mt-2" style={{ color: 'var(--accent)' }}
                                   >
                                     <Download className="h-4 w-4 mr-1" />
                                     View Quote Document
                                   </a>
                                 )}
-                                <p className="text-xs text-gray-500 mt-2">
+                                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                                   Submitted: {qr.submittedAt && new Date(qr.submittedAt).toLocaleString()}
                                 </p>
-                                
+
                                 {!qr.isAwarded && qr.status === 'submitted' && (
                                   <div className="flex space-x-2 mt-3">
-                                    <Button 
+                                    <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleRejectQuote(qr.id)}
-                                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                                      className="flex-1"
+                                      style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
                                     >
                                       <X className="h-4 w-4 mr-1" />
                                       Reject
                                     </Button>
-                                    <Button 
+                                    <Button
                                       size="sm"
                                       onClick={() => handleAwardQuote(qr.id)}
-                                      className="flex-1 bg-green-600 hover:bg-green-700"
+                                      className="flex-1"
+                                      style={{ backgroundColor: 'var(--green)' }}
                                     >
                                       <CheckCircle className="h-4 w-4 mr-1" />
                                       Award Job
@@ -2369,20 +2399,20 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                             )}
                             
                             {qr.status === 'pending' && (
-                              <p className="text-sm text-amber-600 mt-2">
+                              <p className="text-sm mt-2" style={{ color: 'var(--amber)' }}>
                                 <Clock className="h-4 w-4 inline mr-1" />
                                 Awaiting quote submission...
                               </p>
                             )}
                             
                             {qr.status === 'rejected' && qr.rejectionReason && (
-                              <p className="text-sm text-red-600 mt-2">
+                              <p className="text-sm mt-2" style={{ color: 'var(--red)' }}>
                                 Reason: {qr.rejectionReason}
                               </p>
                             )}
                             
                             {qr.isAwarded && (
-                              <p className="text-sm text-green-600 mt-2 font-medium">
+                              <p className="text-sm mt-2 font-medium" style={{ color: 'var(--green)' }}>
                                 🎉 This contractor was awarded the job
                               </p>
                             )}
@@ -2391,8 +2421,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         
                         {/* Summary */}
                         {quoteRequests.filter(qr => qr.status === 'submitted').length > 1 && !quoteRequests.some(qr => qr.isAwarded) && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                            <p className="text-sm text-blue-800">
+                          <div className="border rounded-lg p-3 mt-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                            <p className="text-sm" style={{ color: 'var(--blue)' }}>
                               <strong>{quoteRequests.filter(qr => qr.status === 'submitted').length}</strong> quotes received. 
                               Compare and select the best contractor for this job.
                             </p>
@@ -2405,15 +2435,15 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Cancelled status message */}
                 {selectedTicket.status === 'CANCELLED' && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-red-800 mb-2">Ticket Cancelled</h4>
-                    <p className="text-sm text-red-600">
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                    <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--red)' }}>Ticket Cancelled</h4>
+                    <p className="text-sm" style={{ color: 'var(--red)' }}>
                       This ticket has been cancelled and cannot be assigned to a contractor.
                     </p>
                     {selectedTicket.cancellationReason && (
-                      <div className="mt-2 p-2 bg-red-100 rounded">
-                        <p className="text-xs text-red-700 font-medium">Cancellation Reason:</p>
-                        <p className="text-sm text-red-800">{selectedTicket.cancellationReason}</p>
+                      <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'var(--red-bg)' }}>
+                        <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Cancellation Reason:</p>
+                        <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.cancellationReason}</p>
                       </div>
                     )}
                   </div>
@@ -2421,18 +2451,18 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Awaiting Description - Contractor needs to submit work description */}
                 {selectedTicket.status === 'AWAITING_DESCRIPTION' && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-amber-800 mb-2 flex items-center">
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                    <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
                       <Clock className="h-5 w-5 mr-2" />
                       Awaiting Work Description
                     </h4>
-                    <p className="text-sm text-amber-700">
+                    <p className="text-sm" style={{ color: 'var(--amber)' }}>
                       The user has marked this job as complete. Waiting for the contractor to submit a description of the work done.
                     </p>
                     {selectedTicket.workDescriptionRejectionReason && (
-                      <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-                        <p className="text-xs text-red-700 font-medium">Previous description was rejected:</p>
-                        <p className="text-sm text-red-800">{selectedTicket.workDescriptionRejectionReason}</p>
+                      <div className="mt-2 p-2 border rounded" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                        <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Previous description was rejected:</p>
+                        <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.workDescriptionRejectionReason}</p>
                       </div>
                     )}
                   </div>
@@ -2440,18 +2470,18 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Awaiting Work Approval - User needs to approve description */}
                 {selectedTicket.status === 'AWAITING_WORK_APPROVAL' && (
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-indigo-800 mb-2 flex items-center">
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                    <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
                       <FileText className="h-5 w-5 mr-2" />
                       Awaiting User Approval
                     </h4>
-                    <p className="text-sm text-indigo-700 mb-3">
+                    <p className="text-sm mb-3" style={{ color: 'var(--blue)' }}>
                       The contractor has submitted a work description. Waiting for user to review and approve.
                     </p>
                     {selectedTicket.workDescription && (
-                      <div className="p-3 bg-white border border-indigo-100 rounded">
-                        <p className="text-xs text-gray-500 font-medium mb-1">Work Description:</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTicket.workDescription}</p>
+                      <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Work Description:</p>
+                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
                       </div>
                     )}
                   </div>
@@ -2459,18 +2489,18 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Completed status message - Updated with work description info */}
                 {selectedTicket.status === 'COMPLETED' && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                      <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                      <CheckCircle className="h-5 w-5 mr-2" style={{ color: 'var(--green)' }} />
                       Job Completed - Work Approved
                     </h4>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                       The user has approved the work description. Waiting for user to close and rate. Contractor can now upload invoice.
                     </p>
                     {selectedTicket.workDescription && (
-                      <div className="p-3 bg-white border border-green-100 rounded">
-                        <p className="text-xs text-gray-500 font-medium mb-1">Approved Work Description:</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedTicket.workDescription}</p>
+                      <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--green)' }}>
+                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Approved Work Description:</p>
+                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
                       </div>
                     )}
                   </div>
@@ -2478,31 +2508,31 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
                 {/* Invoice Section for CLOSED tickets */}
                 {selectedTicket.status === 'CLOSED' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                      <FileText className="h-5 w-5 mr-2 text-blue-600" />
+                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                      <FileText className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
                       Invoice
                     </h4>
                     {selectedTicket.invoices?.[0] ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-gray-600">Invoice Number</p>
-                            <p className="text-lg font-semibold text-gray-900">{selectedTicket.invoices[0].invoiceNumber}</p>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Invoice Number</p>
+                            <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{selectedTicket.invoices[0].invoiceNumber}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-600">Amount</p>
-                            <p className="text-lg font-semibold text-green-600 flex items-center">
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Amount</p>
+                            <p className="text-lg font-medium flex items-center" style={{ color: 'var(--green)' }}>
                               <DollarSign className="h-5 w-5" />
                               {selectedTicket.invoices[0].amount.toFixed(2)}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
-                          <Badge className={
-                            selectedTicket.invoices[0].status === 'PAID' ? 'bg-green-100 text-green-800' :
-                            selectedTicket.invoices[0].status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
+                          <Badge variant={
+                            selectedTicket.invoices[0].status === 'PAID' ? 'success' :
+                            selectedTicket.invoices[0].status === 'APPROVED' ? 'info' :
+                            'warning'
                           }>
                             {selectedTicket.invoices[0].status}
                           </Badge>
@@ -2534,7 +2564,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 italic">
+                      <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
                         No invoice submitted yet. The contractor will upload their invoice.
                       </p>
                     )}
@@ -2590,22 +2620,22 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         <Dialog open={showUnassignConfirm} onOpenChange={setShowUnassignConfirm}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center text-red-600">
+              <DialogTitle className="flex items-center text-ds-red">
                 <AlertTriangle className="h-5 w-5 mr-2" />
                 Revoke Assignment
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Are you sure you want to revoke the assignment from{' '}
-                <span className="font-semibold">{selectedTicket?.assignedTo?.name}</span>?
+                <span className="font-medium">{selectedTicket?.assignedTo?.name}</span>?
                 {selectedTicket?.hqAssignedAt && (
-                  <span className="block mt-1 text-blue-600">
+                  <span className="block mt-1" style={{ color: 'var(--blue)' }}>
                     This is an HQ staff assignment.
                   </span>
                 )}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 The ticket will be returned to &quot;Open&quot; status and can be reassigned.
               </p>
               
@@ -2775,7 +2805,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     onClick={() => quickEditTicket && handleQuickAssign(quickEditTicket.id, recommendedContractor.userId)}
                   >
                     <ListItemIcon>
-                      <Star className="h-4 w-4 text-yellow-600" />
+                      <Star className="h-4 w-4 text-ds-amber" />
                     </ListItemIcon>
                     <ListItemText 
                       primary={recommendedContractor.name}
@@ -2799,8 +2829,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     <span 
                       style={{ 
                         fontSize: '0.875rem',
-                        fontWeight: 700,
-                        color: '#1976d2',
+                        fontWeight: 500,
+                        color: 'var(--ds-blue)',
                         minWidth: '20px'
                       }}
                     >
@@ -2816,7 +2846,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                           {contractor.totalJobs ? ` • ${contractor.totalJobs} jobs` : ''}
                         </span>
                         {contractor.categories && contractor.categories.length > 0 && (
-                          <span className="text-gray-400 truncate">
+                          <span className="text-text-muted truncate">
                             {contractor.categories.map(c => c.name).join(', ')}
                           </span>
                         )}
