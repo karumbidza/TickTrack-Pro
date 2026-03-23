@@ -449,40 +449,40 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
       {/* Filter drawer overlay */}
       {filterDrawerOpen && <div onClick={() => setFilterDrawerOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />}
       {/* Filter drawer */}
-      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 300, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 13, fontWeight: 500 }}>Filters</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>Filters</span>
           <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer' }}>✕</button>
         </div>
         <div style={{ flex: 1, padding: 16 }}>
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
           {[{ value: 'available', label: 'Available' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }].map(opt => (
             <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={contractorFilters.status === opt.value} onChange={() => setContractorFilters(f => ({ ...f, status: f.status === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{opt.label}</span>
             </label>
           ))}
         </div>
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-          <button onClick={() => { setContractorFilters({ status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: 7, fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
-          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: 7, fontSize: 11, background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
+          <button onClick={() => { setContractorFilters({ status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: 7, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: 7, fontSize: 'var(--text-xs)', background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
         </div>
       </div>
 
       {/* Topbar — 52px */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Contractors</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredContractors.length} contractors</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Contractors</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredContractors.length} contractors</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>
+          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
             <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
             Filters
-            {contractorFilters.status && <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>}
+            {contractorFilters.status && <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>}
           </button>
-          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>Invite</button>
-          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>+ Quick Add</button>
+          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Invite</button>
+          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--bg)' }}>+ Quick Add</button>
         </div>
       </div>
 
@@ -490,20 +490,20 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         {/* 4 stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           <div onClick={() => setStatFilter(statFilter === '' ? '' : '')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{contractors.length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{contractors.length}</div>
           </div>
           <div onClick={() => setStatFilter(statFilter === 'available' ? '' : 'available')} style={{ background: 'var(--surface)', border: statFilter === 'available' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Available</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{availableCount}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Available</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{availableCount}</div>
           </div>
           <div onClick={() => setStatFilter(statFilter === 'active' ? '' : 'active')} style={{ background: 'var(--surface)', border: statFilter === 'active' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Active / On Jobs</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{activeContractors.length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Active / On Jobs</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{activeContractors.length}</div>
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '11px 13px' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Avg Rating</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{avgRating ?? '—'}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Avg Rating</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{avgRating ?? '—'}</div>
           </div>
         </div>
 
@@ -512,7 +512,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', borderRadius: '8px 8px 0 0', borderBottom: 'none', padding: '0 12px', backgroundColor: 'var(--surface)' }}>
             <div style={{ display: 'flex' }}>
               {[{ value: 'active', label: 'Active Contractors' }, { value: 'kyc', label: 'KYC Applications' }].map(tab => (
-                <button key={tab.value} onClick={() => setActiveTab(tab.value)} style={{ padding: '10px 12px', fontSize: 12, fontWeight: activeTab === tab.value ? 500 : 400, color: activeTab === tab.value ? 'var(--text-primary)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: activeTab === tab.value ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.12s', marginBottom: -1 }}>
+                <button key={tab.value} onClick={() => setActiveTab(tab.value)} style={{ padding: '10px 12px', fontSize: 'var(--text-xs)', fontWeight: activeTab === tab.value ? 500 : 400, color: activeTab === tab.value ? 'var(--text-primary)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: activeTab === tab.value ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.12s', marginBottom: -1 }}>
                   {tab.label}
                 </button>
               ))}
@@ -520,7 +520,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
             {/* Search floated right */}
             <div style={{ position: 'relative' }}>
               <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contractors..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 5, paddingBottom: 5, fontSize: 11, border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 190 }} />
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contractors..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 5, paddingBottom: 5, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 190 }} />
             </div>
           </div>
 
@@ -532,7 +532,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
                       {['Contractor', 'Specialty', 'Jobs Done', 'Rating', 'Status', 'Joined', 'Actions'].map(col => (
-                        <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
+                        <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
                       ))}
                     </tr>
                   </thead>
@@ -544,39 +544,39 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                       >
                         <td style={{ padding: '9px 14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
                               {getInitials(contractor.name, contractor.email)}
                             </div>
                             <div>
-                              <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{contractor.name}</div>
-                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{contractor.email}</div>
+                              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{contractor.name}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{contractor.email}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '9px 14px' }}>
+                        <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>
                           {contractor.categories && contractor.categories.length > 0
                             ? contractor.categories.slice(0, 2).map(c => c.name).join(', ')
                             : <span style={{ color: 'var(--text-muted)' }}>—</span>
                           }
                         </td>
-                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px' }}>{contractor.totalJobs ?? 0}</td>
+                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px' }}>{contractor.totalJobs ?? 0}</td>
                         <td style={{ padding: '9px 14px' }}>
                           {contractor.rating ? (
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#92400e' }}>{contractor.rating.toFixed(1)} ★</span>
-                          ) : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>—</span>}
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: '#92400e' }}>{contractor.rating.toFixed(1)} ★</span>
+                          ) : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td style={{ padding: '9px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: contractor.isAvailable ? '#e8f5ee' : contractor.isActive ? '#eff6ff' : '#f0efe9', color: contractor.isAvailable ? '#2d6a4f' : contractor.isActive ? '#1e40af' : '#6b6860' }}>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: contractor.isAvailable ? '#e8f5ee' : contractor.isActive ? '#eff6ff' : '#f0efe9', color: contractor.isAvailable ? '#2d6a4f' : contractor.isActive ? '#1e40af' : '#6b6860' }}>
                             {contractor.isAvailable ? 'Available' : contractor.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
                           —
                         </td>
                         <td style={{ padding: '9px 14px' }}>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button onClick={() => handleEditContractor(contractor)} style={{ fontSize: 11, padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Edit</button>
-                            <button onClick={() => handleViewRatings(contractor)} style={{ fontSize: 11, padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Ratings</button>
+                            <button onClick={() => handleEditContractor(contractor)} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Edit</button>
+                            <button onClick={() => handleViewRatings(contractor)} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Ratings</button>
                           </div>
                         </td>
                       </tr>
@@ -588,7 +588,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
                     <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                       <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No contractors found</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No contractors found</div>
                   </div>
                 )}
               </div>

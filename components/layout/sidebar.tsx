@@ -64,7 +64,7 @@ function NavLink({ href, label, icon, exact, isActive }: {
         gap: 8,
         padding: '7px 10px',
         borderRadius: 8,
-        fontSize: 13,
+        fontSize: 'var(--text-sm)',
         fontWeight: isActive ? 500 : 400,
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         backgroundColor: isActive ? 'var(--surface2)' : 'transparent',
@@ -99,9 +99,9 @@ function SectionLabel({ label }: { label: string }) {
   return (
     <div style={{
       fontFamily: 'DM Mono, monospace',
-      fontSize: 9,
+      fontSize: 'var(--text-xs)',
       fontWeight: 400,
-      letterSpacing: '0.08em',
+      letterSpacing: 'var(--tracking-wider)',
       textTransform: 'uppercase',
       color: 'var(--text-muted)',
       padding: '8px 10px 4px',
@@ -185,7 +185,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
                     gap: 8,
                     padding: '7px 10px',
                     borderRadius: 8,
-                    fontSize: 13,
+                    fontSize: 'var(--text-sm)',
                     fontWeight: isSettingsActive ? 500 : 400,
                     color: isSettingsActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                     backgroundColor: isSettingsActive ? 'var(--surface2)' : 'transparent',
@@ -239,7 +239,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
                             paddingTop: 5,
                             paddingBottom: 5,
                             borderRadius: 6,
-                            fontSize: 11,
+                            fontSize: 'var(--text-xs)',
                             fontWeight: subActive ? 500 : 400,
                             color: subActive ? 'var(--text-primary)' : 'var(--text-muted)',
                             textDecoration: 'none',
@@ -276,7 +276,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
       <div style={{ borderTop: '1px solid var(--border)', padding: '8px', flexShrink: 0 }}>
         {/* Notifications row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 4 }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', letterSpacing: '0.05em' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', letterSpacing: 'var(--tracking-wide)' }}>
             {session.user.tenantName || (role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack')}
           </span>
           <NotificationBell pollInterval={30000} />
@@ -293,7 +293,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 11,
+            fontSize: 'var(--text-xs)',
             fontWeight: 500,
             flexShrink: 0,
             fontFamily: 'DM Mono, monospace',
@@ -301,11 +301,11 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
             {getInitials(session.user.name, session.user.email)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {session.user.name || session.user.email}
             </div>
             {session.user.branchName && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {session.user.branchName}
               </div>
             )}

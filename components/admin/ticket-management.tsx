@@ -1045,10 +1045,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       />
 
       {/* Topbar */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
             {filteredTickets.length} tickets
           </div>
         </div>
@@ -1074,23 +1074,23 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {/* Total card */}
           <div onClick={() => setStatFilter('')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{tickets.length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{tickets.length}</div>
           </div>
           {/* Open card */}
           <div onClick={() => setStatFilter(statFilter === 'open' ? '' : 'open')} style={{ background: 'var(--surface)', border: statFilter === 'open' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Open</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#92400e' }}>{tickets.filter(t => t.status === 'OPEN').length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Open</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#92400e' }}>{tickets.filter(t => t.status === 'OPEN').length}</div>
           </div>
           {/* In Progress card */}
           <div onClick={() => setStatFilter(statFilter === 'in_progress' ? '' : 'in_progress')} style={{ background: 'var(--surface)', border: statFilter === 'in_progress' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>In Progress</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{tickets.filter(t => ['IN_PROGRESS', 'ASSIGNED', 'ON_SITE', 'AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED'].includes(t.status)).length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>In Progress</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{tickets.filter(t => ['IN_PROGRESS', 'ASSIGNED', 'ON_SITE', 'AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED'].includes(t.status)).length}</div>
           </div>
           {/* Completed card */}
           <div onClick={() => setStatFilter(statFilter === 'completed' ? '' : 'completed')} style={{ background: 'var(--surface)', border: statFilter === 'completed' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Completed</div>
-            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{tickets.filter(t => ['COMPLETED', 'CLOSED'].includes(t.status)).length}</div>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Completed</div>
+            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{tickets.filter(t => ['COMPLETED', 'CLOSED'].includes(t.status)).length}</div>
           </div>
         </div>
 
@@ -1101,7 +1101,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search by title, ticket number, or reporter..."
-            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, fontSize: 12, border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
 
@@ -1109,8 +1109,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
           {/* Card header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Tickets</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{filteredTickets.length} results</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Tickets</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{filteredTickets.length} results</span>
           </div>
           {/* Table */}
           <div style={{ overflowX: 'auto' }}>
@@ -1118,7 +1118,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['Ticket ID', 'Title', 'Branch', 'Priority', 'Status', 'Created', 'Actions'].map(col => (
-                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
+                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
                   ))}
                 </tr>
               </thead>
@@ -1129,31 +1129,31 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     onClick={() => { setSelectedTicket(ticket); setShowTicketModal(true) }}
                   >
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.ticketNumber}</td>
-                    <td style={{ fontSize: 12, color: 'var(--text-primary)', padding: '9px 14px', maxWidth: 240 }}>
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.ticketNumber}</td>
+                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', padding: '9px 14px', maxWidth: 240 }}>
                       <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.title}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{ticket.user?.name || ticket.user?.email}</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 1 }}>{ticket.user?.name || ticket.user?.email}</div>
                     </td>
-                    <td style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.branch?.name || '—'}</td>
+                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.branch?.name || '—'}</td>
                     <td style={{ padding: '9px 14px' }}>
                       <span style={{
-                        fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
+                        fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
                         padding: '2px 7px', borderRadius: 99,
                         ...getPriorityPill(ticket.priority)
                       }}>{ticket.priority}</span>
                     </td>
                     <td style={{ padding: '9px 14px' }}>
                       <span style={{
-                        fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
+                        fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
                         padding: '2px 7px', borderRadius: 99,
                         ...getStatusPill(ticket.status)
                       }}>{ticket.status.replace(/_/g, ' ')}</span>
                     </td>
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{new Date(ticket.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: '9px 14px' }}>
                       <button
                         onClick={e => { e.stopPropagation(); setSelectedTicket(ticket); setShowTicketModal(true) }}
-                        style={{ fontSize: 11, padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                        style={{ fontSize: 'var(--text-xs)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
                       >View</button>
                     </td>
                   </tr>
@@ -1165,8 +1165,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
                 <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                   <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No tickets found</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No tickets found</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
               </div>
             )}
           </div>

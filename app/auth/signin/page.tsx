@@ -122,11 +122,11 @@ function SignInForm() {
         animate={{ opacity: 1, y: 0 }}
         style={{ width: '100%', maxWidth: 420 }}
       >
-        <div className="text-center mb-8">
-          <Logo size="sm" href="/" />
-        </div>
-
         <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '36px 36px 28px' }}>
+          <div className="text-center mb-6">
+            <Logo size="sm" href="/" />
+          </div>
+
           <div style={{ marginBottom: '1.75rem' }}>
             <p className="section-label mb-3">Sign in</p>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>

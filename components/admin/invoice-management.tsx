@@ -110,9 +110,9 @@ const STATUS_PILL: Record<string, { backgroundColor: string; color: string }> = 
 
 const monoLabel = {
   fontFamily: 'DM Mono, monospace',
-  fontSize: 9,
+  fontSize: 'var(--text-xs)',
   textTransform: 'uppercase' as const,
-  letterSpacing: '0.05em',
+  letterSpacing: 'var(--tracking-wide)',
   color: 'var(--text-muted)',
 }
 
@@ -499,7 +499,7 @@ export function AdminInvoiceManagement() {
 
   // ── Shared inline styles ──────────────────────────────────────────────────────
   const actionBtn = (style?: object) => ({
-    fontSize: 10, padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
+    fontSize: 'var(--text-xs)', padding: '3px 8px', borderRadius: 5, cursor: 'pointer',
     border: '1px solid var(--border)', backgroundColor: 'var(--surface)',
     color: 'var(--text-secondary)', ...style,
   })
@@ -511,7 +511,7 @@ export function AdminInvoiceManagement() {
         placeholder="Search invoices..."
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
-        style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', maxWidth: 200, width: 200, outline: 'none' }}
+        style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, border: '1px solid var(--border)', borderRadius: 6, fontSize: 'var(--text-xs)', backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', maxWidth: 200, width: 200, outline: 'none' }}
       />
     </div>
   )
@@ -533,7 +533,7 @@ export function AdminInvoiceManagement() {
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />
       )}
       <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 260,
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 300,
         backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)',
         zIndex: 50, display: 'flex', flexDirection: 'column',
         transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
@@ -541,7 +541,7 @@ export function AdminInvoiceManagement() {
       }}>
         {/* Drawer header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
           <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <X size={12} style={{ color: 'var(--text-secondary)' }} />
           </button>
@@ -554,7 +554,7 @@ export function AdminInvoiceManagement() {
           <div>
             <p style={{ ...monoLabel, marginBottom: 8 }}>Status</p>
             {invoiceFilters.status ? (
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 4 }}>Status set by card selection</p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 4 }}>Status set by card selection</p>
             ) : (
               ([
                 { value: 'pending',  label: 'Pending',  pill: STATUS_PILL.PENDING },
@@ -567,7 +567,7 @@ export function AdminInvoiceManagement() {
                   <div style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: draftFilters.status === value ? '1.5px solid #1a1916' : '1.5px solid var(--border)', backgroundColor: draftFilters.status === value ? '#1a1916' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {draftFilters.status === value && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="#f7f6f3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
-                  <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 99, ...pill, fontWeight: draftFilters.status === value ? 500 : 400 }}>{label}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', padding: '1px 7px', borderRadius: 99, ...pill, fontWeight: draftFilters.status === value ? 500 : 400 }}>{label}</span>
                 </div>
               ))
             )}
@@ -579,9 +579,9 @@ export function AdminInvoiceManagement() {
             <p style={{ ...monoLabel, marginBottom: 8 }}>Amount Range (USD)</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <input type="number" placeholder="Min" value={draftFilters.amountMin} onChange={e => setDraftFilters(d => ({ ...d, amountMin: e.target.value }))}
-                style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 12, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 'var(--text-xs)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
               <input type="number" placeholder="Max" value={draftFilters.amountMax} onChange={e => setDraftFilters(d => ({ ...d, amountMax: e.target.value }))}
-                style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 12, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 'var(--text-xs)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
             </div>
             <div style={{ borderTop: '1px solid var(--border)', margin: '12px 0 14px' }} />
           </div>
@@ -596,7 +596,7 @@ export function AdminInvoiceManagement() {
                   <div style={{ width: 14, height: 14, borderRadius: 3, flexShrink: 0, border: draftFilters.contractors.includes(name) ? '1.5px solid #1a1916' : '1.5px solid var(--border)', backgroundColor: draftFilters.contractors.includes(name) ? '#1a1916' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {draftFilters.contractors.includes(name) && <svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3.5 6L8 1" stroke="#f7f6f3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
-                  <span style={{ fontSize: 12, color: draftFilters.contractors.includes(name) ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: draftFilters.contractors.includes(name) ? 500 : 400 }}>{name}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: draftFilters.contractors.includes(name) ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: draftFilters.contractors.includes(name) ? 500 : 400 }}>{name}</span>
                 </div>
               ))}
               <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0 14px' }} />
@@ -612,7 +612,7 @@ export function AdminInvoiceManagement() {
                 { value: 'month', label: 'This month' }, { value: 'custom', label: 'Custom' },
               ].map(({ value, label }) => (
                 <button key={value} onClick={() => setDraftFilters(d => ({ ...d, date: d.date === value ? '' : value }))}
-                  style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${draftFilters.date === value ? '#1a1916' : 'var(--border)'}`, backgroundColor: draftFilters.date === value ? '#1a1916' : 'transparent', color: draftFilters.date === value ? '#f7f6f3' : 'var(--text-secondary)' }}>
+                  style={{ fontSize: 'var(--text-xs)', padding: '3px 10px', borderRadius: 99, cursor: 'pointer', border: `1px solid ${draftFilters.date === value ? '#1a1916' : 'var(--border)'}`, backgroundColor: draftFilters.date === value ? '#1a1916' : 'transparent', color: draftFilters.date === value ? '#f7f6f3' : 'var(--text-secondary)' }}>
                   {label}
                 </button>
               ))}
@@ -620,9 +620,9 @@ export function AdminInvoiceManagement() {
             {draftFilters.date === 'custom' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <input type="date" value={draftFilters.dateFrom} onChange={e => setDraftFilters(d => ({ ...d, dateFrom: e.target.value }))}
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 12, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 'var(--text-xs)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
                 <input type="date" value={draftFilters.dateTo} onChange={e => setDraftFilters(d => ({ ...d, dateTo: e.target.value }))}
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 12, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontSize: 'var(--text-xs)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none' }} />
               </div>
             )}
           </div>
@@ -631,28 +631,28 @@ export function AdminInvoiceManagement() {
         {/* Drawer footer */}
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => setDraftFilters(EMPTY_FILTERS)}
-            style={{ flex: 1, padding: '7px 0', fontSize: 12, color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}>
+            style={{ flex: 1, padding: '7px 0', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}>
             Clear all
           </button>
           <button onClick={() => { setInvoiceFilters(draftFilters); setFilterDrawerOpen(false) }}
-            style={{ flex: 2, padding: '7px 0', fontSize: 12, fontWeight: 500, color: '#f7f6f3', backgroundColor: '#1a1916', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+            style={{ flex: 2, padding: '7px 0', fontSize: 'var(--text-xs)', fontWeight: 500, color: '#f7f6f3', backgroundColor: '#1a1916', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
             Apply Filters
           </button>
         </div>
       </div>
 
       {/* ── Topbar ───────────────────────────────────────────────────────────── */}
-      <div style={{ height: 52, minHeight: 52, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ height: 56, minHeight: 56, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <h1 style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>Invoices</h1>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Manage contractor invoices</p>
+          <h1 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>Invoices</h1>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>Manage contractor invoices</p>
         </div>
         <button onClick={() => setFilterDrawerOpen(o => !o)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', fontSize: 12, borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border)', backgroundColor: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', color: 'var(--text-secondary)' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', fontSize: 'var(--text-xs)', borderRadius: 6, cursor: 'pointer', border: '1px solid var(--border)', backgroundColor: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', color: 'var(--text-secondary)' }}>
           <SlidersHorizontal size={13} />
           Filters
           {activeFilterCount > 0 && (
-            <span style={{ width: 15, height: 15, borderRadius: 99, backgroundColor: '#1a1916', color: '#f7f6f3', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 15, height: 15, borderRadius: 99, backgroundColor: '#1a1916', color: '#f7f6f3', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
               {activeFilterCount}
             </span>
           )}
@@ -663,7 +663,7 @@ export function AdminInvoiceManagement() {
       <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
         {/* Section label */}
-        <p style={{ ...monoLabel, margin: 0, fontSize: 10, letterSpacing: '0.08em' }}>Click a card to filter</p>
+        <p style={{ ...monoLabel, margin: 0, fontSize: 'var(--text-xs)', letterSpacing: 'var(--tracking-wider)' }}>Click a card to filter</p>
 
         {/* Stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -678,8 +678,8 @@ export function AdminInvoiceManagement() {
               <div key={label} onClick={() => key && setInvoiceFilters(f => ({ ...f, status: f.status === key ? '' : key }))}
                 style={{ backgroundColor: 'var(--surface)', border: isActive ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '13px 14px', cursor: key ? 'pointer' : 'default', transition: 'border 0.15s ease', userSelect: 'none' }}>
                 <p style={{ ...monoLabel, marginBottom: 6 }}>{label}</p>
-                <p style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color }}>{value}</p>
-                <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{sub}</p>
+                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color }}>{value}</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 3 }}>{sub}</p>
               </div>
             )
           })}
@@ -691,8 +691,8 @@ export function AdminInvoiceManagement() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Wallet size={15} style={{ color: '#1e40af' }} />
               <div>
-                <p style={{ fontSize: 12, fontWeight: 500, color: '#1e40af', margin: 0 }}>Batch Payment</p>
-                <p style={{ fontSize: 11, color: '#1e40af', margin: 0 }}>Select invoices below to process with a single Proof of Payment</p>
+                <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: '#1e40af', margin: 0 }}>Batch Payment</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: '#1e40af', margin: 0 }}>Select invoices below to process with a single Proof of Payment</p>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -713,17 +713,17 @@ export function AdminInvoiceManagement() {
         {/* Payment batches */}
         {invoiceFilters.status === 'paid' && paymentBatches.length > 0 && (
           <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
-            <p style={{ ...monoLabel, padding: '10px 14px', margin: 0, borderBottom: '1px solid var(--border)', fontSize: 9, letterSpacing: '0.08em' }}>Payment Batches</p>
+            <p style={{ ...monoLabel, padding: '10px 14px', margin: 0, borderBottom: '1px solid var(--border)', fontSize: 'var(--text-xs)', letterSpacing: 'var(--tracking-wider)' }}>Payment Batches</p>
             {paymentBatches.map(batch => (
               <div key={batch.id}>
                 <div onClick={() => setExpandedBatch(expandedBatch === batch.id ? null : batch.id)}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}>
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{batch.batchNumber}</p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{new Date(batch.paymentDate).toLocaleDateString()} · {batch.invoices.length} invoice{batch.invoices.length > 1 ? 's' : ''}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{batch.batchNumber}</p>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>{new Date(batch.paymentDate).toLocaleDateString()} · {batch.invoices.length} invoice{batch.invoices.length > 1 ? 's' : ''}</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: '#2d6a4f', margin: 0 }}>${batch.totalAmount.toFixed(2)}</p>
+                    <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-sm)', color: '#2d6a4f', margin: 0 }}>${batch.totalAmount.toFixed(2)}</p>
                     <MediaHoverPreview file={{ url: batch.popFileUrl, filename: `POP-${batch.batchNumber}.pdf`, mimeType: 'application/pdf' }} previewSize="lg">
                       <button onClick={e => { e.stopPropagation(); window.open(batch.popFileUrl, '_blank') }} style={actionBtn()}>View POP</button>
                     </MediaHoverPreview>
@@ -734,11 +734,11 @@ export function AdminInvoiceManagement() {
                     {batch.invoices.map((inv, idx) => (
                       <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: idx < batch.invoices.length - 1 ? '1px solid var(--border)' : 'none' }}>
                         <div>
-                          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', margin: 0 }}>{inv.invoiceNumber}</p>
-                          <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: 0 }}>{inv.ticket?.ticketNumber}</p>
+                          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>{inv.invoiceNumber}</p>
+                          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0 }}>{inv.ticket?.ticketNumber}</p>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text-primary)', margin: 0 }}>${inv.amount.toFixed(2)}</p>
+                          <p style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', margin: 0 }}>${inv.amount.toFixed(2)}</p>
                           <button onClick={() => openDetailModal(inv as Invoice)} style={actionBtn()}>View</button>
                         </div>
                       </div>
@@ -758,9 +758,9 @@ export function AdminInvoiceManagement() {
         {/* Active filter tags bar */}
         {hasActiveFilters && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '9px 9px 0 0', padding: '8px 14px', marginBottom: -1 }}>
-            <span style={{ ...monoLabel, marginBottom: 0, fontSize: 9, letterSpacing: '0.06em', marginRight: 2 }}>Filtered:</span>
+            <span style={{ ...monoLabel, marginBottom: 0, fontSize: 'var(--text-xs)', letterSpacing: '0.06em', marginRight: 2 }}>Filtered:</span>
             {activeTags.map(tag => (
-              <span key={tag.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#fff', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 8px', fontSize: 11, color: 'var(--text-primary)' }}>
+              <span key={tag.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, backgroundColor: '#fff', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 8px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
                 {tag.label}
                 <button onClick={tag.remove} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)' }}>
                   <X size={10} />
@@ -768,7 +768,7 @@ export function AdminInvoiceManagement() {
               </span>
             ))}
             <button onClick={() => setInvoiceFilters(EMPTY_FILTERS)}
-              style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               Clear
             </button>
             <div style={{ marginLeft: 'auto' }}>{searchInput}</div>
@@ -789,7 +789,7 @@ export function AdminInvoiceManagement() {
                   </th>
                 )}
                 {['Invoice', 'Contractor', 'Ticket', 'Amount', 'Status', 'Created', 'Actions'].map(col => (
-                  <th key={col} style={{ ...monoLabel, marginBottom: 0, padding: '8px 14px', textAlign: 'left', fontWeight: 400, fontSize: 9, letterSpacing: '0.06em' }}>{col}</th>
+                  <th key={col} style={{ ...monoLabel, marginBottom: 0, padding: '8px 14px', textAlign: 'left', fontWeight: 400, fontSize: 'var(--text-xs)', letterSpacing: '0.06em' }}>{col}</th>
                 ))}
               </tr>
             </thead>
@@ -805,16 +805,16 @@ export function AdminInvoiceManagement() {
                       <Checkbox checked={selectedInvoiceIds.has(invoice.id)} onCheckedChange={() => toggleInvoiceSelection(invoice.id)} />
                     </td>
                   )}
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{invoice.invoiceNumber}</td>
-                  <td style={{ padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)' }}>{invoice.contractor.name}</td>
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{invoice.ticket.ticketNumber}</td>
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-primary)' }}>${invoice.amount.toFixed(2)}</td>
+                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{invoice.invoiceNumber}</td>
+                  <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{invoice.contractor.name}</td>
+                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{invoice.ticket.ticketNumber}</td>
+                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>${invoice.amount.toFixed(2)}</td>
                   <td style={{ padding: '9px 14px' }}>
-                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...(STATUS_PILL[invoice.status] || { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }) }}>
+                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...(STATUS_PILL[invoice.status] || { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }) }}>
                       {invoice.status}
                     </span>
                   </td>
-                  <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-muted)' }}>{new Date(invoice.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{new Date(invoice.createdAt).toLocaleDateString()}</td>
                   <td style={{ padding: '9px 14px' }}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                       {invoice.status === 'PENDING' && (
@@ -839,8 +839,8 @@ export function AdminInvoiceManagement() {
               <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                 <FileText size={16} style={{ color: 'var(--text-muted)' }} />
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No invoices found</p>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>Try adjusting your filters</p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 4px' }}>No invoices found</p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>Try adjusting your filters</p>
             </div>
           )}
         </div>
@@ -864,8 +864,8 @@ export function AdminInvoiceManagement() {
               <Textarea id="rejectionReason" value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Explain why this invoice is being rejected..." rows={4} />
             </div>
             <div className="flex justify-end gap-3">
-              <button style={actionBtn({ fontSize: 12, padding: '6px 14px' })} onClick={() => { setShowRejectDialog(false); setRejectionReason(''); setActionInvoice(null) }}>Cancel</button>
-              <button style={{ ...actionBtn({ fontSize: 12, padding: '6px 14px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b' }), opacity: (processing || !rejectionReason.trim()) ? 0.5 : 1 }}
+              <button style={actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px' })} onClick={() => { setShowRejectDialog(false); setRejectionReason(''); setActionInvoice(null) }}>Cancel</button>
+              <button style={{ ...actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b' }), opacity: (processing || !rejectionReason.trim()) ? 0.5 : 1 }}
                 onClick={() => actionInvoice && handleStatusUpdate(actionInvoice.id, 'REJECTED', rejectionReason)} disabled={processing || !rejectionReason.trim()}>
                 {processing ? 'Rejecting...' : 'Reject Invoice'}
               </button>
@@ -892,8 +892,8 @@ export function AdminInvoiceManagement() {
               <Textarea id="clarificationRequest" value={clarificationRequest} onChange={e => setClarificationRequest(e.target.value)} placeholder="What information do you need from the contractor?" rows={4} />
             </div>
             <div className="flex justify-end gap-3">
-              <button style={actionBtn({ fontSize: 12, padding: '6px 14px' })} onClick={() => { setShowClarificationDialog(false); setClarificationRequest(''); setActionInvoice(null) }}>Cancel</button>
-              <button style={{ ...actionBtn({ fontSize: 12, padding: '6px 14px', border: '1px solid #fcd34d', backgroundColor: '#fef3c7', color: '#92400e' }), opacity: (processing || !clarificationRequest.trim()) ? 0.5 : 1 }}
+              <button style={actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px' })} onClick={() => { setShowClarificationDialog(false); setClarificationRequest(''); setActionInvoice(null) }}>Cancel</button>
+              <button style={{ ...actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px', border: '1px solid #fcd34d', backgroundColor: '#fef3c7', color: '#92400e' }), opacity: (processing || !clarificationRequest.trim()) ? 0.5 : 1 }}
                 onClick={() => actionInvoice && handleClarificationRequest(actionInvoice.id, clarificationRequest)} disabled={processing || !clarificationRequest.trim()}>
                 {processing ? 'Sending...' : 'Send Request'}
               </button>
@@ -953,8 +953,8 @@ export function AdminInvoiceManagement() {
               <Textarea id="batchNotes" value={batchPaymentData.notes} onChange={e => setBatchPaymentData(p => ({ ...p, notes: e.target.value }))} placeholder="Any additional notes about this payment..." rows={2} />
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button style={actionBtn({ fontSize: 12, padding: '6px 14px' })} onClick={() => setShowBatchPaymentDialog(false)}>Cancel</button>
-              <button style={{ ...actionBtn({ fontSize: 12, padding: '6px 14px', border: '1px solid #c6e6d4', backgroundColor: '#e8f5ee', color: '#2d6a4f' }), opacity: (batchProcessing || !batchPaymentData.popFile) ? 0.5 : 1 }}
+              <button style={actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px' })} onClick={() => setShowBatchPaymentDialog(false)}>Cancel</button>
+              <button style={{ ...actionBtn({ fontSize: 'var(--text-xs)', padding: '6px 14px', border: '1px solid #c6e6d4', backgroundColor: '#e8f5ee', color: '#2d6a4f' }), opacity: (batchProcessing || !batchPaymentData.popFile) ? 0.5 : 1 }}
                 onClick={handleBatchPayment} disabled={batchProcessing || !batchPaymentData.popFile}>
                 {batchProcessing ? 'Processing...' : 'Confirm Payment'}
               </button>
@@ -972,7 +972,7 @@ export function AdminInvoiceManagement() {
                 <FileText className="h-5 w-5" />
                 Invoice Details
                 {invoiceDetails && (
-                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusBadgeStyle(invoiceDetails.invoice.status) }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusBadgeStyle(invoiceDetails.invoice.status) }}>
                     {invoiceDetails.invoice.status}
                   </span>
                 )}

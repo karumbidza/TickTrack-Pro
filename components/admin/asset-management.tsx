@@ -353,36 +353,36 @@ export function AdminAssetManagement() {
       )}
 
       {/* Filter drawer */}
-      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 300, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
-          <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>✕</button>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>✕</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {/* Status section */}
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const, letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
           {['ACTIVE', 'PENDING_APPROVAL', 'IN_MAINTENANCE', 'REPAIR_NEEDED', 'DECOMMISSIONED'].map(s => (
             <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={drawerFilters.status === s} onChange={() => setDrawerFilters(f => ({ ...f, status: f.status === s ? '' : s }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</span>
             </label>
           ))}
           <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
           {/* Category section */}
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Category</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const, letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Category</div>
           {categories.map(cat => (
             <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={drawerFilters.category === cat.id} onChange={() => setDrawerFilters(f => ({ ...f, category: f.category === cat.id ? '' : cat.id }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cat.name}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{cat.name}</span>
             </label>
           ))}
           <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
           {/* Branch section */}
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Branch</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase' as const, letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Branch</div>
           {branches.map(br => (
             <label key={br.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={drawerFilters.branch === br.id} onChange={() => setDrawerFilters(f => ({ ...f, branch: f.branch === br.id ? '' : br.id }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{br.name}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{br.name}</span>
             </label>
           ))}
         </div>
@@ -395,20 +395,20 @@ export function AdminAssetManagement() {
               setBranchFilter('all')
               setFilterDrawerOpen(false)
             }}
-            style={{ flex: 1, padding: 7, fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+            style={{ flex: 1, padding: 7, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
           >Clear all</button>
           <button
             onClick={applyDrawerFilters}
-            style={{ flex: 2, padding: 7, fontSize: 11, background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}
+            style={{ flex: 2, padding: 7, fontSize: 'var(--text-xs)', background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}
           >Apply Filters</button>
         </div>
       </div>
 
       {/* Topbar — 52px */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Assets</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{assets.length} assets</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Assets</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{assets.length} assets</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {(() => {
@@ -416,7 +416,7 @@ export function AdminAssetManagement() {
             return (
               <button
                 onClick={() => setFilterDrawerOpen(o => !o)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}
               >
                 <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}>
                   <line x1="4" y1="6" x2="20" y2="6"/>
@@ -425,7 +425,7 @@ export function AdminAssetManagement() {
                 </svg>
                 Filters
                 {count > 0 && (
-                  <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+                  <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
                 )}
               </button>
             )
@@ -449,8 +449,8 @@ export function AdminAssetManagement() {
               onClick={() => { setStatFilter(statFilter === card.key ? '' : card.key); setStatusFilter(card.key || 'all') }}
               style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '10px 12px', cursor: 'pointer', transition: 'border 0.15s ease' }}
             >
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
+              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
             </div>
           ))}
         </div>
@@ -465,15 +465,15 @@ export function AdminAssetManagement() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search assets..."
-            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 9, paddingBottom: 9, fontSize: 13, border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 9, paddingBottom: 9, fontSize: 'var(--text-sm)', border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
 
         {/* Table card */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Assets</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{assets.length} results</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Assets</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{assets.length} results</span>
           </div>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 20px' }}>
@@ -485,7 +485,7 @@ export function AdminAssetManagement() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     {['Asset ID', 'Name', 'Category', 'Branch', 'Status', 'Last Updated', 'Actions'].map(col => (
-                      <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
+                      <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
                     ))}
                   </tr>
                 </thead>
@@ -498,19 +498,19 @@ export function AdminAssetManagement() {
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                       onClick={() => fetchAssetDetail(asset.id)}
                     >
-                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{asset.assetNumber}</td>
-                      <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '9px 14px' }}>
+                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{asset.assetNumber}</td>
+                      <td style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '9px 14px' }}>
                         <div style={{ fontWeight: 400 }}>{asset.name}</div>
-                        {asset.brand && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{asset.brand}</div>}
+                        {asset.brand && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{asset.brand}</div>}
                       </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.category?.name || '—'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.branch?.name || '—'}</td>
+                      <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.category?.name || '—'}</td>
+                      <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.branch?.name || '—'}</td>
                       <td style={{ padding: '9px 14px' }}>
-                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusPill(asset.status) }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusPill(asset.status) }}>
                           {asset.status.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
                         {new Date(asset.purchaseDate || '').toLocaleDateString() !== 'Invalid Date' && asset.purchaseDate
                           ? new Date(asset.purchaseDate).toLocaleDateString()
                           : '—'
@@ -519,7 +519,7 @@ export function AdminAssetManagement() {
                       <td style={{ padding: '9px 14px' }}>
                         <button
                           onClick={e => { e.stopPropagation(); fetchAssetDetail(asset.id) }}
-                          style={{ fontSize: 11, padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                          style={{ fontSize: 'var(--text-xs)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
                         >View</button>
                       </td>
                     </tr>
@@ -533,8 +533,8 @@ export function AdminAssetManagement() {
                       <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No assets found</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No assets found</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
                 </div>
               )}
             </div>

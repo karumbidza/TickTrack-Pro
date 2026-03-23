@@ -465,55 +465,55 @@ export function UserManagement({ user }: UserManagementProps) {
         <div onClick={() => setFilterDrawerOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />
       )}
       {/* Filter drawer panel */}
-      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 300, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
           <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>✕</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
           {/* Role section */}
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Role</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Role</div>
           {[{ value: 'admin', label: 'Admin' }, { value: 'end_user', label: 'End User' }].map(opt => (
             <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={userFilters.role === opt.value} onChange={() => setUserFilters(f => ({ ...f, role: f.role === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{opt.label}</span>
             </label>
           ))}
           <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
           {/* Status section */}
-          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
           {[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }].map(opt => (
             <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={userFilters.status === opt.value} onChange={() => setUserFilters(f => ({ ...f, status: f.status === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{opt.label}</span>
             </label>
           ))}
         </div>
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
-          <button onClick={() => { setUserFilters({ role: '', status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: '7px', fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
-          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: '7px', fontSize: 11, border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
+          <button onClick={() => { setUserFilters({ role: '', status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: '7px', fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: '7px', fontSize: 'var(--text-xs)', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
         </div>
       </div>
 
       {/* Topbar — 52px */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Users</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredUsers.length} users</div>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Users</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredUsers.length} users</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Filters ghost button with badge */}
-          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)', position: 'relative' }}>
+          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', position: 'relative' }}>
             <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
             Filters
             {activeFilterCount > 0 && (
-              <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeFilterCount}</span>
+              <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeFilterCount}</span>
             )}
           </button>
           {/* Invite User ghost button */}
-          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>Invite User</button>
+          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Invite User</button>
           {/* Add User primary button */}
-          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>+ Add User</button>
+          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--bg)' }}>+ Add User</button>
         </div>
       </div>
 
@@ -527,8 +527,8 @@ export function UserManagement({ user }: UserManagementProps) {
             { key: 'active', label: 'Active', value: users.filter(u => u.isActive).length, color: '#2d6a4f' },
           ].map(card => (
             <div key={card.key} onClick={() => setStatFilter(statFilter === card.key ? '' : card.key)} style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
+              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
             </div>
           ))}
         </div>
@@ -537,13 +537,13 @@ export function UserManagement({ user }: UserManagementProps) {
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
           {/* Card header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Users</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Users</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{filteredUsers.length} results</span>
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{filteredUsers.length} results</span>
               {/* Inline search */}
               <div style={{ position: 'relative' }}>
                 <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, fontSize: 11, border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 180 }} />
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 180 }} />
               </div>
             </div>
           </div>
@@ -554,7 +554,7 @@ export function UserManagement({ user }: UserManagementProps) {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
                   {['User', 'Role', 'Branches', 'Status', 'Joined', 'Actions'].map(col => (
-                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
+                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
                   ))}
                 </tr>
               </thead>
@@ -567,23 +567,23 @@ export function UserManagement({ user }: UserManagementProps) {
                     {/* User column: avatar + name + email */}
                     <td style={{ padding: '9px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
                           {getInitials(userData.name, userData.email)}
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 400 }}>{userData.name || 'No Name'}</div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{userData.email}</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: 400 }}>{userData.name || 'No Name'}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{userData.email}</div>
                         </div>
                       </div>
                     </td>
                     {/* Role pill */}
                     <td style={{ padding: '9px 14px' }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getRolePill(userData.role) }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getRolePill(userData.role) }}>
                         {formatRoleLabel(userData.role)}
                       </span>
                     </td>
                     {/* Branches */}
-                    <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-secondary)' }}>
+                    <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                       {userData.branches && userData.branches.length > 0
                         ? userData.branches.map(ub => ub.branch.name).join(', ')
                         : <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -591,12 +591,12 @@ export function UserManagement({ user }: UserManagementProps) {
                     </td>
                     {/* Status pill */}
                     <td style={{ padding: '9px 14px' }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: userData.isActive ? '#e8f5ee' : '#fef2f2', color: userData.isActive ? '#2d6a4f' : '#991b1b' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: userData.isActive ? '#e8f5ee' : '#fef2f2', color: userData.isActive ? '#2d6a4f' : '#991b1b' }}>
                         {userData.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     {/* Joined date */}
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
                       {new Date(userData.createdAt).toLocaleDateString()}
                     </td>
                     {/* Actions — ··· button opens inline dropdown */}
@@ -604,7 +604,7 @@ export function UserManagement({ user }: UserManagementProps) {
                       <div style={{ position: 'relative', display: 'inline-block' }}>
                         <button
                           onClick={e => { e.stopPropagation(); handleMenuOpen(e, userData) }}
-                          style={{ fontSize: 14, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)', letterSpacing: 2 }}
+                          style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)', letterSpacing: 2 }}
                         >···</button>
                       </div>
                     </td>
@@ -617,7 +617,7 @@ export function UserManagement({ user }: UserManagementProps) {
                 <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                   <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No users found</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No users found</div>
               </div>
             )}
           </div>
@@ -1006,10 +1006,10 @@ export function UserManagement({ user }: UserManagementProps) {
       {/* Inline actions dropdown — renders near the ··· button */}
       {menuUser && menuAnchorEl && (
         <div style={{ position: 'fixed', top: (menuAnchorEl as HTMLElement).getBoundingClientRect().bottom + 4, left: (menuAnchorEl as HTMLElement).getBoundingClientRect().left, zIndex: 100, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 160, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <button onClick={() => { handleEditUser(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Edit</button>
-          <button onClick={() => { handleResetPassword(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Reset Password</button>
-          <button onClick={() => { handleSendActivationEmail(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Send Activation Email</button>
-          <button onClick={() => { handleToggleActive(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: menuUser.isActive ? '#991b1b' : '#2d6a4f', background: 'none', border: 'none', cursor: 'pointer' }}>{menuUser.isActive ? 'Deactivate' : 'Activate'}</button>
+          <button onClick={() => { handleEditUser(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Edit</button>
+          <button onClick={() => { handleResetPassword(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Reset Password</button>
+          <button onClick={() => { handleSendActivationEmail(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Send Activation Email</button>
+          <button onClick={() => { handleToggleActive(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 'var(--text-xs)', color: menuUser.isActive ? '#991b1b' : '#2d6a4f', background: 'none', border: 'none', cursor: 'pointer' }}>{menuUser.isActive ? 'Deactivate' : 'Activate'}</button>
         </div>
       )}
     </div>
