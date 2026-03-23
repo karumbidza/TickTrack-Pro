@@ -17,10 +17,9 @@ import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
-import { 
+import {
   Plus,
   Search,
-  Filter,
   Edit,
   Archive,
   ArrowRightLeft,
@@ -39,6 +38,8 @@ import {
   Clock
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
+import type { FilterState } from '@/components/FilterDrawer'
 
 interface Asset {
   id: string
@@ -151,8 +152,9 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
   const [expandedRepairId, setExpandedRepairId] = useState<string | null>(null)
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
 
   const assetStatuses = [
     'ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED', 'REPAIR_NEEDED', 'DECOMMISSIONED', 'TRANSFERRED'
@@ -167,7 +169,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 
   useEffect(() => {
     applyFilters()
-  }, [assets, searchTerm, statusFilter, categoryFilter])
+  }, [assets, searchTerm, filters, categoryFilter])
 
   const fetchAssets = async () => {
     try {
@@ -224,7 +226,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
     let filtered = assets
 
     if (searchTerm) {
-      filtered = filtered.filter(asset => 
+      filtered = filtered.filter(asset =>
         asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.assetNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -232,8 +234,27 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
       )
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(asset => asset.status === statusFilter)
+    if (filters.status.length > 0) {
+      filtered = filtered.filter(asset => filters.status.includes(asset.status))
+    }
+
+    if (filters.date) {
+      const now = new Date()
+      filtered = filtered.filter(asset => {
+        if (!asset.purchaseDate) return true
+        const d = new Date(asset.purchaseDate)
+        const fd = new Date()
+        switch (filters.date) {
+          case 'today': fd.setHours(0, 0, 0, 0); return d >= fd
+          case 'week': fd.setDate(now.getDate() - 7); return d >= fd
+          case 'month': fd.setMonth(now.getMonth() - 1); return d >= fd
+          case 'custom':
+            if (filters.dateFrom && d < new Date(filters.dateFrom)) return false
+            if (filters.dateTo && d > new Date(filters.dateTo + 'T23:59:59')) return false
+            return true
+          default: return true
+        }
+      })
     }
 
     if (categoryFilter !== 'all') {
@@ -241,6 +262,11 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
     }
 
     setFilteredAssets(filtered)
+  }
+
+  const removeFilter = (field: keyof FilterState, value: string) => {
+    if (field === 'status') setFilters(f => ({ ...f, status: f.status.filter(v => v !== value) }))
+    if (field === 'date') setFilters(f => ({ ...f, date: '', dateFrom: '', dateTo: '' }))
   }
 
   const getStatusColor = (status: string) => {
@@ -586,10 +612,30 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
     return <div className="flex items-center justify-center h-screen">Loading assets...</div>
   }
 
+  const ASSET_STATUS_OPTIONS = [
+    { value: 'ACTIVE',        label: 'Active' },
+    { value: 'MAINTENANCE',   label: 'Maintenance' },
+    { value: 'REPAIR_NEEDED', label: 'Repair Needed' },
+    { value: 'OUT_OF_SERVICE',label: 'Out of Service' },
+    { value: 'RETIRED',       label: 'Retired' },
+    { value: 'DECOMMISSIONED',label: 'Decommissioned' },
+    { value: 'TRANSFERRED',   label: 'Transferred' },
+  ]
+
   return (
     <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setFilters}
+        filters={filters}
+        sections={['status', 'date']}
+        statusOptions={ASSET_STATUS_OPTIONS}
+      />
+
       {/* Page Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 52, minHeight: 52, padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
           <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Asset Register</h1>
           {userBranches.length > 0 && (
@@ -598,7 +644,27 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             </p>
           )}
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ position: 'relative' }}>
+            <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-muted)' }} />
+            <Input
+              placeholder="Search assets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ height: 32, fontSize: 12, paddingLeft: 28, width: 200, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
+            />
+          </div>
+          <FilterButton
+            isOpen={filterDrawerOpen}
+            activeCount={countActiveFilters(filters)}
+            onClick={() => setFilterDrawerOpen(o => !o)}
+          />
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={() => setShowCategoryDialog(true)}>
+              Categories
+            </Button>
+          )}
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -606,12 +672,12 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
-              <AssetForm 
+              <AssetForm
                 onAssetCreated={() => {
                   fetchAssets()
                   setShowCreateDialog(false)
-                }} 
-                tenantId={tenantId} 
+                }}
+                tenantId={tenantId}
                 onCancel={() => setShowCreateDialog(false)}
                 categories={categories}
                 branches={branches}
@@ -623,97 +689,48 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
-      {/* Two-column layout: filter panel + content */}
-      <div className="page-with-filter-panel">
-        {/* ── Left Filter Panel ── */}
-        <div className="filter-panel">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
-            {(statusFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
-              <button
-                onClick={() => { setStatusFilter('all'); setCategoryFilter('all'); setSearchTerm('') }}
-                style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              >
-                Clear all
-              </button>
-            )}
-          </div>
+      {/* Active Filter Tags */}
+      <ActiveFilterTags
+        filters={filters}
+        onRemove={removeFilter}
+        onClearAll={() => setFilters(EMPTY_FILTERS)}
+      />
 
-          {/* Search */}
-          <div className="filter-section">
-            <span className="filter-section-label">Search</span>
-            <div style={{ position: 'relative' }}>
-              <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, color: 'var(--text-muted)' }} />
-              <Input
-                placeholder="Name, number, serial..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ height: 30, fontSize: 12, paddingLeft: 26, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
-              />
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="filter-section">
-            <span className="filter-section-label">Status</span>
-            {assetStatuses.map(status => {
-              const count = assets.filter(a => a.status === status).length
-              const active = statusFilter === status
-              return (
-                <div
-                  key={status}
-                  className={`filter-option${active ? ' active' : ''}`}
-                  onClick={() => setStatusFilter(active ? 'all' : status)}
-                >
-                  <span className="filter-option-label">
-                    <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                    {status.replace(/_/g, ' ')}
-                  </span>
-                  <span className="filter-option-count">{count}</span>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Category */}
-          {categories.length > 0 && (
-            <div className="filter-section">
-              <span className="filter-section-label">Category</span>
-              {categories.map(cat => {
-                const count = assets.filter(a => a.categoryId === cat.id).length
-                const active = categoryFilter === cat.id
-                return (
-                  <div
-                    key={cat.id}
-                    className={`filter-option${active ? ' active' : ''}`}
-                    onClick={() => setCategoryFilter(active ? 'all' : cat.id)}
-                  >
-                    <span className="filter-option-label">
-                      <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                      {cat.name}
-                    </span>
-                    <span className="filter-option-count">{count}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {isAdmin && (
-            <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-              <button
-                onClick={() => setShowCategoryDialog(true)}
-                style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <Plus style={{ width: 11, height: 11 }} />Manage Categories
-              </button>
-            </div>
-          )}
+      {/* Category Pills */}
+      {categories.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setCategoryFilter('all')}
+            style={{
+              fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer',
+              border: `1px solid ${categoryFilter === 'all' ? '#1a1916' : 'var(--border)'}`,
+              backgroundColor: categoryFilter === 'all' ? '#1a1916' : 'transparent',
+              color: categoryFilter === 'all' ? '#f7f6f3' : 'var(--text-secondary)',
+            }}
+          >
+            All Categories
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setCategoryFilter(categoryFilter === cat.id ? 'all' : cat.id)}
+              style={{
+                fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer',
+                border: `1px solid ${categoryFilter === cat.id ? '#1a1916' : 'var(--border)'}`,
+                backgroundColor: categoryFilter === cat.id ? '#1a1916' : 'transparent',
+                color: categoryFilter === cat.id ? '#f7f6f3' : 'var(--text-secondary)',
+              }}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* ── Right Content ── */}
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
+      {/* Content */}
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
           {/* Stats Strip */}
           <div className="stats-strip">
             {[
@@ -734,7 +751,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
                 Asset Inventory
-                {(statusFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
+                {(filters.status.length > 0 || filters.date || categoryFilter !== 'all' || searchTerm) && (
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
                     {filteredAssets.length} of {assets.length}
                   </span>
@@ -813,7 +830,6 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
             </CardContent>
           </Card>
         </div>
-      </div>
 
       {/* Decommission Dialog */}
         <Dialog open={showDecommissionDialog} onOpenChange={setShowDecommissionDialog}>

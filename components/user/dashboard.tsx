@@ -855,7 +855,7 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   return (
     <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
       {/* Page header bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 52, minHeight: 52, padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
           <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
             {activeTab === 'tickets' ? 'My Tickets' : 'Asset Register'}

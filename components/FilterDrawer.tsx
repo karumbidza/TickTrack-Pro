@@ -40,6 +40,7 @@ interface FilterDrawerProps {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  // Ticket statuses
   OPEN:                { bg: '#e8f5ee', color: '#2d6a4f' },
   ASSIGNED:            { bg: '#fef3c7', color: '#92400e' },
   IN_PROGRESS:         { bg: '#fef3c7', color: '#92400e' },
@@ -52,6 +53,14 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   CLOSED:              { bg: '#f0efe9', color: '#6b6860' },
   CANCELLED:           { bg: '#f0efe9', color: '#6b6860' },
   NEW:                 { bg: '#e8f5ee', color: '#2d6a4f' },
+  // Asset statuses
+  ACTIVE:              { bg: '#e8f5ee', color: '#2d6a4f' },
+  MAINTENANCE:         { bg: '#fef3c7', color: '#92400e' },
+  REPAIR_NEEDED:       { bg: '#fef3c7', color: '#92400e' },
+  OUT_OF_SERVICE:      { bg: '#fef2f2', color: '#991b1b' },
+  RETIRED:             { bg: '#f0efe9', color: '#6b6860' },
+  DECOMMISSIONED:      { bg: '#f0efe9', color: '#6b6860' },
+  TRANSFERRED:         { bg: '#eff6ff', color: '#1e40af' },
 }
 
 const PRIORITY_COLORS: Record<string, { bg: string; color: string }> = {
