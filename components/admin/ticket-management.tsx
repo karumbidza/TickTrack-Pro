@@ -52,6 +52,8 @@ import {
   Timer
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
+import type { FilterState } from '@/components/FilterDrawer'
 
 interface User {
   id: string
@@ -219,13 +221,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [priorityFilter, setPriorityFilter] = useState('all')
-  const [departmentFilter, setDepartmentFilter] = useState('all')
-  const [assignedFilter, setAssignedFilter] = useState('all')
-  const [branchFilter, setBranchFilter] = useState('all')
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [branches, setBranches] = useState<{id: string, name: string}[]>([])
-  const [showFilters, setShowFilters] = useState(false)
   const [showClosedTickets, setShowClosedTickets] = useState(false)
 
   // Assignment states
@@ -300,7 +298,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   useEffect(() => {
     filterTickets()
-  }, [tickets, searchTerm, statusFilter, priorityFilter, departmentFilter, assignedFilter, branchFilter, showClosedTickets])
+  }, [tickets, searchTerm, filters, showClosedTickets])
 
   // Fetch filtered contractors when a ticket is selected for assignment
   useEffect(() => {
@@ -563,15 +561,15 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const filterTickets = () => {
     let filtered = tickets
 
-    // Hide closed tickets by default (unless showClosedTickets is true or filtering by CLOSED status)
-    if (!showClosedTickets && statusFilter !== 'CLOSED') {
+    // Hide closed tickets unless explicitly filtered
+    if (!showClosedTickets && !filters.status.includes('CLOSED')) {
       filtered = filtered.filter(ticket => ticket.status !== 'CLOSED')
     }
 
     // Text search
     if (searchTerm) {
       const search = searchTerm.toLowerCase()
-      filtered = filtered.filter(ticket => 
+      filtered = filtered.filter(ticket =>
         ticket.title.toLowerCase().includes(search) ||
         ticket.description.toLowerCase().includes(search) ||
         ticket.ticketNumber.toLowerCase().includes(search) ||
@@ -581,33 +579,48 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       )
     }
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter)
+    // Status filter (multi-select)
+    if (filters.status.length > 0) {
+      filtered = filtered.filter(ticket => filters.status.includes(ticket.status))
     }
 
     // Priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.priority === priorityFilter)
+    if (filters.priority.length > 0) {
+      filtered = filtered.filter(ticket => filters.priority.includes(ticket.priority))
     }
 
-    // Type filter  
-    if (departmentFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.type === departmentFilter)
-    }
-
-    // Assignment filter
-    if (assignedFilter !== 'all') {
-      if (assignedFilter === 'assigned') {
-        filtered = filtered.filter(ticket => ticket.assignedTo)
-      } else if (assignedFilter === 'unassigned') {
-        filtered = filtered.filter(ticket => !ticket.assignedTo)
-      }
+    // Type filter
+    if (filters.type.length > 0) {
+      filtered = filtered.filter(ticket => filters.type.includes(ticket.type))
     }
 
     // Branch filter
-    if (branchFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.branch?.id === branchFilter)
+    if (filters.branch.length > 0) {
+      filtered = filtered.filter(ticket => ticket.branch && filters.branch.includes(ticket.branch.id))
+    }
+
+    // Date filter
+    if (filters.date) {
+      const now = new Date()
+      const filterDate = new Date()
+      switch (filters.date) {
+        case 'today':
+          filterDate.setHours(0, 0, 0, 0)
+          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
+          break
+        case 'week':
+          filterDate.setDate(now.getDate() - 7)
+          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
+          break
+        case 'month':
+          filterDate.setMonth(now.getMonth() - 1)
+          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
+          break
+        case 'custom':
+          if (filters.dateFrom) filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= new Date(filters.dateFrom))
+          if (filters.dateTo) filtered = filtered.filter(ticket => new Date(ticket.createdAt) <= new Date(filters.dateTo + 'T23:59:59'))
+          break
+      }
     }
 
     setFilteredTickets(filtered)
@@ -986,25 +999,21 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     }
   }
 
+
   const clearAllFilters = () => {
     setSearchTerm('')
-    setStatusFilter('all')
-    setPriorityFilter('all')
-    setDepartmentFilter('all')
-    setAssignedFilter('all')
-    setBranchFilter('all')
+    setFilters(EMPTY_FILTERS)
   }
 
-  const getActiveFilterCount = () => {
-    let count = 0
-    if (searchTerm) count++
-    if (statusFilter !== 'all') count++
-    if (priorityFilter !== 'all') count++
-    if (departmentFilter !== 'all') count++
-    if (assignedFilter !== 'all') count++
-    if (branchFilter !== 'all') count++
-    return count
+  const removeFilter = (field: keyof FilterState, value: string) => {
+    if (field === 'date') {
+      setFilters(f => ({ ...f, date: '', dateFrom: '', dateTo: '' }))
+    } else {
+      setFilters(f => ({ ...f, [field]: (f[field] as string[]).filter(v => v !== value) }))
+    }
   }
+
+  const getActiveFilterCount = () => countActiveFilters(filters) + (searchTerm ? 1 : 0)
 
   // DataGrid column definitions
   const ticketColumns: GridColDef[] = useMemo(() => [
@@ -1364,6 +1373,17 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   return (
     <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setFilters}
+        filters={filters}
+        sections={['status', 'priority', 'type', 'date', 'branch']}
+        statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
+        branches={branches}
+      />
+
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1383,159 +1403,32 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           </div>
         </div>
 
-        {/* Search and Filter Bar */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <Input
-                  placeholder="Search tickets by title, description, ticket number, or reporter..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                style={getActiveFilterCount() > 0 ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-                {getActiveFilterCount() > 0 && (
-                  <Badge className="ml-2 h-5 w-5 p-0 text-xs">
-                    {getActiveFilterCount()}
-                  </Badge>
-                )}
-              </Button>
-              
-              {getActiveFilterCount() > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-            
-            {showFilters && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Status</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        {statusOptions.map(status => (
-                          <SelectItem key={status} value={status}>
-                            {status.replace('_', ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Priority</label>
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priority</SelectItem>
-                        {priorityOptions.map(priority => (
-                          <SelectItem key={priority} value={priority}>
-                            {priority}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Type</label>
-                    <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        {typeOptions.map(type => (
-                          <SelectItem key={type} value={type}>
-                            {type.replace(/_/g, ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Assignment</label>
-                    <Select value={assignedFilter} onValueChange={setAssignedFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any assignment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Tickets</SelectItem>
-                        <SelectItem value="assigned">Assigned</SelectItem>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Site / Branch</label>
-                    <Select value={branchFilter} onValueChange={setBranchFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Any branch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Branches</SelectItem>
-                        {branches.map(branch => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Show Closed Tickets Toggle */}
-                  <div className="flex items-center justify-between col-span-full pt-2 border-t">
-                    <div>
-                      <label className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Show Closed Tickets</label>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Closed tickets are hidden by default</p>
-                    </div>
-                    <button
-                      onClick={() => setShowClosedTickets(!showClosedTickets)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        showClosedTickets ? 'bg-blue-bg' : 'bg-surface2'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
-                          showClosedTickets ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Results Summary */}
-        {getActiveFilterCount() > 0 && (
-          <div className="flex items-center justify-between text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <span>Showing {filteredTickets.length} of {tickets.length} tickets</span>
-            <span>{getActiveFilterCount()} filter{getActiveFilterCount() > 1 ? 's' : ''} applied</span>
+        {/* Search Bar */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+            <Input
+              placeholder="Search by title, ticket number, or reporter..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
-        )}
+          <FilterButton
+            isOpen={filterDrawerOpen}
+            activeCount={countActiveFilters(filters)}
+            onClick={() => setFilterDrawerOpen(o => !o)}
+          />
+        </div>
+
+        {/* Active Filter Tags */}
+        <ActiveFilterTags
+          filters={filters}
+          statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
+          branches={branches}
+          onRemove={removeFilter}
+          onClearAll={clearAllFilters}
+        />
 
         {/* Tickets Table */}
         <Card>

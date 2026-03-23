@@ -45,6 +45,8 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
+import type { FilterState } from '@/components/FilterDrawer'
 
 interface Job {
   id: string
@@ -182,6 +184,10 @@ interface ContractorCategory {
 export function ContractorDashboard() {
   const { data: session } = useSession()
   const [jobs, setJobs] = useState<Job[]>([])
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([])
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
   const [categories, setCategories] = useState<ContractorCategory[]>([])
@@ -256,6 +262,51 @@ export function ContractorDashboard() {
       fetchContractorData()
     }
   }, [session])
+
+  // Apply filters whenever jobs, filters, or search changes
+  useEffect(() => {
+    let filtered = jobs
+
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase()
+      filtered = filtered.filter(j =>
+        j.title.toLowerCase().includes(s) ||
+        j.ticketNumber.toLowerCase().includes(s)
+      )
+    }
+
+    if (filters.status.length > 0) {
+      filtered = filtered.filter(j => filters.status.includes(j.status))
+    }
+
+    if (filters.priority.length > 0) {
+      filtered = filtered.filter(j => filters.priority.includes(j.priority))
+    }
+
+    if (filters.date) {
+      const now = new Date()
+      const fd = new Date()
+      switch (filters.date) {
+        case 'today': fd.setHours(0, 0, 0, 0); filtered = filtered.filter(j => new Date(j.createdAt) >= fd); break
+        case 'week': fd.setDate(now.getDate() - 7); filtered = filtered.filter(j => new Date(j.createdAt) >= fd); break
+        case 'month': fd.setMonth(now.getMonth() - 1); filtered = filtered.filter(j => new Date(j.createdAt) >= fd); break
+        case 'custom':
+          if (filters.dateFrom) filtered = filtered.filter(j => new Date(j.createdAt) >= new Date(filters.dateFrom))
+          if (filters.dateTo) filtered = filtered.filter(j => new Date(j.createdAt) <= new Date(filters.dateTo + 'T23:59:59'))
+          break
+      }
+    }
+
+    setFilteredJobs(filtered)
+  }, [jobs, filters, searchTerm])
+
+  const removeFilter = (field: keyof FilterState, value: string) => {
+    if (field === 'date') {
+      setFilters(f => ({ ...f, date: '', dateFrom: '', dateTo: '' }))
+    } else {
+      setFilters(f => ({ ...f, [field]: (f[field] as string[]).filter(v => v !== value) }))
+    }
+  }
 
   // Auto-refresh effect (background) - runs independently
   useEffect(() => {
@@ -1033,8 +1084,27 @@ export function ContractorDashboard() {
     )
   }
 
+  const CONTRACTOR_STATUS_OPTIONS = [
+    { value: 'PROCESSING', label: 'New' },
+    { value: 'ACCEPTED', label: 'Accepted' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'ON_SITE', label: 'On Site' },
+    { value: 'COMPLETED', label: 'Completed' },
+    { value: 'CLOSED', label: 'Closed' },
+  ]
+
   return (
     <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setFilters}
+        filters={filters}
+        sections={['status', 'priority', 'date']}
+        statusOptions={CONTRACTOR_STATUS_OPTIONS}
+      />
+
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1045,12 +1115,25 @@ export function ContractorDashboard() {
             <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Manage your assigned jobs and track your work</p>
           </div>
           <div className="flex items-center gap-3">
+            <FilterButton
+              isOpen={filterDrawerOpen}
+              activeCount={countActiveFilters(filters)}
+              onClick={() => setFilterDrawerOpen(o => !o)}
+            />
             <Button onClick={fetchContractorData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>
         </div>
+
+        {/* Active Filter Tags */}
+        <ActiveFilterTags
+          filters={filters}
+          statusOptions={CONTRACTOR_STATUS_OPTIONS}
+          onRemove={removeFilter}
+          onClearAll={() => setFilters(EMPTY_FILTERS)}
+        />
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -1213,26 +1296,43 @@ export function ContractorDashboard() {
         {/* Jobs Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Assigned Jobs</CardTitle>
+            <CardTitle>
+              Assigned Jobs
+              {countActiveFilters(filters) > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
+                  {filteredJobs.length} of {jobs.length}
+                </span>
+              )}
+            </CardTitle>
             <CardDescription>
               View and manage your assigned maintenance tickets
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            {jobs.length === 0 ? (
+            {filteredJobs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Package className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>No jobs assigned yet</h3>
-                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Jobs assigned by administrators will appear here.</p>
-                <Button onClick={fetchContractorData} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Check for New Jobs
-                </Button>
+                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                  {jobs.length === 0 ? 'No jobs assigned yet' : 'No jobs match your filters'}
+                </h3>
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  {jobs.length === 0 ? 'Jobs assigned by administrators will appear here.' : 'Try adjusting your filters.'}
+                </p>
+                {jobs.length === 0 ? (
+                  <Button onClick={fetchContractorData} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Check for New Jobs
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setFilters(EMPTY_FILTERS)}>
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             ) : (
               <Box sx={{ width: '100%', p: 2 }}>
                 <ScrollableDataGrid
-                  rows={jobs}
+                  rows={filteredJobs}
                   columns={jobColumns}
                   initialState={{
                     pagination: {

@@ -44,16 +44,16 @@ const nextConfig = {
           },
         ],
       },
-      {
+      ...(process.env.NODE_ENV === 'production' ? [{
         // HSTS for HTTPS enforcement (only in production)
         source: '/:path*',
-        headers: process.env.NODE_ENV === 'production' ? [
+        headers: [
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains',
           },
-        ] : [],
-      },
+        ],
+      }] : []),
       {
         // Apply to all API routes - disable caching for dynamic data
         source: '/api/:path*',

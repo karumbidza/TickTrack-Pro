@@ -6,6 +6,8 @@ import { Table } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { MediaHoverPreview } from '@/components/ui/media-viewer'
 import { Eye, Download, FileText, Calendar, DollarSign } from 'lucide-react'
+import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
+import type { FilterState } from '@/components/FilterDrawer'
 
 interface Invoice {
   id: string
@@ -35,6 +37,8 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [dateFilters, setDateFilters] = useState<FilterState>(EMPTY_FILTERS)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
 
   useEffect(() => {
     fetchInvoices()
@@ -67,9 +71,28 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
     }
   }
 
-  const filteredInvoices = filter === 'all' 
-    ? invoices 
-    : invoices.filter(invoice => invoice.status.toLowerCase() === filter)
+  const filteredInvoices = invoices.filter(invoice => {
+    if (filter !== 'all' && invoice.status.toLowerCase() !== filter) return false
+    if (dateFilters.date) {
+      const created = new Date(invoice.createdAt)
+      const now = new Date()
+      const fd = new Date()
+      switch (dateFilters.date) {
+        case 'today': fd.setHours(0, 0, 0, 0); if (created < fd) return false; break
+        case 'week': fd.setDate(now.getDate() - 7); if (created < fd) return false; break
+        case 'month': fd.setMonth(now.getMonth() - 1); if (created < fd) return false; break
+        case 'custom':
+          if (dateFilters.dateFrom && created < new Date(dateFilters.dateFrom)) return false
+          if (dateFilters.dateTo && created > new Date(dateFilters.dateTo + 'T23:59:59')) return false
+          break
+      }
+    }
+    return true
+  })
+
+  const removeFilter = (field: keyof FilterState, value: string) => {
+    if (field === 'date') setDateFilters(f => ({ ...f, date: '', dateFrom: '', dateTo: '' }))
+  }
 
   const totalEarnings = invoices
     .filter(inv => inv.status === 'PAID')
@@ -89,6 +112,22 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
 
   return (
     <div className="space-y-6">
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setDateFilters}
+        filters={dateFilters}
+        sections={['date']}
+      />
+
+      {/* Active Filter Tags */}
+      <ActiveFilterTags
+        filters={dateFilters}
+        onRemove={removeFilter}
+        onClearAll={() => setDateFilters(EMPTY_FILTERS)}
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-lg border border-border p-4" style={{ backgroundColor: 'var(--surface)' }}>
@@ -148,9 +187,16 @@ export function InvoiceList({ onCreateInvoice }: InvoiceListProps) {
           </Button>
         </div>
         
-        <Button onClick={onCreateInvoice}>
-          Create Invoice
-        </Button>
+        <div className="flex items-center gap-2">
+          <FilterButton
+            isOpen={filterDrawerOpen}
+            activeCount={countActiveFilters(dateFilters)}
+            onClick={() => setFilterDrawerOpen(o => !o)}
+          />
+          <Button onClick={onCreateInvoice}>
+            Create Invoice
+          </Button>
+        </div>
       </div>
 
       {/* Invoice Table */}

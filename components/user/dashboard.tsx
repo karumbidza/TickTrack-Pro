@@ -53,6 +53,8 @@ import {
 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
+import type { FilterState } from '@/components/FilterDrawer'
 
 interface User {
   id: string
@@ -159,9 +161,9 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [activeTab, setActiveTab] = useState(initialTab)
-  
+
   // Work description approval state
   const [showWorkApprovalDialog, setShowWorkApprovalDialog] = useState(false)
   const [workApprovalLoading, setWorkApprovalLoading] = useState(false)
@@ -169,11 +171,7 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [priorityFilter, setPriorityFilter] = useState('all')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('all')
-  const [assignedFilter, setAssignedFilter] = useState('all')
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
   const [showClosedTickets, setShowClosedTickets] = useState(false)
 
   // Auto-refresh interval (30 seconds)
@@ -200,7 +198,7 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
 
   useEffect(() => {
     applyFilters()
-  }, [tickets, searchTerm, statusFilter, priorityFilter, typeFilter, dateFilter, assignedFilter, showClosedTickets])
+  }, [tickets, searchTerm, filters, showClosedTickets])
 
   const fetchUserTickets = async () => {
     try {
@@ -217,40 +215,39 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
   const applyFilters = () => {
     let filtered = tickets
 
-    // Hide closed tickets by default (unless showClosedTickets is true or filtering by CLOSED status)
-    if (!showClosedTickets && statusFilter !== 'CLOSED') {
+    // Hide closed tickets unless explicitly filtered
+    if (!showClosedTickets && !filters.status.includes('CLOSED')) {
       filtered = filtered.filter(ticket => ticket.status !== 'CLOSED')
     }
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(ticket => 
+      filtered = filtered.filter(ticket =>
         ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ticket.description.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.status === statusFilter)
+    // Status filter (multi-select — empty = show all)
+    if (filters.status.length > 0) {
+      filtered = filtered.filter(ticket => filters.status.includes(ticket.status))
     }
 
     // Priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.priority === priorityFilter)
+    if (filters.priority.length > 0) {
+      filtered = filtered.filter(ticket => filters.priority.includes(ticket.priority))
     }
 
     // Type filter
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(ticket => ticket.type === typeFilter)
+    if (filters.type.length > 0) {
+      filtered = filtered.filter(ticket => filters.type.includes(ticket.type))
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
+    if (filters.date) {
       const now = new Date()
       const filterDate = new Date()
-      
-      switch (dateFilter) {
+      switch (filters.date) {
         case 'today':
           filterDate.setHours(0, 0, 0, 0)
           filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
@@ -263,18 +260,11 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
           filterDate.setMonth(now.getMonth() - 1)
           filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
           break
-        case 'quarter':
-          filterDate.setMonth(now.getMonth() - 3)
-          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
+        case 'custom':
+          if (filters.dateFrom) filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= new Date(filters.dateFrom))
+          if (filters.dateTo) filtered = filtered.filter(ticket => new Date(ticket.createdAt) <= new Date(filters.dateTo + 'T23:59:59'))
           break
       }
-    }
-
-    // Assigned filter
-    if (assignedFilter === 'assigned') {
-      filtered = filtered.filter(ticket => ticket.assignedTo)
-    } else if (assignedFilter === 'unassigned') {
-      filtered = filtered.filter(ticket => !ticket.assignedTo)
     }
 
     setFilteredTickets(filtered)
@@ -282,23 +272,18 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
 
   const clearAllFilters = () => {
     setSearchTerm('')
-    setStatusFilter('all')
-    setPriorityFilter('all')
-    setTypeFilter('all')
-    setDateFilter('all')
-    setAssignedFilter('all')
+    setFilters(EMPTY_FILTERS)
   }
 
-  const getActiveFilterCount = () => {
-    let count = 0
-    if (searchTerm) count++
-    if (statusFilter !== 'all') count++
-    if (priorityFilter !== 'all') count++
-    if (typeFilter !== 'all') count++
-    if (dateFilter !== 'all') count++
-    if (assignedFilter !== 'all') count++
-    return count
+  const removeFilter = (field: keyof FilterState, value: string) => {
+    if (field === 'date') {
+      setFilters(f => ({ ...f, date: '', dateFrom: '', dateTo: '' }))
+    } else {
+      setFilters(f => ({ ...f, [field]: (f[field] as string[]).filter(v => v !== value) }))
+    }
   }
+
+  const getActiveFilterCount = () => countActiveFilters(filters) + (searchTerm ? 1 : 0)
 
   const getStatusColor = (status: string): React.CSSProperties => {
     const colors: Record<string, React.CSSProperties> = {
@@ -878,159 +863,70 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
           <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{user.name || user.email}</p>
         </div>
         <div className="flex items-center gap-2">
+          {activeTab === 'tickets' && (
+            <div style={{ position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-muted)' }} />
+              <Input
+                placeholder="Search tickets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ height: 32, fontSize: 12, paddingLeft: 28, width: 200, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
+              />
+            </div>
+          )}
+          {activeTab === 'tickets' && (
+            <FilterButton
+              isOpen={filterDrawerOpen}
+              activeCount={countActiveFilters(filters)}
+              onClick={() => setFilterDrawerOpen(o => !o)}
+            />
+          )}
           {activeTab === 'tickets' && user.role === 'END_USER' && (
             <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
           )}
         </div>
       </div>
 
+      {/* Filter Drawer */}
+      <FilterDrawer
+        isOpen={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+        onApply={setFilters}
+        filters={filters}
+        sections={['status', 'priority', 'type', 'date']}
+        statusOptions={[
+          { value: 'OPEN', label: 'Open' },
+          { value: 'ASSIGNED', label: 'Assigned' },
+          { value: 'IN_PROGRESS', label: 'In Progress' },
+          { value: 'ON_SITE', label: 'On Site' },
+          { value: 'AWAITING_APPROVAL', label: 'Awaiting Approval' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'CLOSED', label: 'Closed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+        ]}
+      />
+
+      {/* Active Filter Tags */}
+      <ActiveFilterTags
+        filters={filters}
+        statusOptions={[
+          { value: 'OPEN', label: 'Open' },
+          { value: 'ASSIGNED', label: 'Assigned' },
+          { value: 'IN_PROGRESS', label: 'In Progress' },
+          { value: 'ON_SITE', label: 'On Site' },
+          { value: 'AWAITING_APPROVAL', label: 'Awaiting Approval' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'CLOSED', label: 'Closed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+        ]}
+        onRemove={removeFilter}
+        onClearAll={clearAllFilters}
+      />
+
       {/* Tab Content */}
       {user.role === 'END_USER' ? (
         activeTab === 'tickets' ? (
-          <div className="page-with-filter-panel">
-            {/* ── Left Filter Panel ── */}
-            <div className="filter-panel">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
-                {getActiveFilterCount() > 0 && (
-                  <button onClick={clearAllFilters} style={{ fontSize: 11, color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    Clear all
-                  </button>
-                )}
-              </div>
-
-              {/* Search */}
-              <div className="filter-section">
-                <span className="filter-section-label">Search</span>
-                <div style={{ position: 'relative' }}>
-                  <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, color: 'var(--text-muted)' }} />
-                  <Input
-                    placeholder="Search tickets..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ height: 30, fontSize: 12, paddingLeft: 26, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
-                  />
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="filter-section">
-                <span className="filter-section-label">Status</span>
-                {[
-                  { value: 'OPEN', label: 'Open' },
-                  { value: 'ASSIGNED', label: 'Assigned' },
-                  { value: 'IN_PROGRESS', label: 'In Progress' },
-                  { value: 'ON_SITE', label: 'On Site' },
-                  { value: 'AWAITING_APPROVAL', label: 'Awaiting Approval' },
-                  { value: 'COMPLETED', label: 'Completed' },
-                  { value: 'CLOSED', label: 'Closed' },
-                  { value: 'CANCELLED', label: 'Cancelled' },
-                ].map(({ value, label }) => {
-                  const count = tickets.filter(t => t.status === value).length
-                  const active = statusFilter === value
-                  return (
-                    <div
-                      key={value}
-                      className={`filter-option${active ? ' active' : ''}`}
-                      onClick={() => setStatusFilter(active ? 'all' : value)}
-                    >
-                      <span className="filter-option-label">
-                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                        {label}
-                      </span>
-                      <span className="filter-option-count">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Priority */}
-              <div className="filter-section">
-                <span className="filter-section-label">Priority</span>
-                {[
-                  { value: 'LOW', label: 'Low' },
-                  { value: 'MEDIUM', label: 'Medium' },
-                  { value: 'HIGH', label: 'High' },
-                  { value: 'CRITICAL', label: 'Critical' },
-                ].map(({ value, label }) => {
-                  const count = tickets.filter(t => t.priority === value).length
-                  const active = priorityFilter === value
-                  return (
-                    <div
-                      key={value}
-                      className={`filter-option${active ? ' active' : ''}`}
-                      onClick={() => setPriorityFilter(active ? 'all' : value)}
-                    >
-                      <span className="filter-option-label">
-                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                        {label}
-                      </span>
-                      <span className="filter-option-count">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Type */}
-              <div className="filter-section">
-                <span className="filter-section-label">Type</span>
-                {['IT', 'SALES', 'RETAIL', 'MAINTENANCE', 'PROJECTS', 'GENERAL'].map(value => {
-                  const count = tickets.filter(t => t.type === value).length
-                  const active = typeFilter === value
-                  return (
-                    <div
-                      key={value}
-                      className={`filter-option${active ? ' active' : ''}`}
-                      onClick={() => setTypeFilter(active ? 'all' : value)}
-                    >
-                      <span className="filter-option-label">
-                        <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${active ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: active ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                        {value.charAt(0) + value.slice(1).toLowerCase()}
-                      </span>
-                      <span className="filter-option-count">{count}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Date */}
-              <div className="filter-section">
-                <span className="filter-section-label">Created</span>
-                {[
-                  { value: 'today', label: 'Today' },
-                  { value: 'week', label: 'Last 7 days' },
-                  { value: 'month', label: 'Last 30 days' },
-                  { value: 'quarter', label: 'Last 90 days' },
-                ].map(({ value, label }) => {
-                  const active = dateFilter === value
-                  return (
-                    <div
-                      key={value}
-                      className={`filter-option${active ? ' active' : ''}`}
-                      onClick={() => setDateFilter(active ? 'all' : value)}
-                    >
-                      <span className="filter-option-label">{label}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Show Closed */}
-              <div style={{ paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                <div
-                  className={`filter-option${showClosedTickets ? ' active' : ''}`}
-                  onClick={() => setShowClosedTickets(!showClosedTickets)}
-                >
-                  <span className="filter-option-label">
-                    <span style={{ width: 12, height: 12, borderRadius: 3, border: `1.5px solid ${showClosedTickets ? 'var(--accent)' : 'var(--border)'}`, backgroundColor: showClosedTickets ? 'var(--accent)' : 'transparent', display: 'inline-block', flexShrink: 0 }} />
-                    Show Closed
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Right Content ── */}
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Stats Strip */}
               <div className="stats-strip">
                 {[
@@ -1097,7 +993,6 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
                   )}
                 </CardContent>
               </Card>
-            </div>
           </div>
         ) : (
           /* Asset Register Tab */
