@@ -87,10 +87,31 @@ interface PriorityLevel {
 
 interface AdminSettingsProps {
   user: User
+  section?: string
 }
 
-export function AdminSettings({ user }: AdminSettingsProps) {
-  const [activeTab, setActiveTab] = useState('assets')
+const SECTION_META: Record<string, { title: string; subtitle: string; cta?: string }> = {
+  categories:    { title: 'Categories',    subtitle: "Organise your assets into categories", cta: '+ Add Category' },
+  branches:      { title: 'Branches',      subtitle: "Manage your organisation's branches", cta: '+ Add Branch' },
+  'ticket-types':{ title: 'Ticket Types',  subtitle: 'Configure custom ticket types', cta: '+ Add Type' },
+  notifications: { title: 'Notifications', subtitle: 'Configure notification preferences' },
+  reports:       { title: 'Reports',       subtitle: 'Generate and export reports' },
+  organisation:  { title: 'Organisation',  subtitle: 'General organisation settings' },
+  billing:       { title: 'Billing',       subtitle: 'Manage your subscription and billing' },
+}
+
+export function AdminSettings({ user, section = 'categories' }: AdminSettingsProps) {
+  // Map route section slug to internal tab name
+  const tabMap: Record<string, string> = {
+    categories: 'categories',
+    branches: 'branches',
+    'ticket-types': 'tickets',
+    notifications: 'notifications',
+    reports: 'reports',
+    organisation: 'organization',
+    billing: 'billing',
+  }
+  const activeTab = tabMap[section] || 'categories'
   const [loading, setLoading] = useState(false)
 
   // Reports State
@@ -534,109 +555,33 @@ export function AdminSettings({ user }: AdminSettingsProps) {
     { value: '#6B7280', label: 'Gray' }
   ]
 
+  const meta = SECTION_META[section] || SECTION_META['categories']
+
+  const handleCtaClick = () => {
+    if (section === 'categories') setShowCategoryDialog(true)
+    else if (section === 'branches') setShowBranchDialog(true)
+    else if (section === 'ticket-types') setShowTicketTypeDialog(true)
+  }
+
   return (
-    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
-      <div className="space-y-5">
-        {/* Header */}
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Topbar */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <h1 className="text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>Settings</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Manage your organization's settings and resources</p>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Settings — {meta.title}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{meta.subtitle}</div>
         </div>
+        {meta.cta && (
+          <button onClick={handleCtaClick} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>
+            {meta.cta}
+          </button>
+        )}
+      </div>
 
-        {/* Settings Layout - Sidebar + Content */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Navigation */}
-          <div className="lg:w-48 flex-shrink-0">
-            <Card className="sticky top-24">
-              <CardHeader className="pb-2 px-3">
-                <CardTitle className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-                  Menu
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-2">
-                <nav className="space-y-0.5">
-                  {[
-                    { tab: 'assets', icon: <Package className="h-4 w-4 flex-shrink-0" />, label: 'Assets' },
-                    { tab: 'contractors', icon: <Wrench className="h-4 w-4 flex-shrink-0" />, label: 'Contractors' },
-                    { tab: 'users', icon: <Users className="h-4 w-4 flex-shrink-0" />, label: 'Users' },
-                  ].map(({ tab, icon, label }) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
-                      style={activeTab === tab
-                        ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
-                        : { color: 'var(--text-secondary)' }}
-                    >
-                      {icon}
-                      <span className="truncate">{label}</span>
-                    </button>
-                  ))}
-
-                  <div className="pt-2 pb-1">
-                    <p className="px-2.5 text-xs font-medium uppercase" style={{ color: 'var(--text-muted)' }}>Config</p>
-                  </div>
-
-                  {[
-                    { tab: 'categories', icon: <Layers className="h-4 w-4 flex-shrink-0" />, label: 'Categories' },
-                    { tab: 'branches', icon: <MapPin className="h-4 w-4 flex-shrink-0" />, label: 'Branches' },
-                    { tab: 'tickets', icon: <Tag className="h-4 w-4 flex-shrink-0" />, label: 'Ticket Types' },
-                    { tab: 'notifications', icon: <Bell className="h-4 w-4 flex-shrink-0" />, label: 'Notifications' },
-                    { tab: 'reports', icon: <FileSpreadsheet className="h-4 w-4 flex-shrink-0" />, label: 'Reports' },
-                    { tab: 'organization', icon: <Building2 className="h-4 w-4 flex-shrink-0" />, label: 'Organization' },
-                  ].map(({ tab, icon, label }) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
-                      style={activeTab === tab
-                        ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
-                        : { color: 'var(--text-secondary)' }}
-                    >
-                      {icon}
-                      <span className="truncate">{label}</span>
-                    </button>
-                  ))}
-
-                  {/* Only show Billing tab for Tenant Admins, not Super Admins */}
-                  {user.role !== 'SUPER_ADMIN' && (
-                    <>
-                      <div className="pt-2 pb-1">
-                        <p className="px-2.5 text-xs font-medium uppercase" style={{ color: 'var(--text-muted)' }}>Account</p>
-                      </div>
-
-                      <button
-                        onClick={() => setActiveTab('billing')}
-                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm transition-all"
-                        style={activeTab === 'billing'
-                          ? { backgroundColor: 'var(--blue-bg)', color: 'var(--accent)' }
-                          : { color: 'var(--text-secondary)' }}
-                      >
-                        <CreditCard className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">Billing</span>
-                      </button>
-                    </>
-                  )}
-                </nav>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Area */}
+      {/* Content */}
+      <div style={{ padding: '20px' }}>
           <div className="flex-1 min-w-0">
-            {/* Assets Tab */}
-            {activeTab === 'assets' && (
-              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
-                <AdminAssetManagement />
-              </div>
-            )}
-
-            {/* Contractors Tab */}
-            {activeTab === 'contractors' && (
-              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
-                <ContractorManagement user={user} />
-              </div>
-            )}
+            {/* NO assets/contractors/users tabs — they have dedicated sidebar nav items */}
 
             {/* Users Tab */}
             {activeTab === 'users' && (
@@ -1416,7 +1361,6 @@ export function AdminSettings({ user }: AdminSettingsProps) {
             </Card>
           )}
           </div>
-        </div>
       </div>
     </div>
   )

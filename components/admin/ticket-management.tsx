@@ -14,19 +14,7 @@ import { RatingModal } from '@/components/tickets/rating-modal'
 import { TicketChat } from '@/components/tickets/ticket-chat'
 import { MediaViewer, MediaHoverPreview } from '@/components/ui/media-viewer'
 import { calculateSLAInfo, getSLAChipColor } from '@/lib/sla-utils'
-import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
-import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
-import Chip from '@mui/material/Chip'
-import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
-import Box from '@mui/material/Box'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import Divider from '@mui/material/Divider'
-import CircularProgress from '@mui/material/CircularProgress'
-import { 
+import {
   Plus,
   Ticket,
   Clock,
@@ -204,9 +192,38 @@ interface AdminTicketManagementProps {
   user: User
 }
 
+function getStatusPill(status: string): React.CSSProperties {
+  const map: Record<string, React.CSSProperties> = {
+    OPEN:                    { backgroundColor: '#e8f5ee', color: '#2d6a4f' },
+    ASSIGNED:                { backgroundColor: '#fef3c7', color: '#92400e' },
+    IN_PROGRESS:             { backgroundColor: '#fef3c7', color: '#92400e' },
+    ON_SITE:                 { backgroundColor: '#fef3c7', color: '#92400e' },
+    AWAITING_APPROVAL:       { backgroundColor: '#fef3c7', color: '#92400e' },
+    AWAITING_QUOTE:          { backgroundColor: '#fef3c7', color: '#92400e' },
+    AWAITING_DESCRIPTION:    { backgroundColor: '#fef3c7', color: '#92400e' },
+    AWAITING_WORK_APPROVAL:  { backgroundColor: '#fef3c7', color: '#92400e' },
+    QUOTE_SUBMITTED:         { backgroundColor: '#fef3c7', color: '#92400e' },
+    PROCESSING:              { backgroundColor: '#fef3c7', color: '#92400e' },
+    ACCEPTED:                { backgroundColor: '#fef3c7', color: '#92400e' },
+    COMPLETED:               { backgroundColor: '#eff6ff', color: '#1e40af' },
+    CLOSED:                  { backgroundColor: '#f0efe9', color: '#6b6860' },
+    CANCELLED:               { backgroundColor: '#fef2f2', color: '#991b1b' },
+  }
+  return map[status] || { backgroundColor: '#f0efe9', color: '#6b6860' }
+}
+
+function getPriorityPill(priority: string): React.CSSProperties {
+  const map: Record<string, React.CSSProperties> = {
+    LOW:      { backgroundColor: '#f0efe9', color: '#6b6860' },
+    MEDIUM:   { backgroundColor: '#fef3c7', color: '#92400e' },
+    HIGH:     { backgroundColor: '#fef2f2', color: '#991b1b' },
+    CRITICAL: { backgroundColor: '#991b1b', color: '#fff' },
+  }
+  return map[priority] || { backgroundColor: '#f0efe9', color: '#6b6860' }
+}
+
 export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [tickets, setTickets] = useState<TicketDetails[]>([])
-  const [filteredTickets, setFilteredTickets] = useState<TicketDetails[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [filteredContractors, setFilteredContractors] = useState<Contractor[]>([])
   const [recommendedContractor, setRecommendedContractor] = useState<Contractor | null>(null)
@@ -218,13 +235,16 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [showAssignDialog, setShowAssignDialog] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [closingTicketId, setClosingTicketId] = useState<string | null>(null)
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
   const [branches, setBranches] = useState<{id: string, name: string}[]>([])
   const [showClosedTickets, setShowClosedTickets] = useState(false)
+
+  // Stat card filter
+  const [statFilter, setStatFilter] = useState('') // '' | 'open' | 'in_progress' | 'completed'
 
   // Assignment states
   const [selectedContractor, setSelectedContractor] = useState('')
@@ -233,11 +253,11 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [assignmentNotes, setAssignmentNotes] = useState('')
   const [assignmentType, setAssignmentType] = useState<'contractor' | 'hq-admin'>('contractor')
   const [requestQuote, setRequestQuote] = useState(false)
-  
+
   // Quote request management states
   const [quoteRequests, setQuoteRequests] = useState<any[]>([])
   const [loadingQuoteRequests, setLoadingQuoteRequests] = useState(false)
-  
+
   // Quote approval states
   const [quoteRejectionReason, setQuoteRejectionReason] = useState('')
   const [processingQuote, setProcessingQuote] = useState(false)
@@ -261,13 +281,13 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const statusOptions = [
     'OPEN', 'AWAITING_QUOTE', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'AWAITING_APPROVAL', 'COMPLETED', 'CLOSED', 'CANCELLED'
   ]
-  
+
   const priorityOptions = [
     'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
   ]
 
   const typeOptions = [
-    'REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 
+    'REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION',
     'REPLACEMENT', 'EMERGENCY', 'OTHER'
   ]
 
@@ -292,13 +312,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         console.error('Auto-refresh failed:', error)
       }
     }, refreshInterval * 1000)
-    
+
     return () => clearInterval(interval)
   }, [])
-
-  useEffect(() => {
-    filterTickets()
-  }, [tickets, searchTerm, filters, showClosedTickets])
 
   // Fetch filtered contractors when a ticket is selected for assignment
   useEffect(() => {
@@ -310,11 +326,60 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   // Fetch quote requests when viewing a ticket with quotes
   useEffect(() => {
-    if (selectedTicket && showTicketModal && 
+    if (selectedTicket && showTicketModal &&
         (selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED')) {
       fetchQuoteRequests(selectedTicket.id)
     }
   }, [selectedTicket, showTicketModal])
+
+  // Replace filterTickets() + its useEffect with useMemo
+  const filteredTickets = useMemo(() => {
+    let result = tickets
+
+    // Hide closed unless stat filter is completed or status filter includes CLOSED
+    if (!showClosedTickets && !filters.status.includes('CLOSED') && statFilter !== 'completed') {
+      result = result.filter(t => t.status !== 'CLOSED')
+    }
+
+    // Stat card filter
+    if (statFilter === 'open') result = result.filter(t => t.status === 'OPEN')
+    else if (statFilter === 'in_progress') result = result.filter(t => ['IN_PROGRESS', 'ASSIGNED', 'ON_SITE', 'AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED'].includes(t.status))
+    else if (statFilter === 'completed') result = result.filter(t => ['COMPLETED', 'CLOSED'].includes(t.status))
+
+    // Text search
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase()
+      result = result.filter(t =>
+        t.title.toLowerCase().includes(s) ||
+        t.ticketNumber.toLowerCase().includes(s) ||
+        t.user?.name?.toLowerCase().includes(s) ||
+        t.user?.email?.toLowerCase().includes(s) ||
+        t.description.toLowerCase().includes(s)
+      )
+    }
+
+    // FilterDrawer filters
+    if (filters.status.length > 0) result = result.filter(t => filters.status.includes(t.status))
+    if (filters.priority.length > 0) result = result.filter(t => filters.priority.includes(t.priority))
+    if (filters.type.length > 0) result = result.filter(t => filters.type.includes(t.type))
+    if (filters.branch.length > 0) result = result.filter(t => t.branch && filters.branch.includes(t.branch.id))
+    if (filters.date) {
+      const now = new Date()
+      result = result.filter(t => {
+        const created = new Date(t.createdAt)
+        if (filters.date === 'today') { const d = new Date(); d.setHours(0,0,0,0); return created >= d }
+        if (filters.date === 'week') { const d = new Date(); d.setDate(now.getDate()-7); return created >= d }
+        if (filters.date === 'month') { const d = new Date(); d.setMonth(now.getMonth()-1); return created >= d }
+        if (filters.date === 'custom') {
+          if (filters.dateFrom && created < new Date(filters.dateFrom)) return false
+          if (filters.dateTo && created > new Date(filters.dateTo + 'T23:59:59')) return false
+        }
+        return true
+      })
+    }
+
+    return result
+  }, [tickets, searchTerm, filters, showClosedTickets, statFilter])
 
   const fetchTickets = async () => {
     try {
@@ -381,10 +446,10 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     setLoadingContractors(true)
     setRecommendedContractor(null)
     try {
-      const url = categoryId 
+      const url = categoryId
         ? `/api/admin/contractors/available?categoryId=${categoryId}&autoAssign=true`
         : '/api/admin/contractors/available?autoAssign=true'
-      
+
       const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
@@ -410,7 +475,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
       if (response.ok) {
         const data = await response.json()
         // Filter to get only admin users (excluding current user if they want self-assign separately)
-        const admins = (data.users || []).filter((u: HQAdmin) => 
+        const admins = (data.users || []).filter((u: HQAdmin) =>
           u.role.includes('ADMIN') && u.id !== user.id
         )
         setHQAdmins(admins)
@@ -422,14 +487,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const handleAssignToSelf = async () => {
     if (!selectedTicket) return
-    
+
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/assign-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           adminId: user.id,
-          notes: assignmentNotes 
+          notes: assignmentNotes
         })
       })
 
@@ -452,14 +517,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const handleAssignToHQAdmin = async () => {
     if (!selectedTicket || !selectedHQAdmin) return
-    
+
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/assign-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           adminId: selectedHQAdmin,
-          notes: assignmentNotes 
+          notes: assignmentNotes
         })
       })
 
@@ -485,13 +550,13 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const handleHQJobComplete = async () => {
     if (!selectedTicket) return
-    
+
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/hq-complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          completionNotes: hqCompletionNotes 
+        body: JSON.stringify({
+          completionNotes: hqCompletionNotes
         })
       })
 
@@ -527,14 +592,14 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const handleUnassignTicket = async () => {
     if (!selectedTicket) return
-    
+
     setUnassigning(true)
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/unassign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          reason: unassignReason 
+        body: JSON.stringify({
+          reason: unassignReason
         })
       })
 
@@ -556,74 +621,6 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     } finally {
       setUnassigning(false)
     }
-  }
-
-  const filterTickets = () => {
-    let filtered = tickets
-
-    // Hide closed tickets unless explicitly filtered
-    if (!showClosedTickets && !filters.status.includes('CLOSED')) {
-      filtered = filtered.filter(ticket => ticket.status !== 'CLOSED')
-    }
-
-    // Text search
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase()
-      filtered = filtered.filter(ticket =>
-        ticket.title.toLowerCase().includes(search) ||
-        ticket.description.toLowerCase().includes(search) ||
-        ticket.ticketNumber.toLowerCase().includes(search) ||
-        ticket.reporterName.toLowerCase().includes(search) ||
-        ticket.user.name.toLowerCase().includes(search) ||
-        ticket.user.email.toLowerCase().includes(search)
-      )
-    }
-
-    // Status filter (multi-select)
-    if (filters.status.length > 0) {
-      filtered = filtered.filter(ticket => filters.status.includes(ticket.status))
-    }
-
-    // Priority filter
-    if (filters.priority.length > 0) {
-      filtered = filtered.filter(ticket => filters.priority.includes(ticket.priority))
-    }
-
-    // Type filter
-    if (filters.type.length > 0) {
-      filtered = filtered.filter(ticket => filters.type.includes(ticket.type))
-    }
-
-    // Branch filter
-    if (filters.branch.length > 0) {
-      filtered = filtered.filter(ticket => ticket.branch && filters.branch.includes(ticket.branch.id))
-    }
-
-    // Date filter
-    if (filters.date) {
-      const now = new Date()
-      const filterDate = new Date()
-      switch (filters.date) {
-        case 'today':
-          filterDate.setHours(0, 0, 0, 0)
-          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
-          break
-        case 'week':
-          filterDate.setDate(now.getDate() - 7)
-          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
-          break
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1)
-          filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= filterDate)
-          break
-        case 'custom':
-          if (filters.dateFrom) filtered = filtered.filter(ticket => new Date(ticket.createdAt) >= new Date(filters.dateFrom))
-          if (filters.dateTo) filtered = filtered.filter(ticket => new Date(ticket.createdAt) <= new Date(filters.dateTo + 'T23:59:59'))
-          break
-      }
-    }
-
-    setFilteredTickets(filtered)
   }
 
   const handleAssignContractor = async () => {
@@ -719,7 +716,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   // Award quote to a contractor
   const handleAwardQuote = async (quoteRequestId: string) => {
     if (!selectedTicket) return
-    
+
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/quote-requests/${quoteRequestId}`, {
         method: 'POST',
@@ -744,7 +741,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   // Reject a quote
   const handleRejectQuote = async (quoteRequestId: string, reason?: string) => {
     if (!selectedTicket) return
-    
+
     try {
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}/quote-requests/${quoteRequestId}`, {
         method: 'POST',
@@ -767,7 +764,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   // Toggle contractor selection for multi-select
   const toggleContractorSelection = (contractorId: string) => {
-    setSelectedContractors(prev => 
+    setSelectedContractors(prev =>
       prev.includes(contractorId)
         ? prev.filter(id => id !== contractorId)
         : [...prev, contractorId]
@@ -777,7 +774,7 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   // Handle quote approval or rejection
   const handleQuoteAction = async (action: 'approve' | 'reject') => {
     if (!selectedTicket) return
-    
+
     if (action === 'reject' && !quoteRejectionReason.trim()) {
       toast.error('Please provide a reason for rejection')
       return
@@ -796,8 +793,8 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
       if (response.ok) {
         const data = await response.json()
-        toast.success(action === 'approve' 
-          ? 'Quote approved! Job is now assigned to contractor.' 
+        toast.success(action === 'approve'
+          ? 'Quote approved! Job is now assigned to contractor.'
           : 'Quote rejected. Contractor will be asked to resubmit.')
         setQuoteRejectionReason('')
         setShowTicketModal(false)
@@ -866,17 +863,17 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const handleAssetChange = async () => {
     if (!selectedTicket) return
-    
+
     setAssetUpdateLoading(true)
     try {
       // Get the selected asset's category
       const selectedAsset = assets.find(a => a.id === selectedAssetId)
       const categoryId = selectedAsset?.categoryId || null
-      
+
       const response = await fetch(`/api/admin/tickets/${selectedTicket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           assetId: selectedAssetId || null,
           categoryId: categoryId // Update category based on asset
         })
@@ -999,7 +996,6 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     }
   }
 
-
   const clearAllFilters = () => {
     setSearchTerm('')
     setFilters(EMPTY_FILTERS)
@@ -1015,351 +1011,6 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   const getActiveFilterCount = () => countActiveFilters(filters) + (searchTerm ? 1 : 0)
 
-  // DataGrid column definitions
-  const ticketColumns: GridColDef[] = useMemo(() => [
-    {
-      field: 'ticket',
-      headerName: 'Ticket',
-      flex: 1.2,
-      minWidth: 140,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ py: 1, textAlign: 'left', width: '100%' }}>
-          <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{params.row.title}</p>
-          <p className="text-sm font-medium" style={{ color: 'var(--accent)' }}>{params.row.ticketNumber}</p>
-        </Box>
-      ),
-    },
-    {
-      field: 'ticketId',
-      headerName: 'Ticket ID',
-      flex: 0.7,
-      minWidth: 90,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
-          {params.row.id.slice(0, 8).toUpperCase()}
-        </span>
-      ),
-    },
-    {
-      field: 'branch',
-      headerName: 'Site',
-      flex: 0.7,
-      minWidth: 100,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Tooltip title={params.row.branch?.name || params.row.location || 'No site specified'}>
-          <Box sx={{ textAlign: 'left' }}>
-            <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
-              {params.row.branch?.name || params.row.location || '-'}
-            </p>
-          </Box>
-        </Tooltip>
-      ),
-    },
-    {
-      field: 'description',
-      headerName: 'Description',
-      flex: 1.5,
-      minWidth: 150,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
-          <Tooltip 
-            title={
-              <Box sx={{ p: 1, maxWidth: 400 }}>
-                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>
-                  {params.row.description || 'No description'}
-                </p>
-              </Box>
-            }
-            arrow
-            placement="top"
-            slotProps={{
-              tooltip: {
-                sx: {
-                  bgcolor: 'grey.900',
-                  '& .MuiTooltip-arrow': { color: 'grey.900' },
-                  maxWidth: 400,
-                },
-              },
-            }}
-          >
-            <p className="text-sm truncate cursor-pointer text-left" style={{ maxWidth: '100%', color: 'var(--text-secondary)' }}>
-              {params.row.description || 'No description'}
-            </p>
-          </Tooltip>
-        </Box>
-      ),
-    },
-    {
-      field: 'category',
-      headerName: 'Category',
-      flex: 0.7,
-      minWidth: 100,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Tooltip title={params.row.category?.name || 'No category'}>
-          <Chip
-            label={params.row.category?.name || 'N/A'}
-            size="medium"
-            variant="outlined"
-            sx={{ 
-              fontWeight: 500, 
-              fontSize: '0.8rem',
-              py: 0.5,
-              borderRadius: '8px',
-              borderColor: params.row.category?.color || '#6B7280',
-              color: params.row.category?.color || '#6B7280',
-              '& .MuiChip-label': {
-                color: params.row.category?.color || '#6B7280'
-              }
-            }}
-          />
-        </Tooltip>
-      ),
-    },
-    {
-      field: 'priority',
-      headerName: 'Priority',
-      flex: 0.5,
-      minWidth: 70,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const priorityColors: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
-          LOW: 'success',
-          MEDIUM: 'warning',
-          HIGH: 'error',
-          CRITICAL: 'error',
-        }
-        return (
-          <Tooltip title="Click to change priority">
-            <Chip
-              label={params.row.priority}
-              size="medium"
-              color={priorityColors[params.row.priority] || 'default'}
-              onClick={(e) => {
-                e.stopPropagation()
-                setQuickEditTicket(params.row)
-                setPriorityMenuAnchor(e.currentTarget)
-              }}
-              sx={{ 
-                fontWeight: 500, 
-                fontSize: '0.8rem',
-                py: 0.5,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  filter: 'brightness(0.9)',
-                  transform: 'scale(1.02)'
-                }
-              }}
-              icon={<Edit className="h-4 w-4" />}
-            />
-          </Tooltip>
-        )
-      },
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      flex: 0.7,
-      minWidth: 90,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const statusColors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default'> = {
-          OPEN: 'primary',
-          AWAITING_QUOTE: 'warning',
-          QUOTE_SUBMITTED: 'info',
-          PROCESSING: 'warning',
-          ACCEPTED: 'info',
-          IN_PROGRESS: 'warning',
-          ON_SITE: 'secondary',
-          AWAITING_DESCRIPTION: 'warning',
-          AWAITING_WORK_APPROVAL: 'info',
-          AWAITING_APPROVAL: 'warning',
-          COMPLETED: 'success',
-          CLOSED: 'default',
-          CANCELLED: 'error',
-        }
-        return (
-          <Chip
-            label={params.row.status.replace(/_/g, ' ')}
-            size="medium"
-            color={statusColors[params.row.status] || 'default'}
-            sx={{ 
-              fontWeight: 500, 
-              fontSize: '0.8rem',
-              py: 0.5,
-              borderRadius: '8px',
-              letterSpacing: '0.02em'
-            }}
-          />
-        )
-      },
-    },
-    {
-      field: 'sla',
-      headerName: 'SLA',
-      flex: 0.9,
-      minWidth: 110,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const slaInfo = calculateSLAInfo({
-          createdAt: params.row.createdAt,
-          priority: params.row.priority,
-          status: params.row.status,
-          assignedAt: params.row.assignedAt,
-          contractorAcceptedAt: params.row.contractorAcceptedAt,
-          onSiteAt: params.row.onSiteAt,
-          completedAt: params.row.completedAt,
-          responseDeadline: params.row.responseDeadline,
-          resolutionDeadline: params.row.resolutionDeadline
-        })
-        
-        // Show resolution SLA for active tickets, or final status for closed
-        const showResolution = !['OPEN', 'PROCESSING', 'ASSIGNED'].includes(params.row.status)
-        const status = showResolution ? slaInfo.resolutionStatus : slaInfo.responseStatus
-        const label = showResolution ? slaInfo.formattedResolutionRemaining : slaInfo.formattedResponseRemaining
-        const tooltipText = showResolution 
-          ? `Resolution: ${slaInfo.formattedResolutionRemaining}`
-          : `Response: ${slaInfo.formattedResponseRemaining}`
-        
-        return (
-          <Tooltip title={tooltipText}>
-            <Chip
-              icon={<Timer className="h-4 w-4" />}
-              label={label.length > 14 ? label.substring(0, 14) + '...' : label}
-              size="medium"
-              color={getSLAChipColor(status)}
-              sx={{ 
-                fontWeight: 500, 
-                fontSize: '0.75rem',
-                py: 0.5,
-                borderRadius: '8px'
-              }}
-            />
-          </Tooltip>
-        )
-      },
-    },
-    {
-      field: 'assignedTo',
-      headerName: 'Contractor',
-      flex: 0.9,
-      minWidth: 120,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => {
-        const isAssignable = ['OPEN', 'PROCESSING'].includes(params.row.status) || !params.row.assignedTo
-        return (
-          <Tooltip title={params.row.assignedTo ? 'Click to reassign' : 'Click to assign contractor'}>
-            <Box 
-              onClick={(e) => {
-                if (isAssignable) {
-                  e.stopPropagation()
-                  setQuickEditTicket(params.row)
-                  fetchContractorsForCategory(params.row.categoryId || undefined)
-                  setContractorMenuAnchor(e.currentTarget as HTMLElement)
-                }
-              }}
-              sx={{ 
-                textAlign: 'left', 
-                cursor: isAssignable ? 'pointer' : 'default',
-                px: 1,
-                py: 0.5,
-                borderRadius: 1,
-                '&:hover': isAssignable ? { 
-                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
-                  boxShadow: '0 0 0 1px rgba(25, 118, 210, 0.3)'
-                } : {}
-              }}
-            >
-              {params.row.assignedTo ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
-                  <UserCheck className="h-4 w-4" style={{ color: 'var(--green)' }} />
-                  <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{params.row.assignedTo.name}</p>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 1 }}>
-                  <Plus className="h-4 w-4" style={{ color: 'var(--accent)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--accent)' }}>Assign</span>
-                </Box>
-              )}
-            </Box>
-          </Tooltip>
-        )
-      },
-    },
-    {
-      field: 'user',
-      headerName: 'Created By',
-      flex: 0.7,
-      minWidth: 90,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Box sx={{ textAlign: 'left' }}>
-          <p className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{params.row.user.name}</p>
-        </Box>
-      ),
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Created',
-      flex: 0.6,
-      minWidth: 80,
-      align: 'left',
-      headerAlign: 'left',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-          {new Date(params.row.createdAt).toLocaleDateString()}
-        </span>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 60,
-      sortable: false,
-      filterable: false,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<TicketDetails>) => (
-        <Tooltip title="View Details">
-          <IconButton
-            size="medium"
-            onClick={() => {
-              setSelectedTicket(params.row)
-              setEditingAsset(false) // Reset asset editing state
-              setShowTicketModal(true)
-            }}
-            sx={{ 
-              color: 'primary.main',
-              '&:hover': {
-                backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                transform: 'scale(1.1)'
-              },
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Eye className="h-5 w-5" />
-          </IconButton>
-        </Tooltip>
-      ),
-    },
-  ], [])
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
@@ -1372,56 +1023,45 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   }
 
   return (
-    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* Filter Drawer */}
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* FilterDrawer */}
       <FilterDrawer
         isOpen={filterDrawerOpen}
         onClose={() => setFilterDrawerOpen(false)}
         onApply={setFilters}
         filters={filters}
         sections={['status', 'priority', 'type', 'date', 'branch']}
-        statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
+        statusOptions={[
+          { value: 'OPEN', label: 'Open' },
+          { value: 'ASSIGNED', label: 'Assigned' },
+          { value: 'IN_PROGRESS', label: 'In Progress' },
+          { value: 'ON_SITE', label: 'On Site' },
+          { value: 'AWAITING_APPROVAL', label: 'Awaiting Approval' },
+          { value: 'COMPLETED', label: 'Completed' },
+          { value: 'CLOSED', label: 'Closed' },
+          { value: 'CANCELLED', label: 'Cancelled' },
+        ]}
         branches={branches}
       />
 
-      <div className="space-y-5">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>Manage Tickets</h1>
-            <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Review, assign, and manage company tickets</p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button 
-              onClick={fetchTickets} 
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
+      {/* Topbar */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
+            {filteredTickets.length} tickets
           </div>
         </div>
-
-        {/* Search Bar */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-            <Input
-              placeholder="Search by title, ticket number, or reporter..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <FilterButton
-            isOpen={filterDrawerOpen}
-            activeCount={countActiveFilters(filters)}
-            onClick={() => setFilterDrawerOpen(o => !o)}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FilterButton isOpen={filterDrawerOpen} activeCount={countActiveFilters(filters)} onClick={() => setFilterDrawerOpen(o => !o)} />
+          <button onClick={fetchTickets} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
+            <RefreshCw size={13} strokeWidth={1.5} />
+          </button>
         </div>
+      </div>
 
-        {/* Active Filter Tags */}
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* ActiveFilterTags */}
         <ActiveFilterTags
           filters={filters}
           statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
@@ -1430,1329 +1070,1140 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
           onClearAll={clearAllFilters}
         />
 
-        {/* Tickets Table */}
-        <Card>
-          <CardContent className="p-0">
-            {filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Ticket className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {tickets.length === 0 ? 'No tickets yet' : 'No tickets match your filters'}
-                </h3>
-                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  {tickets.length === 0
-                    ? 'Tickets will appear here once users create them'
-                    : 'Try adjusting your search criteria'
-                  }
-                </p>
-                {tickets.length > 0 && (
-                  <Button variant="outline" onClick={clearAllFilters}>
-                    <X className="h-4 w-4 mr-2" />
-                    Clear Filters
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <Box sx={{ width: '100%' }}>
-                <ScrollableDataGrid
-                  rows={filteredTickets}
-                  columns={ticketColumns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10, page: 0 },
-                    },
-                    sorting: {
-                      sortModel: [{ field: 'createdAt', sort: 'desc' }],
-                    },
-                  }}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  disableRowSelectionOnClick
-                  autoHeight
-                  rowHeight={60}
-                  getRowClassName={(params) => {
-                    const hasRejection = params.row.rejectedAt && params.row.status === 'OPEN'
-                    const hasCancellationRequest = params.row.cancellationRequestedAt && !params.row.cancelledAt
-                    if (hasRejection) return 'bg-red-bg'
-                    if (hasCancellationRequest) return 'bg-amber-bg'
-                    return ''
-                  }}
-                  sx={{
-                    border: 'none',
-                    borderRadius: '12px',
-                    '& .MuiDataGrid-columnHeaders': {
-                      backgroundColor: '#f8fafc',
-                      borderRadius: '12px 12px 0 0',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    },
-                    '& .MuiDataGrid-columnHeaderTitle': {
-                      fontWeight: 500,
-                    },
-                    '& .MuiDataGrid-cell': {
-                      borderBottom: '1px solid #f1f5f9',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                    '& .MuiDataGrid-row:hover': {
-                      backgroundColor: '#f8fafc',
-                    },
-                    '& .bg-red-bg': {
-                      backgroundColor: '#fef2f2 !important',
-                      borderLeft: '4px solid #ef4444',
-                    },
-                    '& .bg-amber-bg': {
-                      backgroundColor: '#fffbeb !important',
-                      borderLeft: '4px solid #f59e0b',
-                    },
-                  }}
-                />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+        {/* 4 Stat Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {/* Total card */}
+          <div onClick={() => setStatFilter('')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{tickets.length}</div>
+          </div>
+          {/* Open card */}
+          <div onClick={() => setStatFilter(statFilter === 'open' ? '' : 'open')} style={{ background: 'var(--surface)', border: statFilter === 'open' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Open</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#92400e' }}>{tickets.filter(t => t.status === 'OPEN').length}</div>
+          </div>
+          {/* In Progress card */}
+          <div onClick={() => setStatFilter(statFilter === 'in_progress' ? '' : 'in_progress')} style={{ background: 'var(--surface)', border: statFilter === 'in_progress' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>In Progress</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{tickets.filter(t => ['IN_PROGRESS', 'ASSIGNED', 'ON_SITE', 'AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED'].includes(t.status)).length}</div>
+          </div>
+          {/* Completed card */}
+          <div onClick={() => setStatFilter(statFilter === 'completed' ? '' : 'completed')} style={{ background: 'var(--surface)', border: statFilter === 'completed' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Completed</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{tickets.filter(t => ['COMPLETED', 'CLOSED'].includes(t.status)).length}</div>
+          </div>
+        </div>
 
-        {/* Ticket Detail Modal */}
-        <Dialog open={showTicketModal} onOpenChange={setShowTicketModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between">
-                <span>Ticket Details</span>
-                {selectedTicket && (
-                  <div className="flex items-center space-x-2">
-                    <Badge style={getStatusColor(selectedTicket.status)}>
-                      {selectedTicket.status.replace('_', ' ')}
-                    </Badge>
-                    <Badge style={getPriorityColor(selectedTicket.priority)}>
-                      {selectedTicket.priority}
-                    </Badge>
+        {/* Search bar */}
+        <div style={{ position: 'relative' }}>
+          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search by title, ticket number, or reporter..."
+            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, fontSize: 12, border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {/* Table card */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
+          {/* Card header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Tickets</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{filteredTickets.length} results</span>
+          </div>
+          {/* Table */}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['Ticket ID', 'Title', 'Branch', 'Priority', 'Status', 'Created', 'Actions'].map(col => (
+                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTickets.map((ticket, i) => (
+                  <tr key={ticket.id} style={{ borderBottom: i === filteredTickets.length - 1 ? 'none' : '1px solid var(--surface2)', cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onClick={() => { setSelectedTicket(ticket); setShowTicketModal(true) }}
+                  >
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.ticketNumber}</td>
+                    <td style={{ fontSize: 12, color: 'var(--text-primary)', padding: '9px 14px', maxWidth: 240 }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.title}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{ticket.user?.name || ticket.user?.email}</div>
+                    </td>
+                    <td style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.branch?.name || '—'}</td>
+                    <td style={{ padding: '9px 14px' }}>
+                      <span style={{
+                        fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
+                        padding: '2px 7px', borderRadius: 99,
+                        ...getPriorityPill(ticket.priority)
+                      }}>{ticket.priority}</span>
+                    </td>
+                    <td style={{ padding: '9px 14px' }}>
+                      <span style={{
+                        fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
+                        padding: '2px 7px', borderRadius: 99,
+                        ...getStatusPill(ticket.status)
+                      }}>{ticket.status.replace(/_/g, ' ')}</span>
+                    </td>
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: '9px 14px' }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setSelectedTicket(ticket); setShowTicketModal(true) }}
+                        style={{ fontSize: 11, padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                      >View</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredTickets.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
+                <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No tickets found</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Ticket Detail Modal */}
+      <Dialog open={showTicketModal} onOpenChange={setShowTicketModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Ticket Details</span>
+              {selectedTicket && (
+                <div className="flex items-center space-x-2">
+                  <Badge style={getStatusColor(selectedTicket.status)}>
+                    {selectedTicket.status.replace('_', ' ')}
+                  </Badge>
+                  <Badge style={getPriorityColor(selectedTicket.priority)}>
+                    {selectedTicket.priority}
+                  </Badge>
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedTicket && (
+            <div className="space-y-6">
+              {/* Ticket Header */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                    {selectedTicket.title}
+                  </h3>
+                  <div className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <p><span className="font-medium">Ticket ID:</span> {selectedTicket.ticketNumber}</p>
+                    <p><span className="font-medium">Type:</span> {selectedTicket.type}</p>
+                    <p><span className="font-medium">Created:</span> {new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
+                    <p><span className="font-medium">Reporter:</span> {selectedTicket.reporterName || selectedTicket.user.name}</p>
                   </div>
-                )}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {selectedTicket && (
-              <div className="space-y-6">
-                {/* Ticket Header */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="text-xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                      {selectedTicket.title}
-                    </h3>
-                    <div className="space-y-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      <p><span className="font-medium">Ticket ID:</span> {selectedTicket.ticketNumber}</p>
-                      <p><span className="font-medium">Type:</span> {selectedTicket.type}</p>
-                      <p><span className="font-medium">Created:</span> {new Date(selectedTicket.createdAt).toLocaleDateString()}</p>
-                      <p><span className="font-medium">Reporter:</span> {selectedTicket.reporterName || selectedTicket.user.name}</p>
+                </div>
+
+                <div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Assigned To:</p>
+                      {selectedTicket.assignedTo ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.assignedTo.name}</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              {selectedTicket.hqAssignedAt ? 'HQ Staff' : 'Contractor'}
+                            </p>
+                          </div>
+                          {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
+                              onClick={() => setShowUnassignConfirm(true)}
+                            >
+                              <X className="h-3 w-3 mr-1" />
+                              Revoke
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-text-muted">Unassigned</p>
+                      )}
                     </div>
-                  </div>
-                  
-                  <div>
-                    <div className="space-y-3">
+
+                    {selectedTicket.asset && (
                       <div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Assigned To:</p>
-                        {selectedTicket.assignedTo ? (
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.assignedTo.name}</p>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {selectedTicket.hqAssignedAt ? 'HQ Staff' : 'Contractor'}
-                              </p>
-                            </div>
-                            {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
+                          {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && !editingAsset && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssetId(selectedTicket.asset?.id || '')
+                                setEditingAsset(true)
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Change
+                            </Button>
+                          )}
+                        </div>
+                        {!editingAsset ? (
+                          <>
+                            <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedTicket.asset.location}</p>
+                            {selectedTicket.category && (
+                              <Badge variant="outline" className="mt-1" style={{ borderColor: selectedTicket.category.color }}>
+                                {selectedTicket.category.name}
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <div className="space-y-2 mt-2">
+                            <Select value={selectedAssetId || 'none'} onValueChange={(v) => setSelectedAssetId(v === 'none' ? '' : v)}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select an asset..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Asset</SelectItem>
+                                {assets.map(asset => (
+                                  <SelectItem key={asset.id} value={asset.id}>
+                                    {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={handleAssetChange}
+                                disabled={assetUpdateLoading}
+                              >
+                                {assetUpdateLoading ? 'Saving...' : 'Save'}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
-                                onClick={() => setShowUnassignConfirm(true)}
+                                onClick={() => setEditingAsset(false)}
+                                disabled={assetUpdateLoading}
                               >
-                                <X className="h-3 w-3 mr-1" />
-                                Revoke
+                                Cancel
                               </Button>
-                            )}
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              * Category will be updated to match the selected asset
+                            </p>
                           </div>
-                        ) : (
-                          <p className="text-sm text-text-muted">Unassigned</p>
                         )}
                       </div>
-                      
-                      {selectedTicket.asset && (
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
-                            {!['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && !editingAsset && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAssetId(selectedTicket.asset?.id || '')
-                                  setEditingAsset(true)
-                                }}
-                              >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Change
-                              </Button>
-                            )}
-                          </div>
-                          {!editingAsset ? (
-                            <>
-                              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedTicket.asset.name} ({selectedTicket.asset.assetNumber})</p>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{selectedTicket.asset.location}</p>
-                              {selectedTicket.category && (
-                                <Badge variant="outline" className="mt-1" style={{ borderColor: selectedTicket.category.color }}>
-                                  {selectedTicket.category.name}
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <div className="space-y-2 mt-2">
-                              <Select value={selectedAssetId || 'none'} onValueChange={(v) => setSelectedAssetId(v === 'none' ? '' : v)}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select an asset..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">No Asset</SelectItem>
-                                  {assets.map(asset => (
-                                    <SelectItem key={asset.id} value={asset.id}>
-                                      {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleAssetChange}
-                                  disabled={assetUpdateLoading}
-                                >
-                                  {assetUpdateLoading ? 'Saving...' : 'Save'}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setEditingAsset(false)}
-                                  disabled={assetUpdateLoading}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                * Category will be updated to match the selected asset
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    )}
 
-                      {/* Show add asset option if no asset is set */}
-                      {!selectedTicket.asset && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
-                            {!editingAsset && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAssetId('')
-                                  setEditingAsset(true)
-                                }}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add
-                              </Button>
-                            )}
-                          </div>
-                          {!editingAsset ? (
-                            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No asset linked</p>
-                          ) : (
-                            <div className="space-y-2 mt-2">
-                              <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Select an asset..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {assets.map(asset => (
-                                    <SelectItem key={asset.id} value={asset.id}>
-                                      {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={handleAssetChange}
-                                  disabled={assetUpdateLoading || !selectedAssetId}
-                                >
-                                  {assetUpdateLoading ? 'Saving...' : 'Save'}
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setEditingAsset(false)}
-                                  disabled={assetUpdateLoading}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                * Category will be updated to match the selected asset
-                              </p>
-                            </div>
+                    {/* Show add asset option if no asset is set */}
+                    {!selectedTicket.asset && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Related Asset:</p>
+                          {!editingAsset && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedAssetId('')
+                                setEditingAsset(true)
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
                           )}
                         </div>
-                      )}
-                    </div>
+                        {!editingAsset ? (
+                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No asset linked</p>
+                        ) : (
+                          <div className="space-y-2 mt-2">
+                            <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select an asset..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {assets.map(asset => (
+                                  <SelectItem key={asset.id} value={asset.id}>
+                                    {asset.name} ({asset.assetNumber}) - {asset.category?.name || 'No Category'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={handleAssetChange}
+                                disabled={assetUpdateLoading || !selectedAssetId}
+                              >
+                                {assetUpdateLoading ? 'Saving...' : 'Save'}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingAsset(false)}
+                                disabled={assetUpdateLoading}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              * Category will be updated to match the selected asset
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* Description */}
+              {/* Description */}
+              <div>
+                <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Description</h4>
+                <p className="p-4 rounded-lg" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>{selectedTicket.description}</p>
+              </div>
+
+              {/* Attachments */}
+              {selectedTicket.attachments.length > 0 && (
                 <div>
-                  <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Description</h4>
-                  <p className="p-4 rounded-lg" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface2)' }}>{selectedTicket.description}</p>
+                  <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Media & Attachments</h4>
+                  <MediaViewer
+                    files={selectedTicket.attachments}
+                    gridCols={3}
+                    thumbnailSize="md"
+                  />
                 </div>
+              )}
 
-                {/* Attachments */}
-                {selectedTicket.attachments.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Media & Attachments</h4>
-                    <MediaViewer 
-                      files={selectedTicket.attachments}
-                      gridCols={3}
-                      thumbnailSize="md"
-                    />
+              {/* Ticket Chat */}
+              <TicketChat
+                ticketId={selectedTicket.id}
+                currentUser={{
+                  id: user.id,
+                  name: user.name,
+                  email: user.email,
+                  role: user.role
+                }}
+                ticketStatus={selectedTicket.status}
+                pollInterval={5000}
+              />
+
+              {/* Assignment Section - Only show for non-cancelled/closed tickets without contractor */}
+              {!selectedTicket.assignedTo && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                  <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Assign Ticket</h4>
+
+                  {/* Assignment Type Toggle */}
+                  <div className="flex gap-2 mb-4">
+                    <Button
+                      variant={assignmentType === 'contractor' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setAssignmentType('contractor')}
+                    >
+                      To Contractor
+                    </Button>
+                    <Button
+                      variant={assignmentType === 'hq-admin' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setAssignmentType('hq-admin')}
+                    >
+                      To HQ Staff
+                    </Button>
                   </div>
-                )}
 
-                {/* Ticket Chat */}
-                <TicketChat 
-                  ticketId={selectedTicket.id}
-                  currentUser={{
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role
-                  }}
-                  ticketStatus={selectedTicket.status}
-                  pollInterval={5000}
-                />
-
-                {/* Assignment Section - Only show for non-cancelled/closed tickets without contractor */}
-                {!selectedTicket.assignedTo && !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
-                    <h4 className="text-lg font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Assign Ticket</h4>
-                    
-                    {/* Assignment Type Toggle */}
-                    <div className="flex gap-2 mb-4">
-                      <Button
-                        variant={assignmentType === 'contractor' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setAssignmentType('contractor')}
-                      >
-                        To Contractor
-                      </Button>
-                      <Button
-                        variant={assignmentType === 'hq-admin' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setAssignmentType('hq-admin')}
-                      >
-                        To HQ Staff
-                      </Button>
-                    </div>
-
-                    {assignmentType === 'contractor' ? (
-                      <div className="space-y-4">
-                        {/* Recommended Contractor */}
-                        {recommendedContractor && (
-                          <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--green)' }}>
-                                <Star className="h-4 w-4 fill-current text-ds-amber" />
-                                Recommended Contractor
-                              </span>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                style={{ backgroundColor: 'var(--green)' }}
-                                onClick={() => setSelectedContractor(recommendedContractor.userId)}
-                              >
-                                Auto-Assign
-                              </Button>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1">
-                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{recommendedContractor.name}</p>
-                                <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                  <Tooltip
-                                    title={
-                                      recommendedContractor.stats ? (
-                                        <Box sx={{ p: 0.5 }}>
-                                          <Box sx={{ fontWeight: 500, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.15)', pb: 0.5 }}>
-                                            Rating Breakdown
-                                          </Box>
-                                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: '0.8rem' }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                                              <span>Punctuality:</span>
-                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgPunctuality}/5</span>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                                              <span>Customer Service:</span>
-                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgCustomerService}/5</span>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                                              <span>Workmanship:</span>
-                                              <span style={{ fontWeight: 500 }}>{recommendedContractor.stats.avgWorkmanship}/5</span>
-                                            </Box>
-                                          </Box>
-                                        </Box>
-                                      ) : 'No ratings yet'
-                                    }
-                                    arrow
-                                  >
-                                    <span className="font-medium cursor-help" style={{ color: 'var(--accent)' }}>
-                                      {recommendedContractor.rating?.toFixed(1) || '-'}
-                                    </span>
-                                  </Tooltip>
-                                  <span>•</span>
-                                  <span>{recommendedContractor.totalJobs || 0} jobs</span>
-                                  {recommendedContractor.stats && (
-                                    <>
-                                      <span>•</span>
-                                      <span>{recommendedContractor.stats.totalRatings} reviews</span>
-                                    </>
-                                  )}
-                                </div>
+                  {assignmentType === 'contractor' ? (
+                    <div className="space-y-4">
+                      {/* Recommended Contractor */}
+                      {recommendedContractor && (
+                        <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium flex items-center gap-1" style={{ color: 'var(--green)' }}>
+                              <Star className="h-4 w-4 fill-current text-ds-amber" />
+                              Recommended Contractor
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              style={{ backgroundColor: 'var(--green)' }}
+                              onClick={() => setSelectedContractor(recommendedContractor.userId)}
+                            >
+                              Auto-Assign
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{recommendedContractor.name}</p>
+                              <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                                <span className="font-medium cursor-help" style={{ color: 'var(--accent)' }}>
+                                  {recommendedContractor.rating?.toFixed(1) || '-'}
+                                </span>
+                                <span>•</span>
+                                <span>{recommendedContractor.totalJobs || 0} jobs</span>
+                                {recommendedContractor.stats && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{recommendedContractor.stats.totalRatings} reviews</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
-                        )}
-                        
-                        {/* Contractor Loading State */}
-                        {loadingContractors && (
-                          <div className="text-center py-4">
-                            <RefreshCw className="h-5 w-5 animate-spin mx-auto text-text-muted" />
-                            <p className="text-sm text-text-muted mt-1">Finding contractors for this category...</p>
-                          </div>
-                        )}
-                        
-                        {/* Request Quote Option - Moved to top */}
-                        <div className="flex items-center space-x-2 p-3 rounded-lg border" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
-                          <input
-                            type="checkbox"
-                            id="requestQuote"
-                            checked={requestQuote}
-                            onChange={(e) => {
-                              setRequestQuote(e.target.checked)
-                              if (!e.target.checked) {
-                                setSelectedContractors([])
-                              }
-                            }}
-                            className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
-                          />
-                          <Label htmlFor="requestQuote" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--amber)' }}>
-                            Request Quote/Estimate First (can select multiple contractors)
-                          </Label>
                         </div>
-                        
-                        {/* Contractor Selection */}
-                        {!loadingContractors && (
-                          <>
-                            {requestQuote ? (
-                              // Multi-select for quote requests
+                      )}
+
+                      {/* Contractor Loading State */}
+                      {loadingContractors && (
+                        <div className="text-center py-4">
+                          <RefreshCw className="h-5 w-5 animate-spin mx-auto text-text-muted" />
+                          <p className="text-sm text-text-muted mt-1">Finding contractors for this category...</p>
+                        </div>
+                      )}
+
+                      {/* Request Quote Option - Moved to top */}
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                        <input
+                          type="checkbox"
+                          id="requestQuote"
+                          checked={requestQuote}
+                          onChange={(e) => {
+                            setRequestQuote(e.target.checked)
+                            if (!e.target.checked) {
+                              setSelectedContractors([])
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
+                        />
+                        <Label htmlFor="requestQuote" className="text-sm font-medium cursor-pointer" style={{ color: 'var(--amber)' }}>
+                          Request Quote/Estimate First (can select multiple contractors)
+                        </Label>
+                      </div>
+
+                      {/* Contractor Selection */}
+                      {!loadingContractors && (
+                        <>
+                          {requestQuote ? (
+                            // Multi-select for quote requests
+                            <div>
+                              <Label className="mb-2 block">
+                                Select Contractors for Quote Request
+                                {selectedContractors.length > 0 && (
+                                  <Badge variant="secondary" className="ml-2">
+                                    {selectedContractors.length} selected
+                                  </Badge>
+                                )}
+                              </Label>
+                              <div className="border rounded-lg max-h-64 overflow-y-auto">
+                                {filteredContractors.length === 0 ? (
+                                  <p className="p-4 text-sm text-text-muted text-center">
+                                    No contractors available for this category
+                                  </p>
+                                ) : (
+                                  filteredContractors.map(contractor => (
+                                    <div
+                                      key={contractor.id}
+                                      className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors`}
+                                      style={selectedContractors.includes(contractor.userId) ? { backgroundColor: 'var(--amber-bg)', borderLeft: '4px solid var(--amber)' } : {}}
+                                      onClick={() => toggleContractorSelection(contractor.userId)}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedContractors.includes(contractor.userId)}
+                                        onChange={() => {}}
+                                        className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">{contractor.name}</span>
+                                          <span className="font-medium" style={{ color: 'var(--accent)' }}>
+                                            ★ {contractor.rating?.toFixed(1) || '-'}
+                                          </span>
+                                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                            ({contractor.totalJobs || 0} jobs)
+                                          </span>
+                                        </div>
+                                        {contractor.categories && contractor.categories.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {contractor.categories.slice(0, 3).map(cat => (
+                                              <Badge
+                                                key={cat.id}
+                                                variant="outline"
+                                                className="text-xs"
+                                                style={{ borderColor: cat.color, color: cat.color }}
+                                              >
+                                                {cat.name}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                              {selectedContractors.length > 0 && (
+                                <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
+                                  Quote requests will be sent to {selectedContractors.length} contractor(s). You can compare and award the job later.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            // Single select for direct assignment
+                            <>
                               <div>
-                                <Label className="mb-2 block">
-                                  Select Contractors for Quote Request
-                                  {selectedContractors.length > 0 && (
-                                    <Badge variant="secondary" className="ml-2">
-                                      {selectedContractors.length} selected
-                                    </Badge>
+                                <Label htmlFor="contractor">
+                                  Select Contractor
+                                  {selectedTicket?.category && (
+                                    <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
+                                      (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
+                                    </span>
                                   )}
                                 </Label>
-                                <div className="border rounded-lg max-h-64 overflow-y-auto">
-                                  {filteredContractors.length === 0 ? (
-                                    <p className="p-4 text-sm text-text-muted text-center">
-                                      No contractors available for this category
-                                    </p>
-                                  ) : (
-                                    filteredContractors.map(contractor => (
-                                      <div
-                                        key={contractor.id}
-                                        className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors`}
-                                        style={selectedContractors.includes(contractor.userId) ? { backgroundColor: 'var(--amber-bg)', borderLeft: '4px solid var(--amber)' } : {}}
-                                        onClick={() => toggleContractorSelection(contractor.userId)}
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedContractors.includes(contractor.userId)}
-                                          onChange={() => {}}
-                                          className="h-4 w-4 rounded border-gray-300 text-ds-amber focus:ring-amber-500"
-                                        />
-                                        <div className="flex-1">
+                                <Select value={selectedContractor} onValueChange={setSelectedContractor}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Choose a contractor" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {filteredContractors.length === 0 ? (
+                                      <SelectItem value="no-contractors" disabled>
+                                        No contractors available for this category
+                                      </SelectItem>
+                                    ) : (
+                                      filteredContractors.map(contractor => (
+                                        <SelectItem key={contractor.id} value={contractor.userId}>
                                           <div className="flex items-center gap-2">
-                                            <span className="font-medium">{contractor.name}</span>
-                                            <span className="font-medium" style={{ color: 'var(--accent)' }}>
-                                              ★ {contractor.rating?.toFixed(1) || '-'}
+                                            <span>{contractor.name}</span>
+                                            <span className="font-medium" style={{ color: 'var(--ds-blue)' }}>
+                                              {contractor.rating?.toFixed(1) || '-'}
                                             </span>
-                                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                            <span className="text-xs text-text-muted">
                                               ({contractor.totalJobs || 0} jobs)
                                             </span>
                                           </div>
-                                          {contractor.categories && contractor.categories.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                              {contractor.categories.slice(0, 3).map(cat => (
-                                                <Badge 
-                                                  key={cat.id} 
-                                                  variant="outline" 
-                                                  className="text-xs"
-                                                  style={{ borderColor: cat.color, color: cat.color }}
-                                                >
-                                                  {cat.name}
-                                                </Badge>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                                {selectedContractors.length > 0 && (
-                                  <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
-                                    Quote requests will be sent to {selectedContractors.length} contractor(s). You can compare and award the job later.
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              // Single select for direct assignment
-                              <>
-                                <div>
-                                  <Label htmlFor="contractor">
-                                    Select Contractor 
-                                    {selectedTicket?.category && (
-                                      <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
-                                        (filtered by: {typeof selectedTicket.category === 'object' ? selectedTicket.category.name : selectedTicket.category})
-                                      </span>
-                                    )}
-                                  </Label>
-                                  <Select value={selectedContractor} onValueChange={setSelectedContractor}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Choose a contractor" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {filteredContractors.length === 0 ? (
-                                        <SelectItem value="no-contractors" disabled>
-                                          No contractors available for this category
                                         </SelectItem>
-                                      ) : (
-                                        filteredContractors.map(contractor => (
-                                          <SelectItem key={contractor.id} value={contractor.userId}>
-                                            <div className="flex items-center gap-2">
-                                              <span>{contractor.name}</span>
-                                              <span className="font-medium" style={{ color: 'var(--ds-blue)' }}>
-                                                {contractor.rating?.toFixed(1) || '-'}
-                                              </span>
-                                              <span className="text-xs text-text-muted">
-                                                ({contractor.totalJobs || 0} jobs)
-                                              </span>
-                                            </div>
-                                          </SelectItem>
-                                        ))
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                
-                                {/* Selected Contractor Details */}
-                                {selectedContractor && (
-                                  <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
-                                    {(() => {
-                                      const contractor = filteredContractors.find(c => c.userId === selectedContractor)
-                                      if (!contractor) return null
-                                      return (
-                                        <div className="space-y-2">
-                                          <div className="flex items-center justify-between">
-                                            <span className="font-medium">{contractor.name}</span>
-                                            <Tooltip
-                                              title={
-                                            contractor.stats ? (
-                                              <Box sx={{ p: 0.5 }}>
-                                                <Box sx={{ fontWeight: 500, mb: 1 }}>Overall Rating</Box>
-                                                <Box sx={{ fontSize: '0.8rem' }}>
-                                                  Based on {contractor.stats.totalRatings} review{contractor.stats.totalRatings !== 1 ? 's' : ''}
-                                                </Box>
-                                              </Box>
-                                            ) : 'No ratings yet'
-                                          }
-                                          arrow
-                                        >
+                                      ))
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Selected Contractor Details */}
+                              {selectedContractor && (
+                                <div className="border rounded-lg p-3" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                                  {(() => {
+                                    const contractor = filteredContractors.find(c => c.userId === selectedContractor)
+                                    if (!contractor) return null
+                                    return (
+                                      <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium">{contractor.name}</span>
                                           <span className="text-lg font-medium cursor-help" style={{ color: 'var(--accent)' }}>
                                             {contractor.rating?.toFixed(1) || '-'}
                                           </span>
-                                        </Tooltip>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-sm">
+                                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                            <div className="font-medium" style={{ color: 'var(--accent)' }}>{contractor.stats?.avgPunctuality || '-'}</div>
+                                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</div>
+                                          </div>
+                                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                            <div className="font-medium" style={{ color: 'var(--green)' }}>{contractor.stats?.avgCustomerService || '-'}</div>
+                                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</div>
+                                          </div>
+                                          <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
+                                            <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{contractor.stats?.avgWorkmanship || '-'}</div>
+                                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</div>
+                                          </div>
+                                        </div>
+                                        {contractor.categories && contractor.categories.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 pt-1">
+                                            {contractor.categories.slice(0, 5).map(cat => (
+                                              <Badge
+                                                key={cat.id}
+                                                variant="outline"
+                                                className="text-xs"
+                                                style={{ borderColor: cat.color, color: cat.color }}
+                                              >
+                                                {cat.name}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="grid grid-cols-3 gap-2 text-sm">
-                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
-                                          <div className="font-medium" style={{ color: 'var(--accent)' }}>{contractor.stats?.avgPunctuality || '-'}</div>
-                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</div>
-                                        </div>
-                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
-                                          <div className="font-medium" style={{ color: 'var(--green)' }}>{contractor.stats?.avgCustomerService || '-'}</div>
-                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</div>
-                                        </div>
-                                        <div className="text-center p-2 rounded" style={{ backgroundColor: 'var(--surface)' }}>
-                                          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{contractor.stats?.avgWorkmanship || '-'}</div>
-                                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</div>
-                                        </div>
-                                      </div>
-                                      {contractor.categories && contractor.categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 pt-1">
-                                          {contractor.categories.slice(0, 5).map(cat => (
-                                            <Badge 
-                                              key={cat.id} 
-                                              variant="outline" 
-                                              className="text-xs"
-                                              style={{ borderColor: cat.color, color: cat.color }}
-                                            >
-                                              {cat.name}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })()}
-                              </div>
-                            )}
-                              </>
-                            )}
-                          </>
-                        )}
-                        
-                        <div>
-                          <Label htmlFor="notes">Assignment Notes</Label>
-                          <Textarea
-                            id="notes"
-                            placeholder="Add instructions or notes for the contractor..."
-                            value={assignmentNotes}
-                            onChange={(e) => setAssignmentNotes(e.target.value)}
-                          />
-                        </div>
-                        
-                        {requestQuote ? (
-                          <Button 
-                            onClick={handleRequestQuotesFromMultiple} 
-                            disabled={selectedContractors.length === 0 || loadingContractors}
-                            className="w-full bg-amber-bg hover:bg-amber-bg"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Request Quotes from {selectedContractors.length} Contractor{selectedContractors.length !== 1 ? 's' : ''}
-                          </Button>
-                        ) : (
-                          <Button 
-                            onClick={handleAssignContractor} 
-                            disabled={!selectedContractor || loadingContractors}
-                            className="w-full"
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Assign to Contractor
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-                          Assign to yourself or another HQ admin to handle this ticket internally.
-                        </p>
-                        
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button 
-                            onClick={handleAssignToSelf}
-                            variant="default"
-                            className="w-full"
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Assign to Me
-                          </Button>
-                          
-                          <Select value={selectedHQAdmin} onValueChange={setSelectedHQAdmin}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Other HQ Admin" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {hqAdmins.length === 0 ? (
-                                <SelectItem value="no-admins" disabled>
-                                  No other admins
-                                </SelectItem>
-                              ) : (
-                                hqAdmins.map(admin => (
-                                  <SelectItem key={admin.id} value={admin.id}>
-                                    {admin.name || admin.email}
-                                  </SelectItem>
-                                ))
+                                    )
+                                  })()}
+                                </div>
                               )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        {selectedHQAdmin && (
-                          <Button 
-                            onClick={handleAssignToHQAdmin}
-                            className="w-full"
-                          >
-                            <UserCheck className="h-4 w-4 mr-2" />
-                            Assign to Selected Admin
-                          </Button>
-                        )}
-                        
-                        <div>
-                          <Label htmlFor="hq-notes">Notes (Optional)</Label>
-                          <Textarea
-                            id="hq-notes"
-                            placeholder="Add notes about the assignment..."
-                            value={assignmentNotes}
-                            onChange={(e) => setAssignmentNotes(e.target.value)}
-                            rows={2}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                            </>
+                          )}
+                        </>
+                      )}
 
-                {/* HQ Admin Job Complete Section - Show when ticket is HQ-assigned and current user is the assigned admin */}
-                {selectedTicket.hqAssignedAt && 
-                 selectedTicket.assignedTo?.id === user.id && 
-                 !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
-                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
-                      <UserCheck className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
-                      HQ Assignment - Your Ticket
-                    </h4>
-                    <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      This ticket is assigned to you. When you have completed the work, click &quot;Mark Job Complete&quot; 
-                      to notify the user for review and rating.
-                    </p>
-                    <div className="space-y-3">
                       <div>
-                        <Label htmlFor="completion-notes">Completion Notes (Optional)</Label>
+                        <Label htmlFor="notes">Assignment Notes</Label>
                         <Textarea
-                          id="completion-notes"
-                          placeholder="Describe what was done to resolve this ticket..."
-                          value={hqCompletionNotes}
-                          onChange={(e) => setHQCompletionNotes(e.target.value)}
-                          rows={3}
+                          id="notes"
+                          placeholder="Add instructions or notes for the contractor..."
+                          value={assignmentNotes}
+                          onChange={(e) => setAssignmentNotes(e.target.value)}
                         />
                       </div>
-                      <Button 
-                        onClick={handleHQJobComplete}
-                        style={{ backgroundColor: 'var(--green)' }}
-                        className="w-full"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Mark Job Complete
-                      </Button>
+
+                      {requestQuote ? (
+                        <Button
+                          onClick={handleRequestQuotesFromMultiple}
+                          disabled={selectedContractors.length === 0 || loadingContractors}
+                          className="w-full bg-amber-bg hover:bg-amber-bg"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Request Quotes from {selectedContractors.length} Contractor{selectedContractors.length !== 1 ? 's' : ''}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleAssignContractor}
+                          disabled={!selectedContractor || loadingContractors}
+                          className="w-full"
+                        >
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Assign to Contractor
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                )}
-
-                {/* Awaiting Quote / Quote Submitted - Show all quote requests */}
-                {(selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED') && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-lg font-medium flex items-center" style={{ color: 'var(--amber)' }}>
-                        <FileText className="h-5 w-5 mr-2" />
-                        Quote Requests
-                      </h4>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fetchQuoteRequests(selectedTicket.id)}
-                        disabled={loadingQuoteRequests}
-                      >
-                        <RefreshCw className={`h-4 w-4 ${loadingQuoteRequests ? 'animate-spin' : ''}`} />
-                      </Button>
-                    </div>
-                    
-                    {loadingQuoteRequests ? (
-                      <div className="text-center py-4">
-                        <RefreshCw className="h-5 w-5 animate-spin mx-auto text-ds-amber" />
-                        <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>Loading quote requests...</p>
-                      </div>
-                    ) : quoteRequests.length === 0 ? (
-                      <div className="text-center py-4">
-                        <p className="text-sm" style={{ color: 'var(--amber)' }}>
-                          {selectedTicket.assignedTo
-                            ? `Waiting for ${selectedTicket.assignedTo.name || 'the contractor'} to submit a quote.`
-                            : 'No quote requests found. Use the multi-select option to request quotes.'}
-                        </p>
-                        <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
-                          Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {quoteRequests.map((qr) => (
-                          <div 
-                            key={qr.id} 
-                            className="rounded-lg p-4 border"
-                            style={
-                              qr.isAwarded ? { backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' } :
-                              qr.status === 'submitted' ? { backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' } :
-                              qr.status === 'rejected' ? { backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' } :
-                              { backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }
-                            }
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-3">
-                                <span 
-                                  style={{
-                                    fontSize: '0.875rem',
-                                    fontWeight: 500,
-                                    color: 'var(--accent)',
-                                    minWidth: '20px'
-                                  }}
-                                >
-                                  {(qr.contractor?.name || 'C')[0].toUpperCase()}
-                                </span>
-                                <div>
-                                  <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
-                                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{qr.contractor?.email}</p>
-                                </div>
-                              </div>
-                              <Badge variant={
-                                qr.isAwarded ? 'default' : 
-                                qr.status === 'submitted' ? 'secondary' : 
-                                qr.status === 'rejected' ? 'destructive' :
-                                'outline'
-                              } style={qr.isAwarded ? { backgroundColor: 'var(--green)' } : {}}>
-                                {qr.isAwarded ? '✓ Awarded' : qr.status.toUpperCase()}
-                              </Badge>
-                            </div>
-                            
-                            {qr.status === 'submitted' && (
-                              <>
-                                <div className="flex justify-between items-center mt-3">
-                                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Quoted Amount:</span>
-                                  <span className="text-xl font-medium" style={{ color: 'var(--blue)' }}>
-                                    ${qr.quoteAmount?.toFixed(2) || 'N/A'}
-                                  </span>
-                                </div>
-                                {qr.estimatedDays && (
-                                  <div className="flex justify-between items-center mt-1">
-                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Est. completion:</span>
-                                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{qr.estimatedDays} day(s)</span>
-                                  </div>
-                                )}
-                                {qr.quoteDescription && (
-                                  <div className="mt-3 pt-3 border-t">
-                                    <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Description:</p>
-                                    <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{qr.quoteDescription}</p>
-                                  </div>
-                                )}
-                                {qr.quoteFileUrl && (
-                                  <a 
-                                    href={qr.quoteFileUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-sm flex items-center mt-2" style={{ color: 'var(--accent)' }}
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    View Quote Document
-                                  </a>
-                                )}
-                                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-                                  Submitted: {qr.submittedAt && new Date(qr.submittedAt).toLocaleString()}
-                                </p>
-
-                                {!qr.isAwarded && qr.status === 'submitted' && (
-                                  <div className="flex space-x-2 mt-3">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleRejectQuote(qr.id)}
-                                      className="flex-1"
-                                      style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
-                                    >
-                                      <X className="h-4 w-4 mr-1" />
-                                      Reject
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleAwardQuote(qr.id)}
-                                      className="flex-1"
-                                      style={{ backgroundColor: 'var(--green)' }}
-                                    >
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Award Job
-                                    </Button>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            
-                            {qr.status === 'pending' && (
-                              <p className="text-sm mt-2" style={{ color: 'var(--amber)' }}>
-                                <Clock className="h-4 w-4 inline mr-1" />
-                                Awaiting quote submission...
-                              </p>
-                            )}
-                            
-                            {qr.status === 'rejected' && qr.rejectionReason && (
-                              <p className="text-sm mt-2" style={{ color: 'var(--red)' }}>
-                                Reason: {qr.rejectionReason}
-                              </p>
-                            )}
-                            
-                            {qr.isAwarded && (
-                              <p className="text-sm mt-2 font-medium" style={{ color: 'var(--green)' }}>
-                                🎉 This contractor was awarded the job
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                        
-                        {/* Summary */}
-                        {quoteRequests.filter(qr => qr.status === 'submitted').length > 1 && !quoteRequests.some(qr => qr.isAwarded) && (
-                          <div className="border rounded-lg p-3 mt-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
-                            <p className="text-sm" style={{ color: 'var(--blue)' }}>
-                              <strong>{quoteRequests.filter(qr => qr.status === 'submitted').length}</strong> quotes received. 
-                              Compare and select the best contractor for this job.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Cancelled status message */}
-                {selectedTicket.status === 'CANCELLED' && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
-                    <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--red)' }}>Ticket Cancelled</h4>
-                    <p className="text-sm" style={{ color: 'var(--red)' }}>
-                      This ticket has been cancelled and cannot be assigned to a contractor.
-                    </p>
-                    {selectedTicket.cancellationReason && (
-                      <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'var(--red-bg)' }}>
-                        <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Cancellation Reason:</p>
-                        <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.cancellationReason}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Awaiting Description - Contractor needs to submit work description */}
-                {selectedTicket.status === 'AWAITING_DESCRIPTION' && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
-                    <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
-                      <Clock className="h-5 w-5 mr-2" />
-                      Awaiting Work Description
-                    </h4>
-                    <p className="text-sm" style={{ color: 'var(--amber)' }}>
-                      The user has marked this job as complete. Waiting for the contractor to submit a description of the work done.
-                    </p>
-                    {selectedTicket.workDescriptionRejectionReason && (
-                      <div className="mt-2 p-2 border rounded" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
-                        <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Previous description was rejected:</p>
-                        <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.workDescriptionRejectionReason}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Awaiting Work Approval - User needs to approve description */}
-                {selectedTicket.status === 'AWAITING_WORK_APPROVAL' && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
-                    <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
-                      <FileText className="h-5 w-5 mr-2" />
-                      Awaiting User Approval
-                    </h4>
-                    <p className="text-sm mb-3" style={{ color: 'var(--blue)' }}>
-                      The contractor has submitted a work description. Waiting for user to review and approve.
-                    </p>
-                    {selectedTicket.workDescription && (
-                      <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Work Description:</p>
-                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Completed status message - Updated with work description info */}
-                {selectedTicket.status === 'COMPLETED' && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
-                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
-                      <CheckCircle className="h-5 w-5 mr-2" style={{ color: 'var(--green)' }} />
-                      Job Completed - Work Approved
-                    </h4>
-                    <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-                      The user has approved the work description. Waiting for user to close and rate. Contractor can now upload invoice.
-                    </p>
-                    {selectedTicket.workDescription && (
-                      <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--green)' }}>
-                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Approved Work Description:</p>
-                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Invoice Section for CLOSED tickets */}
-                {selectedTicket.status === 'CLOSED' && (
-                  <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
-                    <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
-                      <FileText className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
-                      Invoice
-                    </h4>
-                    {selectedTicket.invoices?.[0] ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Invoice Number</p>
-                            <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{selectedTicket.invoices[0].invoiceNumber}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Amount</p>
-                            <p className="text-lg font-medium flex items-center" style={{ color: 'var(--green)' }}>
-                              <DollarSign className="h-5 w-5" />
-                              {selectedTicket.invoices[0].amount.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <Badge variant={
-                            selectedTicket.invoices[0].status === 'PAID' ? 'success' :
-                            selectedTicket.invoices[0].status === 'APPROVED' ? 'info' :
-                            'warning'
-                          }>
-                            {selectedTicket.invoices[0].status}
-                          </Badge>
-                          <div className="flex items-center space-x-2">
-                            {selectedTicket.invoices[0].invoiceFileUrl && (
-                              <MediaHoverPreview 
-                                file={{ url: selectedTicket.invoices[0].invoiceFileUrl, filename: 'Invoice PDF', mimeType: 'application/pdf' }}
-                                previewSize="lg"
-                              >
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => window.open(selectedTicket.invoices?.[0]?.invoiceFileUrl, '_blank')}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Invoice PDF
-                                </Button>
-                              </MediaHoverPreview>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(`/api/admin/invoices/summary?invoiceId=${selectedTicket.invoices?.[0]?.id}`, '_blank')}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Summary Doc
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
-                        No invoice submitted yet. The contractor will upload their invoice.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Simple Assignment Dialog for already assigned tickets */}
-        <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Reassign Ticket</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="contractor">Select New Contractor</Label>
-                <Select value={selectedContractor} onValueChange={setSelectedContractor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a contractor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contractors.length === 0 ? (
-                      <SelectItem value="no-contractors" disabled>
-                        No contractors available
-                      </SelectItem>
-                    ) : (
-                      contractors.map(contractor => (
-                        <SelectItem key={contractor.id} value={contractor.id}>
-                          {contractor.name || contractor.email} {contractor.isAvailable ? '' : '(Busy)'}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAssignContractor} disabled={!selectedContractor}>
-                  Reassign
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Unassign Confirmation Dialog */}
-        <Dialog open={showUnassignConfirm} onOpenChange={setShowUnassignConfirm}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center text-ds-red">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                Revoke Assignment
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Are you sure you want to revoke the assignment from{' '}
-                <span className="font-medium">{selectedTicket?.assignedTo?.name}</span>?
-                {selectedTicket?.hqAssignedAt && (
-                  <span className="block mt-1" style={{ color: 'var(--blue)' }}>
-                    This is an HQ staff assignment.
-                  </span>
-                )}
-              </p>
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                The ticket will be returned to &quot;Open&quot; status and can be reassigned.
-              </p>
-              
-              <div>
-                <Label htmlFor="unassign-reason">Reason (Optional)</Label>
-                <Textarea
-                  id="unassign-reason"
-                  placeholder="Why is this assignment being revoked?"
-                  value={unassignReason}
-                  onChange={(e) => setUnassignReason(e.target.value)}
-                  rows={2}
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setShowUnassignConfirm(false)
-                    setUnassignReason('')
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={handleUnassignTicket}
-                  disabled={unassigning}
-                >
-                  {unassigning ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Revoking...
-                    </>
                   ) : (
-                    <>
-                      <X className="h-4 w-4 mr-2" />
-                      Revoke Assignment
-                    </>
+                    <div className="space-y-3">
+                      <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                        Assign to yourself or another HQ admin to handle this ticket internally.
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          onClick={handleAssignToSelf}
+                          variant="default"
+                          className="w-full"
+                        >
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Assign to Me
+                        </Button>
+
+                        <Select value={selectedHQAdmin} onValueChange={setSelectedHQAdmin}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Other HQ Admin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {hqAdmins.length === 0 ? (
+                              <SelectItem value="no-admins" disabled>
+                                No other admins
+                              </SelectItem>
+                            ) : (
+                              hqAdmins.map(admin => (
+                                <SelectItem key={admin.id} value={admin.id}>
+                                  {admin.name || admin.email}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {selectedHQAdmin && (
+                        <Button
+                          onClick={handleAssignToHQAdmin}
+                          className="w-full"
+                        >
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Assign to Selected Admin
+                        </Button>
+                      )}
+
+                      <div>
+                        <Label htmlFor="hq-notes">Notes (Optional)</Label>
+                        <Textarea
+                          id="hq-notes"
+                          placeholder="Add notes about the assignment..."
+                          value={assignmentNotes}
+                          onChange={(e) => setAssignmentNotes(e.target.value)}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Rating Modal */}
-        {selectedTicket && (
-          <RatingModal
-            ticketId={selectedTicket.id}
-            open={showRatingModal}
-            onOpenChange={setShowRatingModal}
-            onRatingSubmitted={handleRatingSubmitted}
-          />
-        )}
-
-        {/* Quick Edit Priority Menu */}
-        <Menu
-          anchorEl={priorityMenuAnchor}
-          open={Boolean(priorityMenuAnchor)}
-          onClose={() => {
-            setPriorityMenuAnchor(null)
-            setQuickEditTicket(null)
-          }}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-          slotProps={{
-            paper: {
-              sx: { minWidth: 140, mt: 0.5 }
-            }
-          }}
-        >
-          {quickEditLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress size={20} />
-            </Box>
-          ) : (
-            ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((priority) => (
-              <MenuItem
-                key={priority}
-                onClick={() => quickEditTicket && handlePriorityChange(quickEditTicket.id, priority)}
-                selected={quickEditTicket?.priority === priority}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                <ListItemIcon>
-                  <Box
-                    sx={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      bgcolor: priority === 'LOW' ? 'success.main' :
-                               priority === 'MEDIUM' ? 'warning.main' :
-                               priority === 'HIGH' ? 'error.main' : 'error.dark'
-                    }}
-                  />
-                </ListItemIcon>
-                <ListItemText>{priority}</ListItemText>
-              </MenuItem>
-            ))
-          )}
-        </Menu>
-
-        {/* Quick Edit Type Menu */}
-        <Menu
-          anchorEl={typeMenuAnchor}
-          open={Boolean(typeMenuAnchor)}
-          onClose={() => {
-            setTypeMenuAnchor(null)
-            setQuickEditTicket(null)
-          }}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-          slotProps={{
-            paper: {
-              sx: { minWidth: 160, mt: 0.5 }
-            }
-          }}
-        >
-          {quickEditLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress size={20} />
-            </Box>
-          ) : (
-            ['REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 'REPLACEMENT', 'EMERGENCY', 'OTHER'].map((type) => (
-              <MenuItem
-                key={type}
-                onClick={() => quickEditTicket && handleTypeChange(quickEditTicket.id, type)}
-                selected={quickEditTicket?.type === type}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                <ListItemText>{type.replace(/_/g, ' ')}</ListItemText>
-              </MenuItem>
-            ))
-          )}
-        </Menu>
-
-        {/* Quick Assign Contractor Menu */}
-        <Menu
-          anchorEl={contractorMenuAnchor}
-          open={Boolean(contractorMenuAnchor)}
-          onClose={() => {
-            setContractorMenuAnchor(null)
-            setQuickEditTicket(null)
-          }}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-          slotProps={{
-            paper: {
-              sx: { minWidth: 280, maxHeight: 400, mt: 0.5 }
-            }
-          }}
-        >
-          {loadingContractors || quickAssignLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-              <CircularProgress size={20} />
-            </Box>
-          ) : filteredContractors.length === 0 ? (
-            <MenuItem disabled>
-              <ListItemText secondary="No contractors available" />
-            </MenuItem>
-          ) : (
-            <>
-              {recommendedContractor && (
-                <>
-                  <MenuItem 
-                    sx={{ bgcolor: 'success.light', '&:hover': { bgcolor: 'success.main' } }}
-                    onClick={() => quickEditTicket && handleQuickAssign(quickEditTicket.id, recommendedContractor.userId)}
-                  >
-                    <ListItemIcon>
-                      <Star className="h-4 w-4 text-ds-amber" />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={recommendedContractor.name}
-                      secondary={
-                        <span className="text-xs">
-                          ⭐ Recommended • {recommendedContractor.rating?.toFixed(1) || 'New'}
-                        </span>
-                      }
-                    />
-                  </MenuItem>
-                  <Divider />
-                </>
+                </div>
               )}
-              {filteredContractors.map((contractor) => (
-                <MenuItem
-                  key={contractor.id}
-                  onClick={() => quickEditTicket && handleQuickAssign(quickEditTicket.id, contractor.userId)}
-                  sx={{ py: 1 }}
-                >
-                  <ListItemIcon>
-                    <span 
-                      style={{ 
-                        fontSize: '0.875rem',
-                        fontWeight: 500,
-                        color: 'var(--ds-blue)',
-                        minWidth: '20px'
-                      }}
+
+              {/* HQ Admin Job Complete Section - Show when ticket is HQ-assigned and current user is the assigned admin */}
+              {selectedTicket.hqAssignedAt &&
+               selectedTicket.assignedTo?.id === user.id &&
+               !['CANCELLED', 'CLOSED', 'COMPLETED'].includes(selectedTicket.status) && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                  <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                    <UserCheck className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
+                    HQ Assignment - Your Ticket
+                  </h4>
+                  <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    This ticket is assigned to you. When you have completed the work, click &quot;Mark Job Complete&quot;
+                    to notify the user for review and rating.
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="completion-notes">Completion Notes (Optional)</Label>
+                      <Textarea
+                        id="completion-notes"
+                        placeholder="Describe what was done to resolve this ticket..."
+                        value={hqCompletionNotes}
+                        onChange={(e) => setHQCompletionNotes(e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleHQJobComplete}
+                      style={{ backgroundColor: 'var(--green)' }}
+                      className="w-full"
                     >
-                      {contractor.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={contractor.name}
-                    secondary={
-                      <Box component="span" sx={{ display: 'flex', flexDirection: 'column', fontSize: '0.7rem' }}>
-                        <span>
-                          {contractor.rating ? `⭐ ${contractor.rating.toFixed(1)}` : 'No rating'} 
-                          {contractor.totalJobs ? ` • ${contractor.totalJobs} jobs` : ''}
-                        </span>
-                        {contractor.categories && contractor.categories.length > 0 && (
-                          <span className="text-text-muted truncate">
-                            {contractor.categories.map(c => c.name).join(', ')}
-                          </span>
-                        )}
-                      </Box>
-                    }
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                  />
-                </MenuItem>
-              ))}
-            </>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark Job Complete
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Awaiting Quote / Quote Submitted - Show all quote requests */}
+              {(selectedTicket.status === 'AWAITING_QUOTE' || selectedTicket.status === 'QUOTE_SUBMITTED') && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-lg font-medium flex items-center" style={{ color: 'var(--amber)' }}>
+                      <FileText className="h-5 w-5 mr-2" />
+                      Quote Requests
+                    </h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fetchQuoteRequests(selectedTicket.id)}
+                      disabled={loadingQuoteRequests}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${loadingQuoteRequests ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+
+                  {loadingQuoteRequests ? (
+                    <div className="text-center py-4">
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto text-ds-amber" />
+                      <p className="text-sm mt-1" style={{ color: 'var(--amber)' }}>Loading quote requests...</p>
+                    </div>
+                  ) : quoteRequests.length === 0 ? (
+                    <div className="text-center py-4">
+                      <p className="text-sm" style={{ color: 'var(--amber)' }}>
+                        {selectedTicket.assignedTo
+                          ? `Waiting for ${selectedTicket.assignedTo.name || 'the contractor'} to submit a quote.`
+                          : 'No quote requests found. Use the multi-select option to request quotes.'}
+                      </p>
+                      <p className="text-xs mt-2" style={{ color: 'var(--amber)' }}>
+                        Quote requested: {selectedTicket.quoteRequestedAt && new Date(selectedTicket.quoteRequestedAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {quoteRequests.map((qr) => (
+                        <div
+                          key={qr.id}
+                          className="rounded-lg p-4 border"
+                          style={
+                            qr.isAwarded ? { backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' } :
+                            qr.status === 'submitted' ? { backgroundColor: 'var(--surface)', borderColor: 'var(--blue)' } :
+                            qr.status === 'rejected' ? { backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' } :
+                            { backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }
+                          }
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <span
+                                style={{
+                                  fontSize: '0.875rem',
+                                  fontWeight: 500,
+                                  color: 'var(--accent)',
+                                  minWidth: '20px'
+                                }}
+                              >
+                                {(qr.contractor?.name || 'C')[0].toUpperCase()}
+                              </span>
+                              <div>
+                                <p className="font-medium">{qr.contractor?.name || 'Contractor'}</p>
+                                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{qr.contractor?.email}</p>
+                              </div>
+                            </div>
+                            <Badge variant={
+                              qr.isAwarded ? 'default' :
+                              qr.status === 'submitted' ? 'secondary' :
+                              qr.status === 'rejected' ? 'destructive' :
+                              'outline'
+                            } style={qr.isAwarded ? { backgroundColor: 'var(--green)' } : {}}>
+                              {qr.isAwarded ? '✓ Awarded' : qr.status.toUpperCase()}
+                            </Badge>
+                          </div>
+
+                          {qr.status === 'submitted' && (
+                            <>
+                              <div className="flex justify-between items-center mt-3">
+                                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Quoted Amount:</span>
+                                <span className="text-xl font-medium" style={{ color: 'var(--blue)' }}>
+                                  ${qr.quoteAmount?.toFixed(2) || 'N/A'}
+                                </span>
+                              </div>
+                              {qr.estimatedDays && (
+                                <div className="flex justify-between items-center mt-1">
+                                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Est. completion:</span>
+                                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{qr.estimatedDays} day(s)</span>
+                                </div>
+                              )}
+                              {qr.quoteDescription && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Description:</p>
+                                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{qr.quoteDescription}</p>
+                                </div>
+                              )}
+                              {qr.quoteFileUrl && (
+                                <a
+                                  href={qr.quoteFileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm flex items-center mt-2" style={{ color: 'var(--accent)' }}
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  View Quote Document
+                                </a>
+                              )}
+                              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                                Submitted: {qr.submittedAt && new Date(qr.submittedAt).toLocaleString()}
+                              </p>
+
+                              {!qr.isAwarded && qr.status === 'submitted' && (
+                                <div className="flex space-x-2 mt-3">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRejectQuote(qr.id)}
+                                    className="flex-1"
+                                    style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAwardQuote(qr.id)}
+                                    className="flex-1"
+                                    style={{ backgroundColor: 'var(--green)' }}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Award Job
+                                  </Button>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {qr.status === 'pending' && (
+                            <p className="text-sm mt-2" style={{ color: 'var(--amber)' }}>
+                              <Clock className="h-4 w-4 inline mr-1" />
+                              Awaiting quote submission...
+                            </p>
+                          )}
+
+                          {qr.status === 'rejected' && qr.rejectionReason && (
+                            <p className="text-sm mt-2" style={{ color: 'var(--red)' }}>
+                              Reason: {qr.rejectionReason}
+                            </p>
+                          )}
+
+                          {qr.isAwarded && (
+                            <p className="text-sm mt-2 font-medium" style={{ color: 'var(--green)' }}>
+                              🎉 This contractor was awarded the job
+                            </p>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Summary */}
+                      {quoteRequests.filter(qr => qr.status === 'submitted').length > 1 && !quoteRequests.some(qr => qr.isAwarded) && (
+                        <div className="border rounded-lg p-3 mt-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                          <p className="text-sm" style={{ color: 'var(--blue)' }}>
+                            <strong>{quoteRequests.filter(qr => qr.status === 'submitted').length}</strong> quotes received.
+                            Compare and select the best contractor for this job.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cancelled status message */}
+              {selectedTicket.status === 'CANCELLED' && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                  <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--red)' }}>Ticket Cancelled</h4>
+                  <p className="text-sm" style={{ color: 'var(--red)' }}>
+                    This ticket has been cancelled and cannot be assigned to a contractor.
+                  </p>
+                  {selectedTicket.cancellationReason && (
+                    <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'var(--red-bg)' }}>
+                      <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Cancellation Reason:</p>
+                      <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.cancellationReason}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Awaiting Description - Contractor needs to submit work description */}
+              {selectedTicket.status === 'AWAITING_DESCRIPTION' && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--amber-bg)', borderColor: 'var(--amber)' }}>
+                  <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--amber)' }}>
+                    <Clock className="h-5 w-5 mr-2" />
+                    Awaiting Work Description
+                  </h4>
+                  <p className="text-sm" style={{ color: 'var(--amber)' }}>
+                    The user has marked this job as complete. Waiting for the contractor to submit a description of the work done.
+                  </p>
+                  {selectedTicket.workDescriptionRejectionReason && (
+                    <div className="mt-2 p-2 border rounded" style={{ backgroundColor: 'var(--red-bg)', borderColor: 'var(--red)' }}>
+                      <p className="text-xs font-medium" style={{ color: 'var(--red)' }}>Previous description was rejected:</p>
+                      <p className="text-sm" style={{ color: 'var(--red)' }}>{selectedTicket.workDescriptionRejectionReason}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Awaiting Work Approval - User needs to approve description */}
+              {selectedTicket.status === 'AWAITING_WORK_APPROVAL' && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                  <h4 className="text-lg font-medium mb-2 flex items-center" style={{ color: 'var(--blue)' }}>
+                    <FileText className="h-5 w-5 mr-2" />
+                    Awaiting User Approval
+                  </h4>
+                  <p className="text-sm mb-3" style={{ color: 'var(--blue)' }}>
+                    The contractor has submitted a work description. Waiting for user to review and approve.
+                  </p>
+                  {selectedTicket.workDescription && (
+                    <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Work Description:</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Completed status message - Updated with work description info */}
+              {selectedTicket.status === 'COMPLETED' && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                  <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                    <CheckCircle className="h-5 w-5 mr-2" style={{ color: 'var(--green)' }} />
+                    Job Completed - Work Approved
+                  </h4>
+                  <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    The user has approved the work description. Waiting for user to close and rate. Contractor can now upload invoice.
+                  </p>
+                  {selectedTicket.workDescription && (
+                    <div className="p-3 border rounded" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--green)' }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Approved Work Description:</p>
+                      <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{selectedTicket.workDescription}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Invoice Section for CLOSED tickets */}
+              {selectedTicket.status === 'CLOSED' && (
+                <div className="border rounded-lg p-4" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--blue)' }}>
+                  <h4 className="text-lg font-medium mb-3 flex items-center" style={{ color: 'var(--text-primary)' }}>
+                    <FileText className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
+                    Invoice
+                  </h4>
+                  {selectedTicket.invoices?.[0] ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Invoice Number</p>
+                          <p className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>{selectedTicket.invoices[0].invoiceNumber}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Amount</p>
+                          <p className="text-lg font-medium flex items-center" style={{ color: 'var(--green)' }}>
+                            <DollarSign className="h-5 w-5" />
+                            {selectedTicket.invoices[0].amount.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Badge variant={
+                          selectedTicket.invoices[0].status === 'PAID' ? 'success' :
+                          selectedTicket.invoices[0].status === 'APPROVED' ? 'info' :
+                          'warning'
+                        }>
+                          {selectedTicket.invoices[0].status}
+                        </Badge>
+                        <div className="flex items-center space-x-2">
+                          {selectedTicket.invoices[0].invoiceFileUrl && (
+                            <MediaHoverPreview
+                              file={{ url: selectedTicket.invoices[0].invoiceFileUrl, filename: 'Invoice PDF', mimeType: 'application/pdf' }}
+                              previewSize="lg"
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(selectedTicket.invoices?.[0]?.invoiceFileUrl, '_blank')}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Invoice PDF
+                              </Button>
+                            </MediaHoverPreview>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/api/admin/invoices/summary?invoiceId=${selectedTicket.invoices?.[0]?.id}`, '_blank')}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Summary Doc
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+                      No invoice submitted yet. The contractor will upload their invoice.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
-        </Menu>
-      </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Simple Assignment Dialog for already assigned tickets */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reassign Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="contractor">Select New Contractor</Label>
+              <Select value={selectedContractor} onValueChange={setSelectedContractor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a contractor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contractors.length === 0 ? (
+                    <SelectItem value="no-contractors" disabled>
+                      No contractors available
+                    </SelectItem>
+                  ) : (
+                    contractors.map(contractor => (
+                      <SelectItem key={contractor.id} value={contractor.id}>
+                        {contractor.name || contractor.email} {contractor.isAvailable ? '' : '(Busy)'}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAssignContractor} disabled={!selectedContractor}>
+                Reassign
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unassign Confirmation Dialog */}
+      <Dialog open={showUnassignConfirm} onOpenChange={setShowUnassignConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-ds-red">
+              <AlertTriangle className="h-5 w-5 mr-2" />
+              Revoke Assignment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Are you sure you want to revoke the assignment from{' '}
+              <span className="font-medium">{selectedTicket?.assignedTo?.name}</span>?
+              {selectedTicket?.hqAssignedAt && (
+                <span className="block mt-1" style={{ color: 'var(--blue)' }}>
+                  This is an HQ staff assignment.
+                </span>
+              )}
+            </p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              The ticket will be returned to &quot;Open&quot; status and can be reassigned.
+            </p>
+
+            <div>
+              <Label htmlFor="unassign-reason">Reason (Optional)</Label>
+              <Textarea
+                id="unassign-reason"
+                placeholder="Why is this assignment being revoked?"
+                value={unassignReason}
+                onChange={(e) => setUnassignReason(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowUnassignConfirm(false)
+                  setUnassignReason('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleUnassignTicket}
+                disabled={unassigning}
+              >
+                {unassigning ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Revoking...
+                  </>
+                ) : (
+                  <>
+                    <X className="h-4 w-4 mr-2" />
+                    Revoke Assignment
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rating Modal */}
+      {selectedTicket && (
+        <RatingModal
+          ticketId={selectedTicket.id}
+          open={showRatingModal}
+          onOpenChange={setShowRatingModal}
+          onRatingSubmitted={handleRatingSubmitted}
+        />
+      )}
     </div>
   )
 }

@@ -1,47 +1,23 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
-import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
-import Chip from '@mui/material/Chip'
-import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
-import Box from '@mui/material/Box'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import MuiDivider from '@mui/material/Divider'
-import { 
-  Plus,
-  User,
+import {
   Star,
-  Phone,
-  Mail,
   Wrench,
   CheckCircle,
   XCircle,
-  Edit,
   Clock,
   Shield,
   Heart,
-  ClipboardCheck,
   Copy,
-  Key,
-  Search,
-  MoreHorizontal,
   Send,
-  FileText,
-  UserPlus
+  User,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ContractorKYCManagement } from './contractor-kyc-management'
 
@@ -110,6 +86,15 @@ interface ContractorManagementProps {
   user: any
 }
 
+function getInitials(name: string, email: string): string {
+  if (name) {
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return name.slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
 export function ContractorManagement({ user }: ContractorManagementProps) {
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loading, setLoading] = useState(true)
@@ -145,6 +130,13 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
   const [isInviting, setIsInviting] = useState(false)
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
 
+  // New state
+  const [statFilter, setStatFilter] = useState('')
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [contractorFilters, setContractorFilters] = useState({ status: '' })
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [menuContractor, setMenuContractor] = useState<Contractor | null>(null)
+
   useEffect(() => {
     fetchContractors()
     fetchCategories()
@@ -173,7 +165,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
       const response = await fetch('/api/admin/contractors/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email: inviteEmail,
           companyName: inviteCompanyName
         })
@@ -184,8 +176,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         toast.success('Invitation sent successfully!', {
           description: `Registration link sent to ${inviteEmail}`
         })
-        
-        // Show the registration link for copying
+
         if (data.registrationLink) {
           setGeneratedLink(data.registrationLink)
         } else {
@@ -259,8 +250,6 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
     setShowEditDialog(true)
   }
 
-  // Categories are now managed in the Edit Contractor dialog
-
   const handleResetPassword = (contractor: Contractor) => {
     setSelectedContractor(contractor)
     setNewPassword('')
@@ -286,7 +275,6 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
       return
     }
 
-    // Validate phone number if provided
     if (newContractor.phone && !newContractor.phone.match(/^\+?[0-9\s\-()]+$/)) {
       toast.error('Please enter a valid phone number')
       return
@@ -324,7 +312,6 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
     if (!selectedContractor) return
 
     try {
-      // Update contractor details
       const response = await fetch(`/api/admin/contractors/${selectedContractor.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -343,7 +330,6 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         return
       }
 
-      // Update categories
       const categoriesResponse = await fetch(`/api/admin/contractors/${selectedContractor.id}/categories`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -423,255 +409,29 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
     }
   }
 
-  // Filter contractors based on search query
-  const filteredContractors = contractors.filter(contractor => {
-    const query = searchQuery.toLowerCase()
-    return (
-      contractor.name?.toLowerCase().includes(query) ||
-      contractor.email?.toLowerCase().includes(query) ||
-      contractor.specializations?.some(s => s.toLowerCase().includes(query))
-    )
-  })
+  // Derived data
+  const activeContractors = useMemo(() => contractors.filter(c => c.isActive), [contractors])
+  const availableCount = useMemo(() => contractors.filter(c => c.isAvailable && c.isActive).length, [contractors])
+  const avgRating = useMemo(() => {
+    const rated = contractors.filter(c => c.rating && c.rating > 0)
+    if (rated.length === 0) return null
+    return (rated.reduce((sum, c) => sum + (c.rating || 0), 0) / rated.length).toFixed(1)
+  }, [contractors])
 
-  // Action menu state for DataGrid
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const [menuContractor, setMenuContractor] = useState<Contractor | null>(null)
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, contractor: Contractor) => {
-    setMenuAnchorEl(event.currentTarget)
-    setMenuContractor(contractor)
-  }
-
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null)
-    setMenuContractor(null)
-  }
-
-  // DataGrid column definitions
-  const contractorColumns: GridColDef[] = useMemo(() => [
-    {
-      field: 'contractor',
-      headerName: 'Contractor',
-      flex: 1.5,
-      minWidth: 220,
-      renderCell: (params: GridRenderCellParams<Contractor>) => {
-        const contractor = params.row
-        const initials = contractor.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, width: '100%', height: '100%' }}>
-            <span 
-              style={{ 
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: 'var(--ds-blue)',
-                minWidth: '24px',
-                flexShrink: 0
-              }}
-            >
-              {initials}
-            </span>
-            <Box sx={{ overflow: 'hidden', textAlign: 'center', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <p className="font-medium text-sm leading-tight truncate" style={{ maxWidth: '100%', color: 'var(--text-primary)' }}>{contractor.name}</p>
-              <p className="text-xs truncate" style={{ maxWidth: '100%', color: 'var(--text-muted)' }}>{contractor.email}</p>
-            </Box>
-          </Box>
+  const filteredContractors = useMemo(() => {
+    let result = searchQuery
+      ? contractors.filter(c =>
+          c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.email.toLowerCase().includes(searchQuery.toLowerCase())
         )
-      },
-    },
-    {
-      field: 'categories',
-      headerName: 'Service Categories',
-      flex: 1.5,
-      minWidth: 200,
-      renderCell: (params: GridRenderCellParams<Contractor>) => {
-        const contractor = params.row
-        const cats = contractor.categories || []
-        const maxShow = 2
-        
-        if (cats.length === 0) {
-          return (
-            <span className="text-xs italic" style={{ color: 'var(--text-muted)' }}>No categories</span>
-          )
-        }
-        
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden' }}>
-            {cats.slice(0, maxShow).map((cat, index) => (
-              <Chip
-                key={index}
-                label={cat.name}
-                size="small"
-                sx={{ 
-                  fontSize: '0.7rem', 
-                  height: 22,
-                  borderRadius: '11px',
-                  bgcolor: cat.color ? `${cat.color}20` : 'grey.100',
-                  color: cat.color || 'inherit',
-                  border: cat.color ? `1px solid ${cat.color}` : '1px solid #e0e0e0',
-                  opacity: cat.isAvailable ? 1 : 0.5,
-                  '& .MuiChip-label': { px: 1 }
-                }}
-              />
-            ))}
-            {cats.length > maxShow && (
-              <Tooltip title={cats.slice(maxShow).map(c => c.name).join(', ')}>
-                <Chip
-                  label={`+${cats.length - maxShow}`}
-                  size="small"
-                  sx={{ 
-                    fontSize: '0.7rem', 
-                    height: 22,
-                    borderRadius: '11px',
-                    bgcolor: 'grey.100',
-                    '& .MuiChip-label': { px: 0.75 }
-                  }}
-                />
-              </Tooltip>
-            )}
-          </Box>
-        )
-      },
-    },
-    {
-      field: 'rating',
-      headerName: 'Rating',
-      flex: 0.5,
-      minWidth: 70,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Contractor>) => {
-        const contractor = params.row
-        const stats = contractor.ratingStats
-        const hasRatings = stats && stats.totalRatings > 0
-        const rating = contractor.rating && contractor.rating > 0 ? contractor.rating.toFixed(1) : '-'
-        
-        return (
-          <Tooltip
-            title={
-              hasRatings ? (
-                <Box sx={{ p: 0.5 }}>
-                  <Box sx={{ fontWeight: 500, mb: 1, borderBottom: '1px solid rgba(255,255,255,0.15)', pb: 0.5 }}>
-                    Rating Breakdown ({stats.totalRatings} review{stats.totalRatings > 1 ? 's' : ''})
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, fontSize: '0.8rem' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <span>Punctuality:</span>
-                      <span style={{ fontWeight: 500 }}>{stats.avgPunctuality}/5</span>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <span>Customer Service:</span>
-                      <span style={{ fontWeight: 500 }}>{stats.avgCustomerService}/5</span>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <span>Workmanship:</span>
-                      <span style={{ fontWeight: 500 }}>{stats.avgWorkmanship}/5</span>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mt: 0.5, pt: 0.5, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-                      <span>PPE Compliance:</span>
-                      <span style={{ fontWeight: 500 }}>{stats.ppeComplianceRate}%</span>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
-                      <span>Procedures:</span>
-                      <span style={{ fontWeight: 500 }}>{stats.procedureComplianceRate}%</span>
-                    </Box>
-                  </Box>
-                </Box>
-              ) : 'No ratings yet'
-            }
-            arrow
-            placement="left"
-          >
-            <Box
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                cursor: 'pointer',
-                py: 0.5,
-                px: 1.5,
-                borderRadius: 1,
-                bgcolor: hasRatings ? 'primary.50' : 'grey.100',
-                '&:hover': { bgcolor: hasRatings ? 'primary.100' : 'grey.200' }
-              }}
-              onClick={() => handleViewRatings(contractor)}
-            >
-              <span className="text-lg font-medium" style={{ color: hasRatings ? 'var(--accent)' : 'var(--text-muted)' }}>
-                {rating}
-              </span>
-              {hasRatings && (
-                <span className="text-xs ml-1" style={{ color: 'var(--text-muted)' }}>({stats.totalRatings})</span>
-              )}
-            </Box>
-          </Tooltip>
-        )
-      },
-    },
-    {
-      field: 'hourlyRate',
-      headerName: 'Rate',
-      flex: 0.4,
-      minWidth: 60,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Contractor>) => (
-        params.row.hourlyRate ? (
-          <span className="font-medium text-xs" style={{ color: 'var(--text-secondary)' }}>${params.row.hourlyRate}/hr</span>
-        ) : (
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>-</span>
-        )
-      ),
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      flex: 0.5,
-      minWidth: 80,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Contractor>) => (
-        <Chip
-          label={params.row.isAvailable ? 'Available' : 'Busy'}
-          size="small"
-          color={params.row.isAvailable ? 'success' : 'warning'}
-          sx={{ 
-            fontWeight: 500,
-            fontSize: '0.7rem',
-            height: 22
-          }}
-        />
-      ),
-    },
-    {
-      field: 'totalJobs',
-      headerName: 'Jobs',
-      flex: 0.3,
-      minWidth: 50,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Contractor>) => (
-        <span className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>{params.row.totalJobs || 0}</span>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      width: 40,
-      sortable: false,
-      filterable: false,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<Contractor>) => (
-        <Tooltip title="More options">
-          <IconButton
-            size="small"
-            onClick={(e) => handleMenuOpen(e, params.row)}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </IconButton>
-        </Tooltip>
-      ),
-    },
-  ], [])
+      : contractors
+    if (statFilter === 'available') result = result.filter(c => c.isAvailable)
+    if (statFilter === 'active') result = result.filter(c => c.isActive && !c.isAvailable)
+    if (contractorFilters.status === 'available') result = result.filter(c => c.isAvailable)
+    if (contractorFilters.status === 'active') result = result.filter(c => c.isActive)
+    if (contractorFilters.status === 'inactive') result = result.filter(c => !c.isActive)
+    return result
+  }, [contractors, searchQuery, statFilter, contractorFilters])
 
   if (loading) {
     return (
@@ -685,693 +445,651 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
   }
 
   return (
-    <div className="p-5 space-y-5">
-        {/* Action Menu */}
-        <Menu
-          anchorEl={menuAnchorEl}
-          open={Boolean(menuAnchorEl)}
-          onClose={handleMenuClose}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <MenuItem onClick={() => { if (menuContractor) handleEditContractor(menuContractor); handleMenuClose(); }}>
-            <ListItemIcon><Edit className="h-4 w-4" /></ListItemIcon>
-            <ListItemText>Edit Contractor</ListItemText>
-          </MenuItem>
-          <MuiDivider />
-          <MenuItem onClick={() => { if (menuContractor) handleResetPassword(menuContractor); handleMenuClose(); }}>
-            <ListItemIcon><Key className="h-4 w-4" /></ListItemIcon>
-            <ListItemText>Reset Password</ListItemText>
-          </MenuItem>
-          <MuiDivider />
-          <MenuItem onClick={() => { if (menuContractor) handleToggleActive(menuContractor); handleMenuClose(); }}>
-            {menuContractor?.isActive ? (
-              <>
-                <ListItemIcon><XCircle className="h-4 w-4 text-ds-red" /></ListItemIcon>
-                <ListItemText sx={{ color: 'error.main' }}>Deactivate</ListItemText>
-              </>
-            ) : (
-              <>
-                <ListItemIcon><CheckCircle className="h-4 w-4 text-ds-green" /></ListItemIcon>
-                <ListItemText sx={{ color: 'success.main' }}>Activate</ListItemText>
-              </>
-            )}
-          </MenuItem>
-        </Menu>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Filter drawer overlay */}
+      {filterDrawerOpen && <div onClick={() => setFilterDrawerOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />}
+      {/* Filter drawer */}
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 13, fontWeight: 500 }}>Filters</span>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ flex: 1, padding: 16 }}>
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          {[{ value: 'available', label: 'Available' }, { value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }].map(opt => (
+            <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={contractorFilters.status === opt.value} onChange={() => setContractorFilters(f => ({ ...f, status: f.status === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+          <button onClick={() => { setContractorFilters({ status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: 7, fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: 7, fontSize: 11, background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
+        </div>
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>Contractors</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage contractor accounts and invitations</p>
+      {/* Topbar — 52px */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Contractors</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredContractors.length} contractors</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>
+            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            Filters
+            {contractorFilters.status && <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>}
+          </button>
+          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>Invite</button>
+          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>+ Quick Add</button>
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* 4 stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <div onClick={() => setStatFilter(statFilter === '' ? '' : '')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{contractors.length}</div>
           </div>
-          
-          <div className="flex space-x-3">
-            {/* Invite Contractor Button */}
-            <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Send className="h-4 w-4 mr-2" />
-                  Invite Contractor
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Invite Contractor for KYC Registration</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {generatedLink ? (
-                    // Show the generated link for copying
-                    <>
-                      <div className="flex items-center gap-2 p-3 border rounded-lg" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
-                        <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--green)' }} />
-                        <div>
-                          <p className="font-medium" style={{ color: 'var(--green)' }}>Invitation Sent Successfully!</p>
-                          <p className="text-sm" style={{ color: 'var(--green)' }}>Email sent to {inviteEmail}</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label>Registration Link</Label>
-                        <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-                          You can also share this link directly with the contractor
-                        </p>
-                        <div className="flex gap-2">
-                          <Input
-                            value={generatedLink}
-                            readOnly
-                            className="text-sm font-mono"
-                            style={{ backgroundColor: 'var(--surface2)' }}
-                          />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              navigator.clipboard.writeText(generatedLink)
-                              toast.success('Link copied to clipboard!')
-                            }}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end pt-4">
-                        <Button
-                          onClick={() => {
-                            setShowInviteDialog(false)
-                            setInviteEmail('')
-                            setInviteCompanyName('')
-                            setGeneratedLink(null)
-                          }}
-                        >
-                          Done
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    // Show the invite form
-                    <>
-                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Send a registration link to the contractor's email. They will complete their KYC registration
-                        and you'll be able to review their application before approving them.
-                      </p>
-                      
-                      <div>
-                        <Label htmlFor="inviteCompanyName">Company Name</Label>
-                        <Input
-                          id="inviteCompanyName"
-                          placeholder="ABC Contractors (Pvt) Ltd"
-                          value={inviteCompanyName}
-                          onChange={(e) => setInviteCompanyName(e.target.value)}
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="inviteEmail">Email Address</Label>
-                        <Input
-                          id="inviteEmail"
-                          type="email"
-                          placeholder="contractor@example.com"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                        />
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          A unique registration link will be sent to this email
-                        </p>
-                      </div>
-                      
-                      <div className="flex justify-end space-x-2 pt-4">
-                        <Button variant="outline" onClick={() => setShowInviteDialog(false)} disabled={isInviting}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleInviteContractor} disabled={isInviting}>
-                          {isInviting ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4 mr-2" />
-                              Send Invitation
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            {/* Add Contractor Button (Quick Add) */}
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Quick Add
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New Contractor</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter contractor's full name"
-                    value={newContractor.name}
-                    onChange={(e) => setNewContractor({...newContractor, name: e.target.value})}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="contractor@example.com"
-                    value={newContractor.email}
-                    onChange={(e) => setNewContractor({...newContractor, email: e.target.value})}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="phone">Primary Phone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+263 77 123 4567"
-                      value={newContractor.phone}
-                      onChange={(e) => setNewContractor({...newContractor, phone: e.target.value})}
-                    />
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format (e.g., +263...)</p>
-                  </div>
-                  <div>
-                    <Label htmlFor="secondaryPhone">Secondary Phone (Optional)</Label>
-                    <Input
-                      id="secondaryPhone"
-                      type="tel"
-                      placeholder="+263 77 987 6543"
-                      value={newContractor.secondaryPhone}
-                      onChange={(e) => setNewContractor({...newContractor, secondaryPhone: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  A default password will be generated and shown after creation.
-                  You can assign service categories after creating the contractor.
-                </p>
-                
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateContractor}>
-                    Create Contractor
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div onClick={() => setStatFilter(statFilter === 'available' ? '' : 'available')} style={{ background: 'var(--surface)', border: statFilter === 'available' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Available</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{availableCount}</div>
+          </div>
+          <div onClick={() => setStatFilter(statFilter === 'active' ? '' : 'active')} style={{ background: 'var(--surface)', border: statFilter === 'active' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Active / On Jobs</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{activeContractors.length}</div>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '11px 13px' }}>
+            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>Avg Rating</div>
+            <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{avgRating ?? '—'}</div>
           </div>
         </div>
 
-        {/* Tabs for Active Contractors and KYC Applications */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="active" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Active Contractors
-            </TabsTrigger>
-            <TabsTrigger value="kyc" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              KYC Applications
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="active" className="space-y-6">
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Contractors</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{contractors.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Available</CardTitle>
-              <CheckCircle className="h-4 w-4 text-ds-green" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{contractors.filter(c => c.isAvailable).length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-ds-blue" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{contractors.filter(c => c.isActive).length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-              <Star className="h-4 w-4 text-ds-amber" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">
-                {contractors.filter(c => c.rating && c.rating > 0).length > 0
-                  ? (contractors.reduce((sum, c) => sum + (c.rating || 0), 0) / contractors.filter(c => c.rating && c.rating > 0).length).toFixed(1)
-                  : 'N/A'
-                }
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-              <Input
-                placeholder="Search contractors by name, email, or specialty..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        {/* Tabs + search merged row */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', borderRadius: '8px 8px 0 0', borderBottom: 'none', padding: '0 12px', backgroundColor: 'var(--surface)' }}>
+            <div style={{ display: 'flex' }}>
+              {[{ value: 'active', label: 'Active Contractors' }, { value: 'kyc', label: 'KYC Applications' }].map(tab => (
+                <button key={tab.value} onClick={() => setActiveTab(tab.value)} style={{ padding: '10px 12px', fontSize: 12, fontWeight: activeTab === tab.value ? 500 : 400, color: activeTab === tab.value ? 'var(--text-primary)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: activeTab === tab.value ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.12s', marginBottom: -1 }}>
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+            {/* Search floated right */}
+            <div style={{ position: 'relative' }}>
+              <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contractors..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 5, paddingBottom: 5, fontSize: 11, border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 190 }} />
+            </div>
+          </div>
 
-        {/* Contractors Table */}
-        <Card>
-          <CardContent className="pt-6">
-            {filteredContractors.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <User className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {searchQuery ? 'No contractors found' : 'No contractors yet'}
-                </h3>
-                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  {searchQuery ? 'Try a different search term' : 'Add your first contractor to get started'}
-                </p>
-                {!searchQuery && (
-                  <Button onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Contractor
-                  </Button>
+          {/* Table card — connected to tab row */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+            {activeTab === 'active' ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['Contractor', 'Specialty', 'Jobs Done', 'Rating', 'Status', 'Joined', 'Actions'].map(col => (
+                        <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredContractors.map((contractor, i) => (
+                      <tr key={contractor.id} style={{ borderBottom: i === filteredContractors.length - 1 ? 'none' : '1px solid var(--surface2)' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <td style={{ padding: '9px 14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                              {getInitials(contractor.name, contractor.email)}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{contractor.name}</div>
+                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{contractor.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '9px 14px' }}>
+                          {contractor.categories && contractor.categories.length > 0
+                            ? contractor.categories.slice(0, 2).map(c => c.name).join(', ')
+                            : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                          }
+                        </td>
+                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px' }}>{contractor.totalJobs ?? 0}</td>
+                        <td style={{ padding: '9px 14px' }}>
+                          {contractor.rating ? (
+                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#92400e' }}>{contractor.rating.toFixed(1)} ★</span>
+                          ) : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '9px 14px' }}>
+                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: contractor.isAvailable ? '#e8f5ee' : contractor.isActive ? '#eff6ff' : '#f0efe9', color: contractor.isAvailable ? '#2d6a4f' : contractor.isActive ? '#1e40af' : '#6b6860' }}>
+                            {contractor.isAvailable ? 'Available' : contractor.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                          —
+                        </td>
+                        <td style={{ padding: '9px 14px' }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => handleEditContractor(contractor)} style={{ fontSize: 11, padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Edit</button>
+                            <button onClick={() => handleViewRatings(contractor)} style={{ fontSize: 11, padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Ratings</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {filteredContractors.length === 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
+                    <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                      <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No contractors found</div>
+                  </div>
                 )}
               </div>
             ) : (
-              <Box sx={{ width: '100%' }}>
-                <ScrollableDataGrid
-                  rows={filteredContractors}
-                  columns={contractorColumns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10, page: 0 },
-                    },
-                    sorting: {
-                      sortModel: [{ field: 'rating', sort: 'desc' }],
-                    },
-                  }}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  disableRowSelectionOnClick
-                  autoHeight
-                  rowHeight={60}
-                  sx={{
-                    border: 'none',
-                    '& .MuiDataGrid-cell': {
-                      borderBottom: '1px solid #f0f0f0',
-                      py: 1,
-                    },
-                    '& .MuiDataGrid-columnHeaders': {
-                      bgcolor: '#fafafa',
-                      borderBottom: '2px solid #e5e5e5',
-                    },
-                    '& .MuiDataGrid-row:hover': {
-                      bgcolor: '#f8fafc',
-                    },
-                  }}
-                />
-              </Box>
+              /* KYC tab — render ContractorKYCManagement */
+              <ContractorKYCManagement />
             )}
-          </CardContent>
-        </Card>
-          </TabsContent>
+          </div>
+        </div>
+      </div>
 
-          <TabsContent value="kyc">
-            <ContractorKYCManagement />
-          </TabsContent>
-        </Tabs>
+      {/* Invite Dialog */}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite Contractor for KYC Registration</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {generatedLink ? (
+              <>
+                <div className="flex items-center gap-2 p-3 border rounded-lg" style={{ backgroundColor: 'var(--green-bg)', borderColor: 'var(--green)' }}>
+                  <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--green)' }} />
+                  <div>
+                    <p className="font-medium" style={{ color: 'var(--green)' }}>Invitation Sent Successfully!</p>
+                    <p className="text-sm" style={{ color: 'var(--green)' }}>Email sent to {inviteEmail}</p>
+                  </div>
+                </div>
 
-        {/* Edit Contractor Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Contractor</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-name">Full Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={editContractor.name}
-                    onChange={(e) => setEditContractor({...editContractor, name: e.target.value})}
-                  />
+                  <Label>Registration Link</Label>
+                  <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                    You can also share this link directly with the contractor
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={generatedLink}
+                      readOnly
+                      className="text-sm font-mono"
+                      style={{ backgroundColor: 'var(--surface2)' }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedLink)
+                        toast.success('Link copied to clipboard!')
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                
-                <div>
-                  <Label htmlFor="edit-email">Email Address</Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={editContractor.email}
-                    onChange={(e) => setEditContractor({...editContractor, email: e.target.value})}
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-phone">Primary Phone</Label>
-                  <Input
-                    id="edit-phone"
-                    type="tel"
-                    placeholder="+263 77 123 4567"
-                    value={editContractor.phone}
-                    onChange={(e) => setEditContractor({...editContractor, phone: e.target.value})}
-                  />
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format</p>
+                <div className="flex justify-end pt-4">
+                  <Button
+                    onClick={() => {
+                      setShowInviteDialog(false)
+                      setInviteEmail('')
+                      setInviteCompanyName('')
+                      setGeneratedLink(null)
+                    }}
+                  >
+                    Done
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor="edit-secondaryPhone">Secondary Phone</Label>
-                  <Input
-                    id="edit-secondaryPhone"
-                    type="tel"
-                    placeholder="+263 77 987 6543"
-                    value={editContractor.secondaryPhone}
-                    onChange={(e) => setEditContractor({...editContractor, secondaryPhone: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              {/* Service Categories Section */}
-              <div>
-                <Label className="flex items-center gap-2 mb-2">
-                  <Wrench className="h-4 w-4" />
-                  Service Categories
-                </Label>
-                <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-                  Select the categories this contractor can be assigned to
+              </>
+            ) : (
+              <>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Send a registration link to the contractor's email. They will complete their KYC registration
+                  and you'll be able to review their application before approving them.
                 </p>
-                <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto">
-                  {allCategories.length === 0 ? (
-                    <p className="text-sm text-center py-2" style={{ color: 'var(--text-muted)' }}>
-                      No categories available
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {allCategories.map((category) => (
-                        <div 
-                          key={category.id}
-                          className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors border-border"
-                          style={selectedCategoryIds.includes(category.id) ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
-                          onClick={() => {
-                            setSelectedCategoryIds(prev => 
-                              prev.includes(category.id)
-                                ? prev.filter(id => id !== category.id)
-                                : [...prev, category.id]
-                            )
+
+                <div>
+                  <Label htmlFor="inviteCompanyName">Company Name</Label>
+                  <Input
+                    id="inviteCompanyName"
+                    placeholder="ABC Contractors (Pvt) Ltd"
+                    value={inviteCompanyName}
+                    onChange={(e) => setInviteCompanyName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="inviteEmail">Email Address</Label>
+                  <Input
+                    id="inviteEmail"
+                    type="email"
+                    placeholder="contractor@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                  />
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    A unique registration link will be sent to this email
+                  </p>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowInviteDialog(false)} disabled={isInviting}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleInviteContractor} disabled={isInviting}>
+                    {isInviting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Send Invitation
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Contractor Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Contractor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter contractor's full name"
+                value={newContractor.name}
+                onChange={(e) => setNewContractor({...newContractor, name: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="contractor@example.com"
+                value={newContractor.email}
+                onChange={(e) => setNewContractor({...newContractor, email: e.target.value})}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="phone">Primary Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+263 77 123 4567"
+                  value={newContractor.phone}
+                  onChange={(e) => setNewContractor({...newContractor, phone: e.target.value})}
+                />
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format (e.g., +263...)</p>
+              </div>
+              <div>
+                <Label htmlFor="secondaryPhone">Secondary Phone (Optional)</Label>
+                <Input
+                  id="secondaryPhone"
+                  type="tel"
+                  placeholder="+263 77 987 6543"
+                  value={newContractor.secondaryPhone}
+                  onChange={(e) => setNewContractor({...newContractor, secondaryPhone: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              A default password will be generated and shown after creation.
+              You can assign service categories after creating the contractor.
+            </p>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateContractor}>
+                Create Contractor
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contractor Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Contractor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editContractor.name}
+                  onChange={(e) => setEditContractor({...editContractor, name: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editContractor.email}
+                  onChange={(e) => setEditContractor({...editContractor, email: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-phone">Primary Phone</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  placeholder="+263 77 123 4567"
+                  value={editContractor.phone}
+                  onChange={(e) => setEditContractor({...editContractor, phone: e.target.value})}
+                />
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>International format</p>
+              </div>
+              <div>
+                <Label htmlFor="edit-secondaryPhone">Secondary Phone</Label>
+                <Input
+                  id="edit-secondaryPhone"
+                  type="tel"
+                  placeholder="+263 77 987 6543"
+                  value={editContractor.secondaryPhone}
+                  onChange={(e) => setEditContractor({...editContractor, secondaryPhone: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Service Categories Section */}
+            <div>
+              <Label className="flex items-center gap-2 mb-2">
+                <Wrench className="h-4 w-4" />
+                Service Categories
+              </Label>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                Select the categories this contractor can be assigned to
+              </p>
+              <div className="border rounded-lg p-3 max-h-[200px] overflow-y-auto">
+                {allCategories.length === 0 ? (
+                  <p className="text-sm text-center py-2" style={{ color: 'var(--text-muted)' }}>
+                    No categories available
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {allCategories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors border-border"
+                        style={selectedCategoryIds.includes(category.id) ? { borderColor: 'var(--accent)', backgroundColor: 'var(--blue-bg)' } : {}}
+                        onClick={() => {
+                          setSelectedCategoryIds(prev =>
+                            prev.includes(category.id)
+                              ? prev.filter(id => id !== category.id)
+                              : [...prev, category.id]
+                          )
+                        }}
+                      >
+                        <div
+                          className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
+                          style={{
+                            borderColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'var(--border)',
+                            backgroundColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'transparent'
                           }}
                         >
-                          <div 
-                            className="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0"
-                            style={{
-                              borderColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'var(--border)',
-                              backgroundColor: selectedCategoryIds.includes(category.id) ? 'var(--accent)' : 'transparent'
-                            }}
-                          >
-                            {selectedCategoryIds.includes(category.id) && (
-                              <CheckCircle className="h-3 w-3 text-bg" />
-                            )}
+                          {selectedCategoryIds.includes(category.id) && (
+                            <CheckCircle className="h-3 w-3 text-bg" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {category.color && (
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: category.color }}
+                            />
+                          )}
+                          <span className="text-sm truncate">{category.name}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                {selectedCategoryIds.length} of {allCategories.length} selected
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-isActive"
+                checked={editContractor.isActive}
+                onChange={(e) => setEditContractor({...editContractor, isActive: e.target.checked})}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="edit-isActive">Account Active</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateContractor}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Reset password for <strong>{selectedContractor?.name}</strong> ({selectedContractor?.email})
+            </p>
+
+            <div>
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Enter new password (min 6 characters)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowResetPasswordDialog(false)} disabled={isResetting}>
+                Cancel
+              </Button>
+              <Button onClick={handlePasswordReset} disabled={isResetting}>
+                {isResetting ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ratings Modal */}
+      <Dialog open={showRatingsModal} onOpenChange={setShowRatingsModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <User className="h-5 w-5" />
+              <span>{selectedContractor?.name} - Rating Details</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedContractor && (
+            <div className="space-y-6">
+              {/* Rating Summary */}
+              <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-4xl font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {selectedContractor.rating?.toFixed(1) || 'N/A'}
+                    </div>
+                    <div>
+                      {renderStars(Math.round(selectedContractor.rating || 0))}
+                      <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                        Based on {contractorRatings.length} review{contractorRatings.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>
+                      {selectedContractor.totalJobs || 0}
+                    </div>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Jobs</p>
+                  </div>
+                </div>
+
+                {/* Average Ratings Breakdown */}
+                {contractorRatings.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                    <div className="text-center">
+                      <Clock className="h-5 w-5 mx-auto text-ds-blue mb-1" />
+                      <div className="text-lg font-medium">
+                        {(contractorRatings.reduce((sum, r) => sum + r.punctualityRating, 0) / contractorRatings.length).toFixed(1)}
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</p>
+                    </div>
+                    <div className="text-center">
+                      <Heart className="h-5 w-5 mx-auto text-pink-500 mb-1" />
+                      <div className="text-lg font-medium">
+                        {(contractorRatings.reduce((sum, r) => sum + r.customerServiceRating, 0) / contractorRatings.length).toFixed(1)}
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</p>
+                    </div>
+                    <div className="text-center">
+                      <Wrench className="h-5 w-5 mx-auto text-ds-amber mb-1" />
+                      <div className="text-lg font-medium">
+                        {(contractorRatings.reduce((sum, r) => sum + r.workmanshipRating, 0) / contractorRatings.length).toFixed(1)}
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</p>
+                    </div>
+                    <div className="text-center">
+                      <Shield className="h-5 w-5 mx-auto text-ds-green mb-1" />
+                      <div className="text-lg font-medium">
+                        {Math.round((contractorRatings.filter(r => r.ppeCompliant).length / contractorRatings.length) * 100)}%
+                      </div>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PPE Compliant</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Individual Ratings */}
+              <div>
+                <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Individual Reviews</h4>
+                <ScrollArea className="h-[300px]">
+                  {ratingsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: 'var(--accent)' }}></div>
+                      <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Loading ratings...</p>
+                    </div>
+                  ) : contractorRatings.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Star className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+                      <p style={{ color: 'var(--text-muted)' }}>No ratings yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {contractorRatings.map((rating) => (
+                        <div key={rating.id} className="border rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                {rating.ticket?.title || 'Job'}
+                              </p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                {rating.ticket?.ticketNumber} • {new Date(rating.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {renderStars(rating.overallRating)}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {category.color && (
-                              <div 
-                                className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
-                                style={{ backgroundColor: category.color }}
-                              />
-                            )}
-                            <span className="text-sm truncate">{category.name}</span>
+
+                          <div className="grid grid-cols-4 gap-2 text-xs mb-2">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                              <span>{rating.punctualityRating}/5</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Heart className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                              <span>{rating.customerServiceRating}/5</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Wrench className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                              <span>{rating.workmanshipRating}/5</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {rating.ppeCompliant ? (
+                                <CheckCircle className="h-3 w-3 text-ds-green" />
+                              ) : (
+                                <XCircle className="h-3 w-3 text-ds-red" />
+                              )}
+                              <span>PPE</span>
+                            </div>
                           </div>
+
+                          {rating.comment && (
+                            <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>"{rating.comment}"</p>
+                          )}
+
+                          {rating.user && (
+                            <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                              — {rating.user.name || rating.user.email}
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  {selectedCategoryIds.length} of {allCategories.length} selected
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="edit-isActive"
-                  checked={editContractor.isActive}
-                  onChange={(e) => setEditContractor({...editContractor, isActive: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="edit-isActive">Account Active</Label>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateContractor}>
-                  Save Changes
-                </Button>
+                </ScrollArea>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Reset Password Dialog */}
-        <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Reset Password</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p style={{ color: 'var(--text-secondary)' }}>
-                Reset password for <strong>{selectedContractor?.name}</strong> ({selectedContractor?.email})
-              </p>
-              
-              <div>
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="Enter new password (min 6 characters)"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowResetPasswordDialog(false)} disabled={isResetting}>
-                  Cancel
-                </Button>
-                <Button onClick={handlePasswordReset} disabled={isResetting}>
-                  {isResetting ? 'Resetting...' : 'Reset Password'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Ratings Modal */}
-        <Dialog open={showRatingsModal} onOpenChange={setShowRatingsModal}>
-          <DialogContent className="max-w-3xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
-                <span>{selectedContractor?.name} - Rating Details</span>
-              </DialogTitle>
-            </DialogHeader>
-            
-            {selectedContractor && (
-              <div className="space-y-6">
-                {/* Rating Summary */}
-                <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--surface2)' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-4xl font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {selectedContractor.rating?.toFixed(1) || 'N/A'}
-                      </div>
-                      <div>
-                        {renderStars(Math.round(selectedContractor.rating || 0))}
-                        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                          Based on {contractorRatings.length} review{contractorRatings.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>
-                        {selectedContractor.totalJobs || 0}
-                      </div>
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Jobs</p>
-                    </div>
-                  </div>
-
-                  {/* Average Ratings Breakdown */}
-                  {contractorRatings.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div className="text-center">
-                        <Clock className="h-5 w-5 mx-auto text-ds-blue mb-1" />
-                        <div className="text-lg font-medium">
-                          {(contractorRatings.reduce((sum, r) => sum + r.punctualityRating, 0) / contractorRatings.length).toFixed(1)}
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Punctuality</p>
-                      </div>
-                      <div className="text-center">
-                        <Heart className="h-5 w-5 mx-auto text-pink-500 mb-1" />
-                        <div className="text-lg font-medium">
-                          {(contractorRatings.reduce((sum, r) => sum + r.customerServiceRating, 0) / contractorRatings.length).toFixed(1)}
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Service</p>
-                      </div>
-                      <div className="text-center">
-                        <Wrench className="h-5 w-5 mx-auto text-ds-amber mb-1" />
-                        <div className="text-lg font-medium">
-                          {(contractorRatings.reduce((sum, r) => sum + r.workmanshipRating, 0) / contractorRatings.length).toFixed(1)}
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Workmanship</p>
-                      </div>
-                      <div className="text-center">
-                        <Shield className="h-5 w-5 mx-auto text-ds-green mb-1" />
-                        <div className="text-lg font-medium">
-                          {Math.round((contractorRatings.filter(r => r.ppeCompliant).length / contractorRatings.length) * 100)}%
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>PPE Compliant</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Individual Ratings */}
-                <div>
-                  <h4 className="font-medium mb-3" style={{ color: 'var(--text-primary)' }}>Individual Reviews</h4>
-                  <ScrollArea className="h-[300px]">
-                    {ratingsLoading ? (
-                      <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: 'var(--accent)' }}></div>
-                        <p className="mt-2" style={{ color: 'var(--text-muted)' }}>Loading ratings...</p>
-                      </div>
-                    ) : contractorRatings.length === 0 ? (
-                      <div className="text-center py-8">
-                        <Star className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-                        <p style={{ color: 'var(--text-muted)' }}>No ratings yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {contractorRatings.map((rating) => (
-                          <div key={rating.id} className="border rounded-lg p-4">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                                  {rating.ticket?.title || 'Job'}
-                                </p>
-                                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                  {rating.ticket?.ticketNumber} • {new Date(rating.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                {renderStars(rating.overallRating)}
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-4 gap-2 text-xs mb-2">
-                              <div className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
-                                <span>{rating.punctualityRating}/5</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Heart className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
-                                <span>{rating.customerServiceRating}/5</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Wrench className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
-                                <span>{rating.workmanshipRating}/5</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                {rating.ppeCompliant ? (
-                                  <CheckCircle className="h-3 w-3 text-ds-green" />
-                                ) : (
-                                  <XCircle className="h-3 w-3 text-ds-red" />
-                                )}
-                                <span>PPE</span>
-                              </div>
-                            </div>
-
-                            {rating.comment && (
-                              <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>"{rating.comment}"</p>
-                            )}
-
-                            {rating.user && (
-                              <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-                                — {rating.user.name || rating.user.email}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,30 +8,12 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
-import { ScrollableDataGrid } from '@/components/ui/scrollable-data-grid'
-import Chip from '@mui/material/Chip'
-import IconButton from '@mui/material/IconButton'
-import Tooltip from '@mui/material/Tooltip'
-import Box from '@mui/material/Box'
-import Menu from '@mui/material/Menu'
-import MenuItem from '@mui/material/MenuItem'
-import ListItemIcon from '@mui/material/ListItemIcon'
-import ListItemText from '@mui/material/ListItemText'
-import Divider from '@mui/material/Divider'
-import { 
+import {
   Plus,
   User,
   Users,
-  Shield,
-  CheckCircle,
-  XCircle,
   Edit,
-  Key,
-  Search,
-  MoreHorizontal,
   Mail,
-  UserCog,
   Send,
   Loader2
 } from 'lucide-react'
@@ -78,12 +59,30 @@ const ROLE_OPTIONS = [
   { value: 'PROJECTS_ADMIN', label: 'Projects Admin', description: 'Admin for Projects department' },
 ]
 
+function getInitials(name: string | null, email: string): string {
+  if (name) {
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    return name.slice(0, 2).toUpperCase()
+  }
+  return email.slice(0, 2).toUpperCase()
+}
+
+function getRolePill(role: string): React.CSSProperties {
+  if (role.includes('ADMIN')) return { backgroundColor: '#f0efe9', color: '#444441' }
+  if (role === 'END_USER') return { backgroundColor: '#eff6ff', color: '#1e40af' }
+  return { backgroundColor: '#f0efe9', color: '#6b6860' }
+}
+
+function formatRoleLabel(role: string): string {
+  return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+}
+
 export function UserManagement({ user }: UserManagementProps) {
   const [users, setUsers] = useState<UserData[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<string>('all')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false)
@@ -91,13 +90,19 @@ export function UserManagement({ user }: UserManagementProps) {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedBranches, setSelectedBranches] = useState<string[]>([])
-  
+
+  // Filter drawer state
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [userFilters, setUserFilters] = useState({ role: '', status: '' })
+  // statFilter: '' | 'total' | 'admins' | 'end_users' | 'active'
+  const [statFilter, setStatFilter] = useState('')
+
   // Invite form state
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName, setInviteName] = useState('')
   const [inviteExpiry, setInviteExpiry] = useState('72')
   const [isInviting, setIsInviting] = useState(false)
-  
+
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -105,7 +110,7 @@ export function UserManagement({ user }: UserManagementProps) {
     role: 'END_USER',
     branchIds: [] as string[]
   })
-  
+
   const [editUser, setEditUser] = useState({
     name: '',
     email: '',
@@ -114,13 +119,23 @@ export function UserManagement({ user }: UserManagementProps) {
     isActive: true,
     branchIds: [] as string[]
   })
-  
+
   const [newPassword, setNewPassword] = useState('')
+
+  // Action menu state for inline dropdown
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
+  const [menuUser, setMenuUser] = useState<UserData | null>(null)
 
   useEffect(() => {
     fetchUsers()
     fetchBranches()
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = () => { if (menuAnchorEl) { setMenuAnchorEl(null); setMenuUser(null) } }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuAnchorEl])
 
   const fetchBranches = async () => {
     try {
@@ -397,25 +412,6 @@ export function UserManagement({ user }: UserManagementProps) {
     }
   }
 
-  // Filter users based on search and role
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = 
-      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter
-    
-    return matchesSearch && matchesRole
-  })
-
-  // Count users by role
-  const adminCount = users.filter(u => u.role.includes('ADMIN')).length
-  const endUserCount = users.filter(u => u.role === 'END_USER').length
-
-  // Action menu state for DataGrid
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
-  const [menuUser, setMenuUser] = useState<UserData | null>(null)
-
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, userData: UserData) => {
     setMenuAnchorEl(event.currentTarget)
     setMenuUser(userData)
@@ -426,166 +422,30 @@ export function UserManagement({ user }: UserManagementProps) {
     setMenuUser(null)
   }
 
-  const getRoleChipColor = (role: string): 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'default' => {
-    switch (role) {
-      case 'TENANT_ADMIN': return 'secondary'
-      case 'IT_ADMIN': return 'primary'
-      case 'SALES_ADMIN': return 'success'
-      case 'RETAIL_ADMIN': return 'warning'
-      case 'MAINTENANCE_ADMIN': return 'warning'
-      case 'PROJECTS_ADMIN': return 'info'
-      case 'END_USER': return 'default'
-      default: return 'default'
-    }
-  }
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      // Search
+      if (searchQuery) {
+        const s = searchQuery.toLowerCase()
+        if (!u.name?.toLowerCase().includes(s) && !u.email.toLowerCase().includes(s)) return false
+      }
+      // Stat card filter
+      if (statFilter === 'admins') { if (!u.role.includes('ADMIN')) return false }
+      else if (statFilter === 'end_users') { if (u.role !== 'END_USER') return false }
+      else if (statFilter === 'active') { if (!u.isActive) return false }
+      // Drawer role filter
+      if (userFilters.role) {
+        if (userFilters.role === 'admin' && !u.role.includes('ADMIN')) return false
+        if (userFilters.role === 'end_user' && u.role !== 'END_USER') return false
+      }
+      // Drawer status filter
+      if (userFilters.status === 'active' && !u.isActive) return false
+      if (userFilters.status === 'inactive' && u.isActive) return false
+      return true
+    })
+  }, [users, searchQuery, statFilter, userFilters])
 
-  // DataGrid column definitions
-  const userColumns: GridColDef[] = useMemo(() => [
-    {
-      field: 'user',
-      headerName: 'User',
-      flex: 1.2,
-      minWidth: 180,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => {
-        const userData = params.row
-        const initials = userData.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || userData.email.slice(0, 2).toUpperCase()
-        return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1, width: '100%' }}>
-            <span 
-              style={{ 
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: '#1976d2',
-                minWidth: '24px'
-              }}
-            >
-              {initials}
-            </span>
-            <Box sx={{ textAlign: 'left', overflow: 'hidden' }}>
-              <p className="font-medium text-sm truncate" style={{ color: 'var(--text-primary)' }}>{userData.name || 'No Name'}</p>
-              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{userData.email}</p>
-            </Box>
-          </Box>
-        )
-      },
-    },
-    {
-      field: 'role',
-      headerName: 'Role',
-      flex: 0.6,
-      minWidth: 100,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => (
-        <Chip
-          label={formatRole(params.row.role)}
-          size="small"
-          color={getRoleChipColor(params.row.role)}
-          sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-        />
-      ),
-    },
-    {
-      field: 'branches',
-      headerName: 'Branches',
-      flex: 0.8,
-      minWidth: 130,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => {
-        const userData = params.row
-        return (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center' }}>
-            {userData.branches && userData.branches.length > 0 ? (
-              <>
-                {userData.branches.slice(0, 1).map(ub => (
-                  <Chip
-                    key={ub.branch.id}
-                    label={ub.branch.name}
-                    size="small"
-                    variant="outlined"
-                    color={ub.branch.isHeadOffice ? 'primary' : 'default'}
-                    sx={{ fontSize: '0.65rem', height: 22 }}
-                  />
-                ))}
-                {userData.branches.length > 1 && (
-                  <Chip
-                    label={`+${userData.branches.length - 1}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.65rem', height: 22 }}
-                  />
-                )}
-              </>
-            ) : (
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No branches</span>
-            )}
-          </Box>
-        )
-      },
-    },
-    {
-      field: 'status',
-      headerName: 'Status',
-      flex: 0.6,
-      minWidth: 120,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => {
-        const status = params.row.status || (params.row.isActive ? 'ACTIVE' : 'DEACTIVATED')
-        const statusConfig: Record<string, { label: string; color: 'success' | 'warning' | 'error' | 'info' | 'default' }> = {
-          'ACTIVE': { label: 'Active', color: 'success' },
-          'PENDING_APPROVAL': { label: 'Pending', color: 'warning' },
-          'APPROVED_EMAIL_PENDING': { label: 'Awaiting Setup', color: 'info' },
-          'SUSPENDED': { label: 'Suspended', color: 'error' },
-          'DEACTIVATED': { label: 'Inactive', color: 'error' }
-        }
-        const config = statusConfig[status] || { label: status, color: 'default' }
-        return (
-          <Chip
-            label={config.label}
-            size="small"
-            color={config.color}
-            sx={{ fontWeight: 500, fontSize: '0.7rem' }}
-          />
-        )
-      },
-    },
-    {
-      field: 'createdAt',
-      headerName: 'Joined',
-      flex: 0.5,
-      minWidth: 80,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => (
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          {new Date(params.row.createdAt).toLocaleDateString()}
-        </span>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: '',
-      width: 50,
-      sortable: false,
-      filterable: false,
-      align: 'center',
-      headerAlign: 'center',
-      renderCell: (params: GridRenderCellParams<UserData>) => (
-        <Tooltip title="More options">
-          <IconButton
-            size="small"
-            onClick={(e) => handleMenuOpen(e, params.row)}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </IconButton>
-        </Tooltip>
-      ),
-    },
-  ], [])
+  const activeFilterCount = (userFilters.role ? 1 : 0) + (userFilters.status ? 1 : 0)
 
   if (loading) {
     return (
@@ -599,554 +459,559 @@ export function UserManagement({ user }: UserManagementProps) {
   }
 
   return (
-    <div className="p-5 space-y-5">
-        {/* Action Menu */}
-        <Menu
-          anchorEl={menuAnchorEl}
-          open={Boolean(menuAnchorEl)}
-          onClose={handleMenuClose}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <MenuItem onClick={() => { if (menuUser) handleEditUser(menuUser); handleMenuClose(); }}>
-            <ListItemIcon><Edit className="h-4 w-4" /></ListItemIcon>
-            <ListItemText>Edit User</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={() => { if (menuUser) handleSendActivationEmail(menuUser); handleMenuClose(); }}>
-            <ListItemIcon><Mail className="h-4 w-4 text-ds-blue" /></ListItemIcon>
-            <ListItemText>Send Activation Email</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => { if (menuUser) handleResetPassword(menuUser); handleMenuClose(); }}>
-            <ListItemIcon><Key className="h-4 w-4" /></ListItemIcon>
-            <ListItemText>Reset Password</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={() => { if (menuUser) handleToggleActive(menuUser); handleMenuClose(); }}>
-            {menuUser?.isActive ? (
-              <>
-                <ListItemIcon><XCircle className="h-4 w-4 text-ds-red" /></ListItemIcon>
-                <ListItemText sx={{ color: 'error.main' }}>Deactivate</ListItemText>
-              </>
-            ) : (
-              <>
-                <ListItemIcon><CheckCircle className="h-4 w-4 text-ds-green" /></ListItemIcon>
-                <ListItemText sx={{ color: 'success.main' }}>Activate</ListItemText>
-              </>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Filter drawer overlay */}
+      {filterDrawerOpen && (
+        <div onClick={() => setFilterDrawerOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />
+      )}
+      {/* Filter drawer panel */}
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>✕</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {/* Role section */}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Role</div>
+          {[{ value: 'admin', label: 'Admin' }, { value: 'end_user', label: 'End User' }].map(opt => (
+            <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={userFilters.role === opt.value} onChange={() => setUserFilters(f => ({ ...f, role: f.role === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+            </label>
+          ))}
+          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
+          {/* Status section */}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          {[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }].map(opt => (
+            <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={userFilters.status === opt.value} onChange={() => setUserFilters(f => ({ ...f, status: f.status === opt.value ? '' : opt.value }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+          <button onClick={() => { setUserFilters({ role: '', status: '' }); setFilterDrawerOpen(false) }} style={{ flex: 1, padding: '7px', fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Clear all</button>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ flex: 2, padding: '7px', fontSize: 11, border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}>Apply Filters</button>
+        </div>
+      </div>
+
+      {/* Topbar — 52px */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Users</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredUsers.length} users</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Filters ghost button with badge */}
+          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)', position: 'relative' }}>
+            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            Filters
+            {activeFilterCount > 0 && (
+              <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeFilterCount}</span>
             )}
-          </MenuItem>
-        </Menu>
+          </button>
+          {/* Invite User ghost button */}
+          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>Invite User</button>
+          {/* Add User primary button */}
+          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>+ Add User</button>
+        </div>
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>Users</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage users and department admins</p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowInviteDialog(true)}>
-              <Mail className="h-4 w-4 mr-2" />
-              Invite User
-            </Button>
-            
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add User
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create New User</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Full Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter user's full name"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+263 77 123 4567"
-                    value={newUser.phone}
-                    onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">For SMS notifications</p>
-                </div>
-                
-                <div className="rounded-md p-3 border" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--accent)' }}>
-                  <p className="text-sm" style={{ color: 'var(--blue)' }}>
-                    <Mail className="inline h-4 w-4 mr-1" />
-                    An activation email will be sent to the user. They will set their own password.
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="role">Role *</Label>
-                  <Select value={newUser.role} onValueChange={(value) => {
-                    setNewUser({...newUser, role: value})
-                    // If role contains ADMIN or is TENANT_ADMIN, auto-select all branches if there's a head office
-                    const isAdmin = value.includes('ADMIN')
-                    if (isAdmin) {
-                      const hqBranch = branches.find(b => b.isHeadOffice)
-                      if (hqBranch) {
-                        // Select all branches if assigned to HQ
-                        setNewUser({...newUser, role: value, branchIds: [hqBranch.id]})
-                      }
-                    }
-                  }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLE_OPTIONS.map(role => (
-                        <SelectItem key={role.value} value={role.value}>
-                          <div>
-                            <p className="font-medium">{role.label}</p>
-                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{role.description}</p>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Branch Selection */}
-                <div className="space-y-2">
-                  <Label>Assign Branches *</Label>
-                  <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
-                    {branches.length === 0 ? (
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No branches available. Create branches first.</p>
-                    ) : (
-                      branches.map((branch) => {
-                        const isHQ = branch.isHeadOffice
-                        const isSelected = newUser.branchIds.includes(branch.id)
-                        const isAdminRole = newUser.role.includes('ADMIN')
-                        
-                        return (
-                          <div key={branch.id} className="flex items-start space-x-2">
-                            <Checkbox
-                              id={`branch-${branch.id}`}
-                              checked={isSelected}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  // Add branch
-                                  const newBranchIds = [...newUser.branchIds, branch.id]
-                                  // If HQ is selected and user is admin, auto-select all branches
-                                  if (isHQ && isAdminRole) {
-                                    setNewUser({...newUser, branchIds: branches.map(b => b.id)})
-                                  } else {
-                                    setNewUser({...newUser, branchIds: newBranchIds})
-                                  }
-                                } else {
-                                  // Remove branch
-                                  setNewUser({...newUser, branchIds: newUser.branchIds.filter(id => id !== branch.id)})
-                                }
-                              }}
-                            />
-                            <Label 
-                              htmlFor={`branch-${branch.id}`} 
-                              className="text-sm font-normal cursor-pointer flex-1"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>{branch.name}</span>
-                                {isHQ && (
-                                  <Badge variant="secondary" className="text-xs">HQ</Badge>
-                                )}
-                              </div>
-                              {isHQ && isAdminRole && isSelected && (
-                                <p className="text-xs mt-0.5" style={{ color: 'var(--accent)' }}>Auto-selects all branches</p>
-                              )}
-                            </Label>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                  {newUser.branchIds.length > 0 && (
-                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{newUser.branchIds.length} branch(es) selected</p>
-                  )}
-                </div>
-                
-                <div className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setShowCreateDialog(false)} disabled={isSubmitting}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateUser} disabled={isSubmitting}>
-                    {isSubmitting ? 'Creating...' : 'Create User'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          </div>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* 4 stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {[
+            { key: '', label: 'Total Users', value: users.length, color: 'var(--text-primary)' },
+            { key: 'admins', label: 'Admins', value: users.filter(u => u.role.includes('ADMIN')).length, color: 'var(--text-primary)' },
+            { key: 'end_users', label: 'End Users', value: users.filter(u => u.role === 'END_USER').length, color: '#1e40af' },
+            { key: 'active', label: 'Active', value: users.filter(u => u.isActive).length, color: '#2d6a4f' },
+          ].map(card => (
+            <div key={card.key} onClick={() => setStatFilter(statFilter === card.key ? '' : card.key)} style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Invite User Dialog */}
-        <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite User</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
-              Send an invitation email to a new user. They will be able to create their account after accepting.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="invite-email">Email Address *</Label>
-                <Input
-                  id="invite-email"
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div>
-                <Label htmlFor="invite-name">Name (Optional)</Label>
-                <Input
-                  id="invite-name"
-                  type="text"
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="John Doe"
-                />
-              </div>
-              <div>
-                <Label htmlFor="invite-expiry">Invitation Expiry</Label>
-                <Select value={inviteExpiry} onValueChange={setInviteExpiry}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24">24 hours</SelectItem>
-                    <SelectItem value="48">48 hours</SelectItem>
-                    <SelectItem value="72">72 hours (default)</SelectItem>
-                    <SelectItem value="168">7 days</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSendInvite} disabled={isInviting}>
-                  {isInviting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Send Invitation
-                    </>
-                  )}
-                </Button>
+        {/* Table card with inline search in header */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
+          {/* Card header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Users</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{filteredUsers.length} results</span>
+              {/* Inline search */}
+              <div style={{ position: 'relative' }}>
+                <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, fontSize: 11, border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 180 }} />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{users.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Admins</CardTitle>
-              <Shield className="h-4 w-4 text-text-secondary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{adminCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">End Users</CardTitle>
-              <User className="h-4 w-4 text-ds-blue" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{endUserCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-ds-green" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-medium">{users.filter(u => u.isActive).length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Table */}
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['User', 'Role', 'Branches', 'Status', 'Joined', 'Actions'].map(col => (
+                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((userData, i) => (
+                  <tr key={userData.id} style={{ borderBottom: i === filteredUsers.length - 1 ? 'none' : '1px solid var(--surface2)' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    {/* User column: avatar + name + email */}
+                    <td style={{ padding: '9px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          {getInitials(userData.name, userData.email)}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 400 }}>{userData.name || 'No Name'}</div>
+                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)' }}>{userData.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    {/* Role pill */}
+                    <td style={{ padding: '9px 14px' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getRolePill(userData.role) }}>
+                        {formatRoleLabel(userData.role)}
+                      </span>
+                    </td>
+                    {/* Branches */}
+                    <td style={{ padding: '9px 14px', fontSize: 11, color: 'var(--text-secondary)' }}>
+                      {userData.branches && userData.branches.length > 0
+                        ? userData.branches.map(ub => ub.branch.name).join(', ')
+                        : <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      }
+                    </td>
+                    {/* Status pill */}
+                    <td style={{ padding: '9px 14px' }}>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: userData.isActive ? '#e8f5ee' : '#fef2f2', color: userData.isActive ? '#2d6a4f' : '#991b1b' }}>
+                        {userData.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    {/* Joined date */}
+                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                      {new Date(userData.createdAt).toLocaleDateString()}
+                    </td>
+                    {/* Actions — ··· button opens inline dropdown */}
+                    <td style={{ padding: '9px 14px' }}>
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleMenuOpen(e, userData) }}
+                          style={{ fontSize: 14, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)', letterSpacing: 2 }}
+                        >···</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredUsers.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
+                <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No users found</div>
               </div>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by role" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Create User Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Full Name *</Label>
+              <Input
+                id="name"
+                placeholder="Enter user's full name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+263 77 123 4567"
+                value={newUser.phone}
+                onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground mt-1">For SMS notifications</p>
+            </div>
+
+            <div className="rounded-md p-3 border" style={{ backgroundColor: 'var(--blue-bg)', borderColor: 'var(--accent)' }}>
+              <p className="text-sm" style={{ color: 'var(--blue)' }}>
+                <Mail className="inline h-4 w-4 mr-1" />
+                An activation email will be sent to the user. They will set their own password.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="role">Role *</Label>
+              <Select value={newUser.role} onValueChange={(value) => {
+                setNewUser({...newUser, role: value})
+                // If role contains ADMIN or is TENANT_ADMIN, auto-select all branches if there's a head office
+                const isAdmin = value.includes('ADMIN')
+                if (isAdmin) {
+                  const hqBranch = branches.find(b => b.isHeadOffice)
+                  if (hqBranch) {
+                    // Select all branches if assigned to HQ
+                    setNewUser({...newUser, role: value, branchIds: [hqBranch.id]})
+                  }
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
+                  {ROLE_OPTIONS.map(role => (
+                    <SelectItem key={role.value} value={role.value}>
+                      <div>
+                        <p className="font-medium">{role.label}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{role.description}</p>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Branch Selection */}
+            <div className="space-y-2">
+              <Label>Assign Branches *</Label>
+              <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                {branches.length === 0 ? (
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No branches available. Create branches first.</p>
+                ) : (
+                  branches.map((branch) => {
+                    const isHQ = branch.isHeadOffice
+                    const isSelected = newUser.branchIds.includes(branch.id)
+                    const isAdminRole = newUser.role.includes('ADMIN')
+
+                    return (
+                      <div key={branch.id} className="flex items-start space-x-2">
+                        <Checkbox
+                          id={`branch-${branch.id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              // Add branch
+                              const newBranchIds = [...newUser.branchIds, branch.id]
+                              // If HQ is selected and user is admin, auto-select all branches
+                              if (isHQ && isAdminRole) {
+                                setNewUser({...newUser, branchIds: branches.map(b => b.id)})
+                              } else {
+                                setNewUser({...newUser, branchIds: newBranchIds})
+                              }
+                            } else {
+                              // Remove branch
+                              setNewUser({...newUser, branchIds: newUser.branchIds.filter(id => id !== branch.id)})
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`branch-${branch.id}`}
+                          className="text-sm font-normal cursor-pointer flex-1"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>{branch.name}</span>
+                            {isHQ && (
+                              <Badge variant="secondary" className="text-xs">HQ</Badge>
+                            )}
+                          </div>
+                          {isHQ && isAdminRole && isSelected && (
+                            <p className="text-xs mt-0.5" style={{ color: 'var(--accent)' }}>Auto-selects all branches</p>
+                          )}
+                        </Label>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              {newUser.branchIds.length > 0 && (
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{newUser.branchIds.length} branch(es) selected</p>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowCreateDialog(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateUser} disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create User'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite User Dialog */}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite User</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+            Send an invitation email to a new user. They will be able to create their account after accepting.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="invite-email">Email Address *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="invite-name">Name (Optional)</Label>
+              <Input
+                id="invite-name"
+                type="text"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="John Doe"
+              />
+            </div>
+            <div>
+              <Label htmlFor="invite-expiry">Invitation Expiry</Label>
+              <Select value={inviteExpiry} onValueChange={setInviteExpiry}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24">24 hours</SelectItem>
+                  <SelectItem value="48">48 hours</SelectItem>
+                  <SelectItem value="72">72 hours (default)</SelectItem>
+                  <SelectItem value="168">7 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendInvite} disabled={isInviting}>
+                {isInviting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Invitation
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editUser.name}
+                onChange={(e) => setEditUser({...editUser, name: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-email">Email Address</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editUser.email}
+                onChange={(e) => setEditUser({...editUser, email: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-phone">Phone Number</Label>
+              <Input
+                id="edit-phone"
+                value={editUser.phone}
+                onChange={(e) => setEditUser({...editUser, phone: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-role">Role</Label>
+              <Select value={editUser.role} onValueChange={(value) => {
+                setEditUser({...editUser, role: value})
+                // Auto-select all branches for admin roles with HQ
+                if (value.includes('ADMIN')) {
+                  const hqBranch = branches.find(b => b.isHeadOffice)
+                  if (hqBranch && editUser.branchIds.includes(hqBranch.id)) {
+                    setEditUser(prev => ({
+                      ...prev,
+                      role: value,
+                      branchIds: branches.map(b => b.id)
+                    }))
+                  }
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
                   {ROLE_OPTIONS.map(role => (
                     <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Users Table */}
-        <Card>
-          <CardContent className="pt-6">
-            {filteredUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 mb-4" style={{ color: 'var(--text-muted)' }} />
-                <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {searchQuery || roleFilter !== 'all' ? 'No users found' : 'No users yet'}
-                </h3>
-                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-                  {searchQuery || roleFilter !== 'all' ? 'Try a different search or filter' : 'Add your first user to get started'}
-                </p>
-                {!searchQuery && roleFilter === 'all' && (
-                  <Button onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <Box sx={{ width: '100%' }}>
-                <ScrollableDataGrid
-                  rows={filteredUsers}
-                  columns={userColumns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10, page: 0 },
-                    },
-                    sorting: {
-                      sortModel: [{ field: 'createdAt', sort: 'desc' }],
-                    },
-                  }}
-                  pageSizeOptions={[5, 10, 25, 50]}
-                  disableRowSelectionOnClick
-                  autoHeight
-                />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Edit User Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input
-                  id="edit-name"
-                  value={editUser.name}
-                  onChange={(e) => setEditUser({...editUser, name: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-email">Email Address</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editUser.email}
-                  onChange={(e) => setEditUser({...editUser, email: e.target.value})}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="edit-phone">Phone Number</Label>
-                <Input
-                  id="edit-phone"
-                  value={editUser.phone}
-                  onChange={(e) => setEditUser({...editUser, phone: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-role">Role</Label>
-                <Select value={editUser.role} onValueChange={(value) => {
-                  setEditUser({...editUser, role: value})
-                  // Auto-select all branches for admin roles with HQ
-                  if (value.includes('ADMIN')) {
-                    const hqBranch = branches.find(b => b.isHeadOffice)
-                    if (hqBranch && editUser.branchIds.includes(hqBranch.id)) {
-                      setEditUser(prev => ({
-                        ...prev,
-                        role: value,
-                        branchIds: branches.map(b => b.id)
-                      }))
-                    }
-                  }
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLE_OPTIONS.map(role => (
-                      <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Branch Selection */}
-              <div>
-                <Label>Assigned Branches</Label>
-                <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
-                  {editUser.role.includes('ADMIN')
-                    ? 'Admins at Head Office get access to all branches'
-                    : 'Select the branch(es) this user can access'}
-                </p>
-                <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
-                  {branches.map(branch => (
-                    <div key={branch.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-branch-${branch.id}`}
-                        checked={editUser.branchIds.includes(branch.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            const newBranchIds = [...editUser.branchIds, branch.id]
-                            // If HQ selected and admin role, auto-select all
-                            if (branch.isHeadOffice && editUser.role.includes('ADMIN')) {
-                              setEditUser({...editUser, branchIds: branches.map(b => b.id)})
-                            } else {
-                              setEditUser({...editUser, branchIds: newBranchIds})
-                            }
-                          } else {
-                            setEditUser({
-                              ...editUser, 
-                              branchIds: editUser.branchIds.filter(id => id !== branch.id)
-                            })
-                          }
-                        }}
-                      />
-                      <label 
-                        htmlFor={`edit-branch-${branch.id}`}
-                        className="text-sm cursor-pointer flex items-center gap-2"
-                      >
-                        {branch.name}
-                        {branch.isHeadOffice && (
-                          <Badge variant="secondary" className="text-xs">HQ</Badge>
-                        )}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                {editUser.branchIds.length === 0 && (
-                  <p className="text-xs text-ds-red mt-1">At least one branch required</p>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="edit-isActive"
-                  checked={editUser.isActive}
-                  onChange={(e) => setEditUser({...editUser, isActive: e.target.checked})}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="edit-isActive">Account Active</Label>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdateUser} disabled={isSubmitting || editUser.branchIds.length === 0}>
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Reset Password Dialog */}
-        <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Reset Password</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p style={{ color: 'var(--text-secondary)' }}>
-                Reset password for <strong>{selectedUser?.name || selectedUser?.email}</strong>
+            {/* Branch Selection */}
+            <div>
+              <Label>Assigned Branches</Label>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
+                {editUser.role.includes('ADMIN')
+                  ? 'Admins at Head Office get access to all branches'
+                  : 'Select the branch(es) this user can access'}
               </p>
-              
-              <div>
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="Enter new password (min 6 characters)"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
+              <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
+                {branches.map(branch => (
+                  <div key={branch.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-branch-${branch.id}`}
+                      checked={editUser.branchIds.includes(branch.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          const newBranchIds = [...editUser.branchIds, branch.id]
+                          // If HQ selected and admin role, auto-select all
+                          if (branch.isHeadOffice && editUser.role.includes('ADMIN')) {
+                            setEditUser({...editUser, branchIds: branches.map(b => b.id)})
+                          } else {
+                            setEditUser({...editUser, branchIds: newBranchIds})
+                          }
+                        } else {
+                          setEditUser({
+                            ...editUser,
+                            branchIds: editUser.branchIds.filter(id => id !== branch.id)
+                          })
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={`edit-branch-${branch.id}`}
+                      className="text-sm cursor-pointer flex items-center gap-2"
+                    >
+                      {branch.name}
+                      {branch.isHeadOffice && (
+                        <Badge variant="secondary" className="text-xs">HQ</Badge>
+                      )}
+                    </label>
+                  </div>
+                ))}
               </div>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowResetPasswordDialog(false)} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button onClick={handlePasswordReset} disabled={isSubmitting}>
-                  {isSubmitting ? 'Resetting...' : 'Reset Password'}
-                </Button>
-              </div>
+              {editUser.branchIds.length === 0 && (
+                <p className="text-xs text-ds-red mt-1">At least one branch required</p>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-isActive"
+                checked={editUser.isActive}
+                onChange={(e) => setEditUser({...editUser, isActive: e.target.checked})}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="edit-isActive">Account Active</Label>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateUser} disabled={isSubmitting || editUser.branchIds.length === 0}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Reset password for <strong>{selectedUser?.name || selectedUser?.email}</strong>
+            </p>
+
+            <div>
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Enter new password (min 6 characters)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowResetPasswordDialog(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button onClick={handlePasswordReset} disabled={isSubmitting}>
+                {isSubmitting ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Inline actions dropdown — renders near the ··· button */}
+      {menuUser && menuAnchorEl && (
+        <div style={{ position: 'fixed', top: (menuAnchorEl as HTMLElement).getBoundingClientRect().bottom + 4, left: (menuAnchorEl as HTMLElement).getBoundingClientRect().left, zIndex: 100, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, minWidth: 160, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+          <button onClick={() => { handleEditUser(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Edit</button>
+          <button onClick={() => { handleResetPassword(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Reset Password</button>
+          <button onClick={() => { handleSendActivationEmail(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: 'var(--text-primary)', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid var(--surface2)' }}>Send Activation Email</button>
+          <button onClick={() => { handleToggleActive(menuUser); handleMenuClose() }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', fontSize: 12, color: menuUser.isActive ? '#991b1b' : '#2d6a4f', background: 'none', border: 'none', cursor: 'pointer' }}>{menuUser.isActive ? 'Deactivate' : 'Activate'}</button>
+        </div>
+      )}
     </div>
   )
 }

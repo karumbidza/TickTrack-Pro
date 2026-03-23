@@ -17,6 +17,13 @@ import {
   LogOut,
   ChevronRight,
   Ticket,
+  Tag,
+  GitBranch,
+  TicketIcon,
+  Bell,
+  BarChart2,
+  Building,
+  CreditCard,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { Logo } from '@/components/Logo'
@@ -31,50 +38,77 @@ function getInitials(name?: string | null, email?: string | null): string {
   return 'U'
 }
 
-type NavItem = {
+const SETTINGS_SUB_ITEMS = [
+  { href: '/admin/settings/categories',   label: 'Categories',    icon: <Tag size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/branches',     label: 'Branches',      icon: <GitBranch size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/ticket-types', label: 'Ticket Types',  icon: <TicketIcon size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/notifications',label: 'Notifications', icon: <Bell size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/reports',      label: 'Reports',       icon: <BarChart2 size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/organisation', label: 'Organisation',  icon: <Building size={12} strokeWidth={1.5} /> },
+  { href: '/admin/settings/billing',      label: 'Billing',       icon: <CreditCard size={12} strokeWidth={1.5} /> },
+]
+
+function NavLink({ href, label, icon, exact, isActive }: {
   href: string
   label: string
   icon: React.ReactNode
   exact?: boolean
+  isActive: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '7px 10px',
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: isActive ? 500 : 400,
+        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        backgroundColor: isActive ? 'var(--surface2)' : 'transparent',
+        textDecoration: 'none',
+        transition: 'background-color 0.12s ease, color 0.12s ease',
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'var(--surface2)'
+          e.currentTarget.style.color = 'var(--text-primary)'
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'transparent'
+          e.currentTarget.style.color = 'var(--text-secondary)'
+        }
+      }}
+    >
+      <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>{icon}</span>
+      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {label}
+      </span>
+      {isActive && (
+        <ChevronRight size={11} strokeWidth={2} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+      )}
+    </Link>
+  )
 }
 
-function getNavItems(role: string): NavItem[] {
-  if (role === 'SUPER_ADMIN') {
-    return [
-      { href: '/super-admin', label: 'Dashboard', icon: <LayoutDashboard size={14} strokeWidth={1.5} />, exact: true },
-      { href: '/super-admin/tenants', label: 'Tenants', icon: <Building2 size={14} strokeWidth={1.5} /> },
-      { href: '/super-admin/analytics', label: 'Analytics', icon: <BarChart3 size={14} strokeWidth={1.5} /> },
-    ]
-  }
-
-  if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)) {
-    const items: NavItem[] = [
-      { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={14} strokeWidth={1.5} />, exact: true },
-      { href: '/admin/tickets', label: 'Tickets', icon: <Ticket size={14} strokeWidth={1.5} /> },
-      { href: '/admin/invoices', label: 'Invoices', icon: <FileText size={14} strokeWidth={1.5} /> },
-    ]
-    if (role === 'TENANT_ADMIN') {
-      items.push(
-        { href: '/admin/users', label: 'Users', icon: <Users size={14} strokeWidth={1.5} /> },
-        { href: '/admin/contractors', label: 'Contractors', icon: <Briefcase size={14} strokeWidth={1.5} /> },
-        { href: '/admin/assets', label: 'Assets', icon: <Package size={14} strokeWidth={1.5} /> },
-        { href: '/admin/settings', label: 'Settings', icon: <Settings size={14} strokeWidth={1.5} /> },
-      )
-    }
-    return items
-  }
-
-  if (role === 'CONTRACTOR') {
-    return [
-      { href: '/contractor', label: 'Dashboard', icon: <LayoutDashboard size={14} strokeWidth={1.5} />, exact: true },
-      { href: '/contractor/invoice-tracker', label: 'Invoice Tracker', icon: <FileSearch size={14} strokeWidth={1.5} /> },
-    ]
-  }
-
-  return [
-    { href: '/dashboard', label: 'My Tickets', icon: <Inbox size={14} strokeWidth={1.5} />, exact: true },
-    { href: '/dashboard/assets', label: 'Asset Register', icon: <Package size={14} strokeWidth={1.5} /> },
-  ]
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <div style={{
+      fontFamily: 'DM Mono, monospace',
+      fontSize: 9,
+      fontWeight: 400,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      color: 'var(--text-muted)',
+      padding: '8px 10px 4px',
+    }}>
+      {label}
+    </div>
+  )
 }
 
 export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
@@ -83,7 +117,10 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
 
   if (!session) return null
 
-  const navItems = getNavItems(session.user.role)
+  const role = session.user.role
+  const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)
+  const isTenantAdmin = role === 'TENANT_ADMIN'
+  const isSettingsActive = pathname?.startsWith('/admin/settings')
 
   return (
     <aside className={`sidebar-fixed${mobileOpen ? ' open' : ''}`}>
@@ -94,53 +131,145 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
 
       {/* Nav items */}
       <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {navItems.map((item) => {
-            const isActive = item.exact
-              ? pathname === item.href
-              : pathname === item.href || pathname?.startsWith(item.href + '/')
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '7px 10px',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: isActive ? 500 : 400,
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  backgroundColor: isActive ? 'var(--surface2)' : 'transparent',
-                  textDecoration: 'none',
-                  transition: 'background-color 0.12s ease, color 0.12s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'var(--surface2)'
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                  }
-                }}
-              >
-                <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {item.label}
-                </span>
-                {isActive && (
-                  <ChevronRight size={11} strokeWidth={2} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        {/* SUPER ADMIN */}
+        {role === 'SUPER_ADMIN' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <NavLink href="/super-admin" label="Dashboard" icon={<LayoutDashboard size={14} strokeWidth={1.5} />} exact isActive={pathname === '/super-admin'} />
+            <NavLink href="/super-admin/tenants" label="Tenants" icon={<Building2 size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/super-admin/tenants')} />
+            <NavLink href="/super-admin/analytics" label="Analytics" icon={<BarChart3 size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/super-admin/analytics')} />
+          </div>
+        )}
+
+        {/* CONTRACTOR */}
+        {role === 'CONTRACTOR' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <NavLink href="/contractor" label="Dashboard" icon={<LayoutDashboard size={14} strokeWidth={1.5} />} exact isActive={pathname === '/contractor'} />
+            <NavLink href="/contractor/invoice-tracker" label="Invoice Tracker" icon={<FileSearch size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/contractor/invoice-tracker')} />
+          </div>
+        )}
+
+        {/* END USER */}
+        {!isAdmin && role !== 'SUPER_ADMIN' && role !== 'CONTRACTOR' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <NavLink href="/dashboard" label="My Tickets" icon={<Inbox size={14} strokeWidth={1.5} />} exact isActive={pathname === '/dashboard'} />
+            <NavLink href="/dashboard/assets" label="Asset Register" icon={<Package size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/dashboard/assets')} />
+          </div>
+        )}
+
+        {/* ADMIN */}
+        {isAdmin && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <SectionLabel label="Main" />
+            <NavLink href="/admin" label="Dashboard" icon={<LayoutDashboard size={14} strokeWidth={1.5} />} exact isActive={pathname === '/admin'} />
+            <NavLink href="/admin/tickets" label="Tickets" icon={<Ticket size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/tickets')} />
+            <NavLink href="/admin/invoices" label="Invoices" icon={<FileText size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/invoices')} />
+
+            {isTenantAdmin && (
+              <>
+                <NavLink href="/admin/users" label="Users" icon={<Users size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/users')} />
+                <NavLink href="/admin/contractors" label="Contractors" icon={<Briefcase size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/contractors')} />
+                <NavLink href="/admin/assets" label="Assets" icon={<Package size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/assets')} />
+              </>
+            )}
+
+            {isTenantAdmin && (
+              <>
+                <SectionLabel label="Config" />
+                {/* Settings parent */}
+                <Link
+                  href="/admin/settings/categories"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '7px 10px',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: isSettingsActive ? 500 : 400,
+                    color: isSettingsActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    backgroundColor: isSettingsActive ? 'var(--surface2)' : 'transparent',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.12s ease, color 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSettingsActive) {
+                      e.currentTarget.style.backgroundColor = 'var(--surface2)'
+                      e.currentTarget.style.color = 'var(--text-primary)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSettingsActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent'
+                      e.currentTarget.style.color = 'var(--text-secondary)'
+                    }
+                  }}
+                >
+                  <span style={{ flexShrink: 0, opacity: isSettingsActive ? 1 : 0.7 }}>
+                    <Settings size={14} strokeWidth={1.5} />
+                  </span>
+                  <span style={{ flex: 1 }}>Settings</span>
+                  <ChevronRight
+                    size={11}
+                    strokeWidth={2}
+                    style={{
+                      color: 'var(--text-muted)',
+                      flexShrink: 0,
+                      transform: isSettingsActive ? 'rotate(90deg)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  />
+                </Link>
+
+                {/* Settings sub-items — shown when any settings route is active */}
+                {isSettingsActive && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 1 }}>
+                    {SETTINGS_SUB_ITEMS.map((sub) => {
+                      const subActive = pathname === sub.href || pathname?.startsWith(sub.href + '/')
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 7,
+                            paddingLeft: 26,
+                            paddingRight: 10,
+                            paddingTop: 5,
+                            paddingBottom: 5,
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: subActive ? 500 : 400,
+                            color: subActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                            textDecoration: 'none',
+                            backgroundColor: subActive ? 'var(--surface2)' : 'transparent',
+                            transition: 'background-color 0.1s ease, color 0.1s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!subActive) {
+                              e.currentTarget.style.backgroundColor = 'var(--surface2)'
+                              e.currentTarget.style.color = 'var(--text-secondary)'
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!subActive) {
+                              e.currentTarget.style.backgroundColor = 'transparent'
+                              e.currentTarget.style.color = 'var(--text-muted)'
+                            }
+                          }}
+                        >
+                          <span style={{ opacity: subActive ? 1 : 0.6 }}>{sub.icon}</span>
+                          {sub.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 )}
-              </Link>
-            )
-          })}
-        </div>
+              </>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Bottom user strip */}
@@ -148,7 +277,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
         {/* Notifications row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 4 }}>
           <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', letterSpacing: '0.05em' }}>
-            {session.user.tenantName || (session.user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack')}
+            {session.user.tenantName || (role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack')}
           </span>
           <NotificationBell pollInterval={30000} />
         </div>
