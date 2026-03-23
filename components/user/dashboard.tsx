@@ -62,6 +62,7 @@ interface User {
   name?: string | null
   role: string
   tenantId: string | null
+  branchName?: string | null
 }
 
 interface TicketSummary {
@@ -854,13 +855,11 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
 
   return (
     <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
-      {/* Page header bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 52, minHeight: 52, padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+      {/* Page header bar — only shown on tickets tab; asset register has its own header */}
+      {activeTab === 'tickets' && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 52, minHeight: 52, padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
         <div>
-          <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
-            {activeTab === 'tickets' ? 'My Tickets' : 'Asset Register'}
-          </h1>
-          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{user.name || user.email}</p>
+          <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>My Tickets</h1>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>{user.branchName || user.name || user.email}</p>
         </div>
         <div className="flex items-center gap-2">
           {activeTab === 'tickets' && (
@@ -885,7 +884,7 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
             <CreateTicketDialog tenantId={user.tenantId || ''} onTicketCreated={fetchUserTickets} />
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Filter Drawer */}
       <FilterDrawer
