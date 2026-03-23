@@ -18,10 +18,6 @@ import {
   EyeOff,
   Loader2,
   ArrowRight,
-  Shield,
-  Zap,
-  Users,
-  BarChart3
 } from 'lucide-react'
 
 function SignInForm() {
@@ -119,70 +115,16 @@ function SignInForm() {
     finally { setIsLoading(false) }
   }
 
-  const features = [
-    { icon: Zap, label: 'Fast Resolution', description: 'Resolve tickets 50% faster' },
-    { icon: Users, label: 'Team Collaboration', description: 'Work together seamlessly' },
-    { icon: BarChart3, label: 'Smart Analytics', description: 'Data-driven insights' },
-    { icon: Shield, label: 'Enterprise Security', description: 'Bank-level protection' },
-  ]
-
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--bg)' }}>
-      {/* Left Panel — Branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
-        style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
-        <Logo size="sm" href="/" dark />
-
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            style={{ fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 300, letterSpacing: '-0.035em', lineHeight: 1.15, marginBottom: '1rem', opacity: 0.95 }}
-          >
-            Welcome back to your <strong>helpdesk command centre</strong>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            style={{ fontSize: 15, opacity: 0.6, marginBottom: '3rem', lineHeight: 1.6 }}
-          >
-            Manage tickets, assets, contractors, and more — all in one place.
-          </motion.p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {features.map(({ icon: Icon, label, description }, i) => (
-              <motion.div
-                key={label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.08 }}
-                style={{ padding: 16, borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.06)' }}
-              >
-                <Icon className="h-5 w-5 mb-2" style={{ opacity: 0.6 }} />
-                <p style={{ fontWeight: 500, fontSize: 14, opacity: 0.9, marginBottom: 2 }}>{label}</p>
-                <p style={{ fontSize: 12, opacity: 0.5 }}>{description}</p>
-              </motion.div>
-            ))}
-          </div>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ width: '100%', maxWidth: 400, padding: '0 24px' }}
+      >
+        <div className="text-center mb-8">
+          <Logo size="sm" href="/" />
         </div>
-
-        <p style={{ fontSize: 12, opacity: 0.35 }}>© {new Date().getFullYear()} TickTrack Pro. All rights reserved.</p>
-      </div>
-
-      {/* Right Panel — Sign In Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-12"
-        style={{ backgroundColor: 'var(--surface)' }}>
-        <motion.div
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          style={{ width: '100%', maxWidth: 400 }}
-        >
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <Logo size="sm" href="/" />
-          </div>
 
           <div style={{ marginBottom: '2rem' }}>
             <p className="section-label mb-3">Sign in</p>
@@ -266,8 +208,7 @@ function SignInForm() {
               {resendingEmail ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Sending...</span> : <><Mail className="inline h-3 w-3 mr-1" />Resend verification email</>}
             </button>
           </div>
-        </motion.div>
-      </div>
+      </motion.div>
     </div>
   )
 }
