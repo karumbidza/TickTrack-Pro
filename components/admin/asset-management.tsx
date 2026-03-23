@@ -2,36 +2,25 @@
 
 import React from 'react'
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MediaViewer } from '@/components/ui/media-viewer'
-import { 
-  Package,
-  Search,
-  Filter,
-  Eye,
+import {
   CheckCircle,
   XCircle,
   Clock,
   AlertTriangle,
   Wrench,
   DollarSign,
-  Calendar,
   MapPin,
   User,
   History,
-  RefreshCw,
   TrendingUp,
   AlertCircle,
-  FileText,
-  ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -145,6 +134,21 @@ interface AssetStats {
   repairNeeded: number
 }
 
+function getStatusPill(status: string): React.CSSProperties {
+  const map: Record<string, React.CSSProperties> = {
+    ACTIVE:               { backgroundColor: '#e8f5ee', color: '#2d6a4f' },
+    PENDING_APPROVAL:     { backgroundColor: '#fef3c7', color: '#92400e' },
+    IN_MAINTENANCE:       { backgroundColor: '#eff6ff', color: '#1e40af' },
+    REPAIR_NEEDED:        { backgroundColor: '#fef2f2', color: '#991b1b' },
+    OUT_OF_SERVICE:       { backgroundColor: '#fef2f2', color: '#991b1b' },
+    DECOMMISSIONED:       { backgroundColor: '#f0efe9', color: '#6b6860' },
+    PENDING_DECOMMISSION: { backgroundColor: '#fef3c7', color: '#92400e' },
+    MAINTENANCE:          { backgroundColor: '#eff6ff', color: '#1e40af' },
+    RETIRED:              { backgroundColor: '#f0efe9', color: '#6b6860' },
+  }
+  return map[status] || { backgroundColor: '#f0efe9', color: '#6b6860' }
+}
+
 export function AdminAssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [stats, setStats] = useState<AssetStats | null>(null)
@@ -160,6 +164,16 @@ export function AdminAssetManagement() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [statFilter, setStatFilter] = useState('')
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false)
+  const [drawerFilters, setDrawerFilters] = useState({ status: '', category: '', branch: '' })
+
+  const applyDrawerFilters = () => {
+    setStatusFilter(drawerFilters.status || 'all')
+    setCategoryFilter(drawerFilters.category || 'all')
+    setBranchFilter(drawerFilters.branch || 'all')
+    setFilterDrawerOpen(false)
+  }
 
   const fetchAssets = async () => {
     try {
@@ -296,13 +310,13 @@ export function AdminAssetManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { style: React.CSSProperties; icon: React.ReactNode }> = {
-      'ACTIVE': { style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <CheckCircle className="h-3 w-3" /> },
-      'MAINTENANCE': { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <Wrench className="h-3 w-3" /> },
-      'OUT_OF_SERVICE': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <XCircle className="h-3 w-3" /> },
-      'RETIRED': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <Clock className="h-3 w-3" /> },
-      'REPAIR_NEEDED': { style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <AlertTriangle className="h-3 w-3" /> },
-      'DECOMMISSIONED': { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }, icon: <XCircle className="h-3 w-3" /> },
-      'TRANSFERRED': { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <TrendingUp className="h-3 w-3" /> },
+      'ACTIVE':               { style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)' }, icon: <CheckCircle className="h-3 w-3" /> },
+      'MAINTENANCE':          { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <Wrench className="h-3 w-3" /> },
+      'OUT_OF_SERVICE':       { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <XCircle className="h-3 w-3" /> },
+      'RETIRED':              { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: <Clock className="h-3 w-3" /> },
+      'REPAIR_NEEDED':        { style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)' }, icon: <AlertTriangle className="h-3 w-3" /> },
+      'DECOMMISSIONED':       { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }, icon: <XCircle className="h-3 w-3" /> },
+      'TRANSFERRED':          { style: { backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }, icon: <TrendingUp className="h-3 w-3" /> },
       'PENDING_DECOMMISSION': { style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)' }, icon: <AlertCircle className="h-3 w-3" /> }
     }
     const config = statusConfig[status] || { style: { backgroundColor: 'var(--surface2)', color: 'var(--text-secondary)' }, icon: null }
@@ -329,303 +343,204 @@ export function AdminAssetManagement() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Total Assets</p>
-                  <p className="text-2xl font-medium">{stats.total}</p>
-                </div>
-                <Package className="h-8 w-8" style={{ color: 'var(--text-muted)' }} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Active</p>
-                  <p className="text-2xl font-medium" style={{ color: 'var(--green)' }}>{stats.active}</p>
-                </div>
-                <CheckCircle className="h-8 w-8" style={{ color: 'var(--green)' }} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card style={stats.pendingDecommission > 0 ? { borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' } : {}}>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Pending Approval</p>
-                  <p className="text-2xl font-medium" style={{ color: 'var(--amber)' }}>{stats.pendingDecommission}</p>
-                </div>
-                <AlertCircle className="h-8 w-8" style={{ color: 'var(--amber)' }} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>In Maintenance</p>
-                  <p className="text-2xl font-medium" style={{ color: 'var(--blue)' }}>{stats.maintenance}</p>
-                </div>
-                <Wrench className="h-8 w-8" style={{ color: 'var(--blue)' }} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Repair Needed</p>
-                  <p className="text-2xl font-medium" style={{ color: 'var(--red)' }}>{stats.repairNeeded}</p>
-                </div>
-                <AlertTriangle className="h-8 w-8" style={{ color: 'var(--red)' }} />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Decommissioned</p>
-                  <p className="text-2xl font-medium" style={{ color: 'var(--text-secondary)' }}>{stats.decommissioned}</p>
-                </div>
-                <XCircle className="h-8 w-8" style={{ color: 'var(--text-muted)' }} />
-              </div>
-            </CardContent>
-          </Card>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+      {/* Filter drawer overlay */}
+      {filterDrawerOpen && (
+        <div
+          onClick={() => setFilterDrawerOpen(false)}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }}
+        />
+      )}
+
+      {/* Filter drawer */}
+      <div style={{ position: 'fixed', top: 0, right: 0, height: '100%', width: 270, backgroundColor: 'var(--surface)', borderLeft: '1px solid var(--border)', zIndex: 50, transform: filterDrawerOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.22s ease', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Filters</span>
+          <button onClick={() => setFilterDrawerOpen(false)} style={{ width: 24, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>✕</button>
         </div>
-      )}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+          {/* Status section */}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Status</div>
+          {['ACTIVE', 'PENDING_APPROVAL', 'IN_MAINTENANCE', 'REPAIR_NEEDED', 'DECOMMISSIONED'].map(s => (
+            <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={drawerFilters.status === s} onChange={() => setDrawerFilters(f => ({ ...f, status: f.status === s ? '' : s }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</span>
+            </label>
+          ))}
+          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
+          {/* Category section */}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Category</div>
+          {categories.map(cat => (
+            <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={drawerFilters.category === cat.id} onChange={() => setDrawerFilters(f => ({ ...f, category: f.category === cat.id ? '' : cat.id }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{cat.name}</span>
+            </label>
+          ))}
+          <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0 12px' }} />
+          {/* Branch section */}
+          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Branch</div>
+          {branches.map(br => (
+            <label key={br.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={drawerFilters.branch === br.id} onChange={() => setDrawerFilters(f => ({ ...f, branch: f.branch === br.id ? '' : br.id }))} style={{ width: 14, height: 14, accentColor: 'var(--accent)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{br.name}</span>
+            </label>
+          ))}
+        </div>
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => {
+              setDrawerFilters({ status: '', category: '', branch: '' })
+              setStatusFilter('all')
+              setCategoryFilter('all')
+              setBranchFilter('all')
+              setFilterDrawerOpen(false)
+            }}
+            style={{ flex: 1, padding: 7, fontSize: 11, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+          >Clear all</button>
+          <button
+            onClick={applyDrawerFilters}
+            style={{ flex: 2, padding: 7, fontSize: 11, background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 7, cursor: 'pointer', color: 'var(--bg)', fontWeight: 500 }}
+          >Apply Filters</button>
+        </div>
+      </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
-                <Input
-                  placeholder="Search assets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      {/* Topbar — 52px */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Assets</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{assets.length} assets</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(() => {
+            const count = [drawerFilters.status, drawerFilters.category, drawerFilters.branch].filter(Boolean).length
+            return (
+              <button
+                onClick={() => setFilterDrawerOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}
+              >
+                <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}>
+                  <line x1="4" y1="6" x2="20" y2="6"/>
+                  <line x1="8" y1="12" x2="16" y2="12"/>
+                  <line x1="11" y1="18" x2="13" y2="18"/>
+                </svg>
+                Filters
+                {count > 0 && (
+                  <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 9, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+                )}
+              </button>
+            )
+          })()}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* 6 stat cards in a grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+          {[
+            { key: '',                  label: 'Total',       value: stats?.total ?? assets.length,             color: 'var(--text-primary)' },
+            { key: 'ACTIVE',            label: 'Active',      value: stats?.active ?? 0,                        color: '#2d6a4f' },
+            { key: 'PENDING_APPROVAL',  label: 'Pending',     value: stats?.pendingDecommission ?? 0,           color: '#92400e' },
+            { key: 'IN_MAINTENANCE',    label: 'Maintenance', value: stats?.maintenance ?? 0,                   color: '#1e40af' },
+            { key: 'REPAIR_NEEDED',     label: 'Repair',      value: stats?.repairNeeded ?? 0,                  color: '#991b1b' },
+            { key: 'DECOMMISSIONED',    label: 'Decomm.',     value: stats?.decommissioned ?? 0,                color: '#9e9c94' },
+          ].map(card => (
+            <div
+              key={card.key}
+              onClick={() => { setStatFilter(statFilter === card.key ? '' : card.key); setStatusFilter(card.key || 'all') }}
+              style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '10px 12px', cursor: 'pointer', transition: 'border 0.15s ease' }}
+            >
+              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="PENDING_DECOMMISSION">Pending Decommission</SelectItem>
-                <SelectItem value="MAINTENANCE">In Maintenance</SelectItem>
-                <SelectItem value="REPAIR_NEEDED">Repair Needed</SelectItem>
-                <SelectItem value="DECOMMISSIONED">Decommissioned</SelectItem>
-                <SelectItem value="TRANSFERRED">Transferred</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(cat => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by branch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Branches</SelectItem>
-                {branches.map(branch => (
-                  <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={fetchAssets}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+          ))}
+        </div>
+
+        {/* Search bar full width */}
+        <div style={{ position: 'relative' }}>
+          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search assets..."
+            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 9, paddingBottom: 9, fontSize: 13, border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        {/* Table card */}
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)' }}>All Assets</span>
+            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, color: 'var(--text-muted)' }}>{assets.length} results</span>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Pending Decommission Requests - Highlighted */}
-      {assets.filter(a => a.status === 'PENDING_DECOMMISSION').length > 0 && (
-        <Card style={{ borderColor: 'var(--amber)', backgroundColor: 'var(--amber-bg)' }}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" style={{ color: 'var(--amber)' }}>
-              <AlertCircle className="h-5 w-5" />
-              Pending Decommission Requests ({assets.filter(a => a.status === 'PENDING_DECOMMISSION').length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {assets.filter(a => a.status === 'PENDING_DECOMMISSION').map(asset => (
-                <div key={asset.id} className="flex items-center justify-between p-4 rounded-lg border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--amber)' }}>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{asset.assetNumber}</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>{asset.name}</span>
-                      {asset.category && (
-                        <Badge variant="outline" style={{ borderColor: asset.category.color }}>
-                          {asset.category.name}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-                      <span>Requested by: {asset.decommissionRequestedBy?.name || 'Unknown'}</span>
-                      <span className="mx-2">•</span>
-                      <span>Reason: {asset.decommissionReason}</span>
-                      <span className="mx-2">•</span>
-                      <span>{formatDate(asset.decommissionRequestedAt)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => fetchAssetDetail(asset.id)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button 
-                      size="sm"
-                      style={{ backgroundColor: 'var(--green)' }}
-                      onClick={() => handleApproveDecommission(asset.id)}
-                      disabled={actionLoading}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Approve
-                    </Button>
-                    <Button 
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        setSelectedAsset(asset)
-                        setShowRejectDialog(true)
-                      }}
-                      disabled={actionLoading}
-                    >
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Reject
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Assets Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            All Assets
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--text-muted)' }} />
-            </div>
-          ) : assets.length === 0 ? (
-            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-              No assets found
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 20px' }}>
+              <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr className="border-b text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-                    <th className="pb-3 font-medium text-center">Asset</th>
-                    <th className="pb-3 font-medium text-center">Asset ID</th>
-                    <th className="pb-3 font-medium text-center">Category</th>
-                    <th className="pb-3 font-medium text-center">Site/Branch</th>
-                    <th className="pb-3 font-medium text-center">Status</th>
-                    <th className="pb-3 font-medium text-center">Purchase Price</th>
-                    <th className="pb-3 font-medium text-center">Service Cost</th>
-                    <th className="pb-3 font-medium text-center">Tickets</th>
-                    <th className="pb-3 font-medium text-center">Actions</th>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    {['Asset ID', 'Name', 'Category', 'Branch', 'Status', 'Last Updated', 'Actions'].map(col => (
+                      <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {assets.map(asset => (
-                    <tr key={asset.id} className="border-b" style={{ ['--tw-hover-bg' as string]: 'var(--surface2)' }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface2)'} onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = ''}>
-                      <td className="py-3 text-center">
-                        <div>
-                          <p className="font-medium">{asset.name}</p>
-                          {asset.brand && asset.model && (
-                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{asset.brand} {asset.model}</p>
-                          )}
-                        </div>
+                  {assets.map((asset, i) => (
+                    <tr
+                      key={asset.id}
+                      style={{ borderBottom: i === assets.length - 1 ? 'none' : '1px solid var(--surface2)', cursor: 'pointer' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      onClick={() => fetchAssetDetail(asset.id)}
+                    >
+                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{asset.assetNumber}</td>
+                      <td style={{ fontSize: 13, color: 'var(--text-primary)', padding: '9px 14px' }}>
+                        <div style={{ fontWeight: 400 }}>{asset.name}</div>
+                        {asset.brand && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{asset.brand}</div>}
                       </td>
-                      <td className="py-3 text-center">
-                        <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>{asset.assetNumber}</span>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.category?.name || '—'}</td>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.branch?.name || '—'}</td>
+                      <td style={{ padding: '9px 14px' }}>
+                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusPill(asset.status) }}>
+                          {asset.status.replace(/_/g, ' ')}
+                        </span>
                       </td>
-                      <td className="py-3 text-center">
-                        {asset.category ? (
-                          <Badge variant="outline" style={{ borderColor: asset.category.color }}>
-                            {asset.category.name}
-                          </Badge>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>-</span>
-                        )}
+                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
+                        {new Date(asset.purchaseDate || '').toLocaleDateString() !== 'Invalid Date' && asset.purchaseDate
+                          ? new Date(asset.purchaseDate).toLocaleDateString()
+                          : '—'
+                        }
                       </td>
-                      <td className="py-3 text-center">
-                        <div className="flex items-center justify-center gap-1 text-sm">
-                          <MapPin className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
-                          {asset.branch?.name || asset.location || '-'}
-                        </div>
-                      </td>
-                      <td className="py-3 text-center">{getStatusBadge(asset.status)}</td>
-                      <td className="py-3 text-center text-sm">{formatCurrency(asset.purchasePrice)}</td>
-                      <td className="py-3 text-center">
-                        <div className="text-sm">
-                          <p className="font-medium">{formatCurrency(asset.totalCost)}</p>
-                          {asset.totalRepairCost > 0 && (
-                            <p className="text-xs text-text-muted">
-                              Repairs: {formatCurrency(asset.totalRepairCost)}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 text-center">
-                        <Badge variant="outline">{asset._count.tickets}</Badge>
-                      </td>
-                      <td className="py-3 text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => fetchAssetDetail(asset.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                      <td style={{ padding: '9px 14px' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); fetchAssetDetail(asset.id) }}
+                          style={{ fontSize: 11, padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
+                        >View</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              {assets.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 20px' }}>
+                  <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24">
+                      <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No assets found</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+                </div>
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Asset Detail Modal */}
       <Dialog open={showAssetDetail} onOpenChange={setShowAssetDetail}>
@@ -634,7 +549,6 @@ export function AdminAssetManagement() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <Package className="h-6 w-6" />
                   {selectedAsset.name}
                   <span className="text-text-muted font-normal">({selectedAsset.assetNumber})</span>
                   {getStatusBadge(selectedAsset.status)}
@@ -673,8 +587,8 @@ export function AdminAssetManagement() {
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Approve Decommission
                             </Button>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="destructive"
                               onClick={() => setShowRejectDialog(true)}
                               disabled={actionLoading}
@@ -885,7 +799,7 @@ export function AdminAssetManagement() {
                     {selectedAsset.images && selectedAsset.images.length > 0 && (
                       <div>
                         <h4 className="font-medium mb-3">Asset Images</h4>
-                        <MediaViewer 
+                        <MediaViewer
                           files={selectedAsset.images}
                           gridCols={3}
                           thumbnailSize="md"
@@ -895,14 +809,14 @@ export function AdminAssetManagement() {
                     {selectedAsset.manuals && selectedAsset.manuals.length > 0 && (
                       <div>
                         <h4 className="font-medium mb-3">Manuals & Documents</h4>
-                        <MediaViewer 
+                        <MediaViewer
                           files={selectedAsset.manuals}
                           gridCols={3}
                           thumbnailSize="md"
                         />
                       </div>
                     )}
-                    {(!selectedAsset.images || selectedAsset.images.length === 0) && 
+                    {(!selectedAsset.images || selectedAsset.images.length === 0) &&
                      (!selectedAsset.manuals || selectedAsset.manuals.length === 0) && (
                       <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
                         No media files attached
@@ -942,8 +856,8 @@ export function AdminAssetManagement() {
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleRejectDecommission}
               disabled={actionLoading || !rejectReason.trim()}
             >

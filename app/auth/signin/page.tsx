@@ -116,17 +116,18 @@ function SignInForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--surface)' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)', padding: '24px 16px' }}>
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ width: '100%', maxWidth: 400, padding: '0 24px' }}
+        style={{ width: '100%', maxWidth: 420 }}
       >
         <div className="text-center mb-8">
           <Logo size="sm" href="/" />
         </div>
 
-          <div style={{ marginBottom: '2rem' }}>
+        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '36px 36px 28px' }}>
+          <div style={{ marginBottom: '1.75rem' }}>
             <p className="section-label mb-3">Sign in</p>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
               Welcome back
@@ -208,6 +209,7 @@ function SignInForm() {
               {resendingEmail ? <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Sending...</span> : <><Mail className="inline h-3 w-3 mr-1" />Resend verification email</>}
             </button>
           </div>
+        </div>
       </motion.div>
     </div>
   )

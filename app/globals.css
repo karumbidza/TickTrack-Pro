@@ -88,6 +88,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Ensure tap targets are large enough on mobile */
+  button, a, input, select, textarea {
+    min-height: unset;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'DM Sans', sans-serif;
     font-weight: 300;
@@ -340,7 +345,7 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 170px;
+    width: 210px;
     height: 100vh;
     z-index: 40;
     display: flex;
@@ -352,15 +357,16 @@
   }
 
   .sidebar-content {
-    margin-left: 170px;
+    margin-left: 210px;
     min-height: 100vh;
-    width: calc(100% - 170px);
+    width: calc(100% - 210px);
   }
 
   @media (max-width: 768px) {
     .sidebar-fixed {
       transform: translateX(-100%);
       transition: transform 0.2s ease;
+      width: 240px;
     }
 
     .sidebar-fixed.open {
@@ -374,6 +380,50 @@
 
     .sidebar-topbar {
       display: flex;
+    }
+
+    /* Mobile table — wrap in scrollable container */
+    .table-scroll-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      min-width: 560px;
+    }
+
+    /* Larger touch targets on mobile */
+    button {
+      min-height: 38px;
+    }
+
+    input, select, textarea {
+      font-size: 16px !important; /* Prevents iOS zoom on focus */
+      min-height: 44px;
+    }
+
+    /* Stat card grids: 2-column on mobile */
+    .stat-cards-4 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .stat-cards-6 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Typography bump */
+    body {
+      font-size: 16px;
+    }
+
+    /* Page content padding on mobile */
+    .page-content {
+      padding: 12px 14px !important;
+    }
+
+    /* Topbar subtitle hide on very small screens */
+    .topbar-subtitle {
+      display: none;
     }
   }
 
