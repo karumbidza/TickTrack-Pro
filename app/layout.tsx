@@ -21,8 +21,13 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'TickTrack Pro - Helpdesk Management System',
-  description: 'Multi-tenant SaaS helpdesk and ticket tracking system for organizations',
+  title: 'TickTrack Pro',
+  description: 'Maintenance management for multi-branch organisations',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 }
 
 export default function RootLayout({

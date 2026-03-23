@@ -8,8 +8,8 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Logo } from '@/components/Logo'
 import {
-  Ticket,
   CheckCircle2,
   AlertCircle,
   Mail,
@@ -131,10 +131,7 @@ function SignInForm() {
       {/* Left Panel — Branding */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
         style={{ backgroundColor: 'var(--accent)', color: 'var(--bg)' }}>
-        <Link href="/" className="flex items-center gap-2">
-          <Ticket className="h-5 w-5" style={{ opacity: 0.8 }} />
-          <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.9 }}>TickTrack Pro</span>
-        </Link>
+        <Logo size="sm" href="/" dark />
 
         <div>
           <motion.h1
@@ -184,10 +181,7 @@ function SignInForm() {
         >
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <Ticket className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
-              <span style={{ fontWeight: 500, fontSize: 16, color: 'var(--text-primary)' }}>TickTrack Pro</span>
-            </Link>
+            <Logo size="sm" href="/" />
           </div>
 
           <div style={{ marginBottom: '2rem' }}>

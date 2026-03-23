@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
-  Ticket,
   FileText,
   Settings,
   Building2,
@@ -17,8 +16,10 @@ import {
   Inbox,
   LogOut,
   ChevronRight,
+  Ticket,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/notification-bell'
+import { Logo } from '@/components/Logo'
 
 function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
@@ -87,24 +88,8 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
   return (
     <aside className={`sidebar-fixed${mobileOpen ? ' open' : ''}`}>
       {/* Logo */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
-          <div style={{
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            backgroundColor: 'var(--accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <Ticket size={13} strokeWidth={1.5} style={{ color: 'var(--bg)' }} />
-          </div>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-            TickTrack Pro
-          </span>
-        </Link>
+      <div style={{ height: 52, display: 'flex', alignItems: 'center', padding: '0 14px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <Logo size="sm" href="/dashboard" />
       </div>
 
       {/* Nav items */}

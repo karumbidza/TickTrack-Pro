@@ -14,13 +14,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Ticket,
   Settings,
   LogOut,
   Menu,
   X
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/notification-bell'
+import { Logo } from '@/components/Logo'
 
 function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
@@ -43,10 +43,7 @@ export function Navbar() {
 
   const loadingBar = (
     <nav style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)', height: 64 }} className="sticky top-0 z-50 flex items-center px-5">
-      <div className="flex items-center gap-2">
-        <Ticket className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
-        <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 16 }}>TickTrack Pro</span>
-      </div>
+      <Logo size="sm" href="/" />
       <div className="ml-auto animate-pulse">
         <div className="h-8 w-20 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }} />
       </div>
@@ -58,10 +55,7 @@ export function Navbar() {
   if (!session) {
     return (
       <nav style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)', height: 64 }} className="sticky top-0 z-50 flex items-center px-5">
-        <Link href="/" className="flex items-center gap-2">
-          <Ticket className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
-          <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 16 }}>TickTrack Pro</span>
-        </Link>
+        <Logo size="sm" href="/" />
         <div className="ml-auto flex gap-2">
           <Link href="/auth/signin">
             <Button variant="outline" size="sm">Sign In</Button>
@@ -111,11 +105,7 @@ export function Navbar() {
     <nav style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }} className="sticky top-0 z-50">
       <div className="px-4 sm:px-6" style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Ticket className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
-          <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 16 }} className="hidden xs:inline">TickTrack Pro</span>
-          <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 16 }} className="xs:hidden">TTP</span>
-        </Link>
+        <Logo size="sm" href="/dashboard" />
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1">

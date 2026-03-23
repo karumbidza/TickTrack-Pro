@@ -4,7 +4,8 @@ import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Sidebar } from './sidebar'
-import { Menu, Ticket } from 'lucide-react'
+import { Menu } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 
 // Routes where no sidebar or nav should be shown
 const PUBLIC_ROUTES = ['/', '/pricing', '/about', '/get-started', '/request-quote', '/register']
@@ -82,20 +83,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu size={18} strokeWidth={1.5} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
-              width: 22,
-              height: 22,
-              borderRadius: 5,
-              backgroundColor: 'var(--accent)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Ticket size={12} strokeWidth={1.5} style={{ color: 'var(--bg)' }} />
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>TickTrack Pro</span>
-          </div>
+          <Logo size="sm" href="/dashboard" />
         </div>
 
         <main style={{ flex: 1 }}>{children}</main>

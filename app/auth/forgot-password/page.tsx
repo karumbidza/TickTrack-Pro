@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Ticket, Mail, MessageSquare, Loader2, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Mail, MessageSquare, Loader2, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 import { motion } from 'framer-motion'
 
 export default function ForgotPasswordPage() {
@@ -109,11 +110,9 @@ export default function ForgotPasswordPage() {
       >
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Ticket className="h-5 w-5" style={{ color: 'var(--bg)' }} />
-            </div>
-          </Link>
+          <div style={{ display: 'inline-flex', justifyContent: 'center' }}>
+            <Logo href="/" />
+          </div>
           <p className="section-label mt-4 mb-2">{step === 'success' ? 'Password Reset' : 'Forgot Password'}</p>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 300, letterSpacing: '-0.025em', color: 'var(--text-primary)', marginBottom: 8 }}>
             {step === 'success' ? 'All done!' : 'Reset your password'}

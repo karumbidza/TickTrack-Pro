@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Ticket } from "lucide-react"
+import { Logo } from "@/components/Logo"
 
 export function LandingNavbar() {
   return (
@@ -18,10 +18,7 @@ export function LandingNavbar() {
       className="flex items-center"
     >
       <div className="mx-auto w-full max-w-[1100px] px-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Ticket className="h-5 w-5" style={{ color: 'var(--text-primary)' }} />
-          <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 16 }}>TickTrack Pro</span>
-        </Link>
+        <Logo size="sm" href="/" />
 
         <div className="flex items-center gap-2">
           <Link href="/pricing">
