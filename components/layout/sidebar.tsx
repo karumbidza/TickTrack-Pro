@@ -311,7 +311,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
             )}
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: '/' })}
+            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
             title="Sign out"
             style={{
               flexShrink: 0,

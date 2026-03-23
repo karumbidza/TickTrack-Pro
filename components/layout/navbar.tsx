@@ -196,7 +196,7 @@ export function Navbar() {
                 <DropdownMenuItem
                   className="cursor-pointer"
                   style={{ color: 'var(--ds-red)' }}
-                  onSelect={() => signOut({ callbackUrl: '/' })}
+                  onSelect={() => signOut({ callbackUrl: '/auth/signin' })}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -266,7 +266,7 @@ export function Navbar() {
               Settings
             </Link>
             <button
-              onClick={() => signOut({ callbackUrl: '/' })}
+              onClick={() => signOut({ callbackUrl: '/auth/signin' })}
               className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm"
               style={{ color: 'var(--ds-red)' }}
             >
