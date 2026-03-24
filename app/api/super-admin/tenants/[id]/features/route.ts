@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // PATCH - Toggle a specific feature for a tenant
@@ -8,12 +8,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const role = (meta.role as string) ?? 'END_USER'
-
-    if (role !== 'SUPER_ADMIN') {
+    const authCtx = await getAuthContext()
+    if (!authCtx || authCtx.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

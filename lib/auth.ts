@@ -28,7 +28,13 @@ export async function getAuthContext(): Promise<AuthContext | null> {
   const { userId, sessionClaims } = await auth()
   if (!userId) return null
 
-  const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+  // sessionClaims.publicMetadata is only populated if the Clerk JWT template includes it.
+  // Fall back to currentUser() to get live metadata when the JWT claims are empty.
+  let meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+  if (!meta.role) {
+    const user = await currentUser()
+    meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  }
 
   const role = (meta.role as string) ?? 'END_USER'
   const dbUserId = (meta.dbUserId as string) ?? userId
