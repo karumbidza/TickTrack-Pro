@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendJobAssignedSMS } from '@/lib/africastalking-service'
 import { sendJobAssignedEmailToContractor } from '@/lib/email'
@@ -10,18 +10,13 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const { userId, tenantId, role } = authCtx
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
-    const userName = meta.userName ?? null
-
-    const user = { id: userId, tenantId, role, name: userName, email: null as string | null }
+    const user = { id: userId, tenantId, role, name: null as string | null, email: null as string | null }
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
 
     if (!allowedRoles.includes(user.role)) {

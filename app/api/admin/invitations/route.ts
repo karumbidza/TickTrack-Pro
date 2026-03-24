@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { clerkClient } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -17,12 +18,10 @@ const ADMIN_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 
 // GET — list invitations for this tenant
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { tenantId, role } = authCtx
 
     if (!ADMIN_ROLES.includes(role) && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
@@ -50,13 +49,10 @@ export async function GET(request: NextRequest) {
 // POST — invite a user via Clerk
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const callerRole = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role: callerRole } = authCtx
 
     if (!ADMIN_ROLES.includes(callerRole) && callerRole !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })

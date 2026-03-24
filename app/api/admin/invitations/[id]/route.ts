@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { clerkClient } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 const ADMIN_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
@@ -7,12 +8,10 @@ const ADMIN_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 
 // PATCH — revoke or resend an invitation
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { tenantId, role } = authCtx
 
     if (!ADMIN_ROLES.includes(role) && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
@@ -92,12 +91,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 // DELETE — remove a cancelled/expired invitation record
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { tenantId, role } = authCtx
 
     if (!ADMIN_ROLES.includes(role) && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })

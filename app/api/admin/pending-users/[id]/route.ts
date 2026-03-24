@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import crypto from 'crypto'
@@ -20,11 +20,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
     if (!adminRoles.includes(role)) {
@@ -78,12 +76,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { userId, tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
     if (!adminRoles.includes(role)) {
@@ -277,11 +272,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
     if (!adminRoles.includes(role)) {

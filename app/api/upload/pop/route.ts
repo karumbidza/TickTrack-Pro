@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { uploadToR2, isR2Configured, validateFileSize } from '@/lib/r2-storage'
 
 // Route segment config for large file uploads
@@ -8,14 +8,11 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role } = authCtx
 
     // Only admins can upload POPs
     const adminRoles = ['TENANT_ADMIN', 'SUPER_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']

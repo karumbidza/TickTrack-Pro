@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -25,14 +25,12 @@ export async function GET(request: NextRequest) {
       tenantId = queryTenantId
     } else {
       // Require authentication for requests without tenantId param
-      const { userId: clerkUserId, sessionClaims } = await auth()
-      if (!clerkUserId) {
+      const authCtx = await getAuthContext()
+      if (!authCtx) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-      const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-      const userId = meta.dbUserId ?? clerkUserId
-      const role = (meta.role as string) ?? 'END_USER'
-      tenantId = meta.tenantId ?? null
+      const { userId, tenantId: ctxTenantId, role } = authCtx
+      tenantId = ctxTenantId
       if (!tenantId) {
         return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
       }
@@ -64,14 +62,11 @@ export async function GET(request: NextRequest) {
 // POST - Create a new asset category
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role } = authCtx
 
     // Only admins can create categories
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']

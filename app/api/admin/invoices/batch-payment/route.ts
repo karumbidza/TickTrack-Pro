@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // POST - Create batch payment for multiple approved invoices
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'SUPER_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
     if (!adminRoles.includes(role)) {
@@ -210,14 +207,11 @@ export async function POST(request: NextRequest) {
 // GET - Fetch all payment batches
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'SUPER_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
     if (!adminRoles.includes(role)) {

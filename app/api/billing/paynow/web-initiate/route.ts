@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BillingService, getSubscriptionPricing } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
@@ -22,14 +22,11 @@ paynow.resultUrl = process.env.PAYNOW_RESULT_URL || `${baseUrl}/api/payments/pay
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const userId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const { userId, tenantId, role } = authCtx
 
     // Only tenant admins can initiate payments
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
@@ -171,7 +168,7 @@ export async function POST(request: NextRequest) {
     paynow.returnUrl = `${baseUrl}/billing/payment/return?reference=${reference}&paymentId=${payment.id}`
 
     // Create Paynow payment for web-based flow
-    const paymentEmail = process.env.PAYNOW_MERCHANT_EMAIL || (meta.email as string) || ''
+    const paymentEmail = process.env.PAYNOW_MERCHANT_EMAIL || ''
     const paynowPayment = paynow.createPayment(reference, paymentEmail)
     paynowPayment.add(`TickTrack Pro ${plan} - ${billingCycle}`, paymentAmount)
 

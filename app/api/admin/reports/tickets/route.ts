@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { tenantId, role } = authCtx
 
     // Only admin roles can access reports
     const adminRoles = ['SUPER_ADMIN', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']

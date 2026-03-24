@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { sendPasswordResetEmail } from '@/lib/email'
@@ -10,16 +10,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const sessionUserId = meta.dbUserId ?? clerkUserId
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
-    const userName = meta.userName ?? null
+    const { userId: sessionUserId, tenantId, role } = authCtx
 
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']
 
@@ -60,7 +56,7 @@ export async function POST(
     })
 
     // Send password reset email with new credentials (non-blocking)
-    const resetByName = userName || 'Administrator'
+    const resetByName = 'Administrator'
     sendPasswordResetEmail(
       user.email,
       user.name || user.email,

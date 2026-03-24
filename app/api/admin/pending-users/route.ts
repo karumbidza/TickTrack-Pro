@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // GET - List pending users awaiting approval
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId, sessionClaims } = await auth()
-    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-    const tenantId = meta.tenantId ?? null
-    const role = (meta.role as string) ?? 'END_USER'
+    const authCtx = await getAuthContext()
+    if (!authCtx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { tenantId, role } = authCtx
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
     if (!adminRoles.includes(role)) {
