@@ -100,7 +100,7 @@ export function InvitationManagement({ user }: { user: any }) {
   // Form state
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteName, setInviteName] = useState('')
-  const [inviteExpiry, setInviteExpiry] = useState('72')
+  const [inviteRole, setInviteRole] = useState('END_USER')
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Approval form
@@ -158,17 +158,18 @@ export function InvitationManagement({ user }: { user: any }) {
         body: JSON.stringify({
           email: inviteEmail,
           name: inviteName || undefined,
-          expiresInHours: parseInt(inviteExpiry)
+          role: inviteRole,
         })
       })
 
       const data = await response.json()
 
       if (response.ok) {
-        toast.success('Invitation sent successfully')
+        toast.success('Invitation sent via Clerk — user will receive an email shortly')
         setShowInviteDialog(false)
         setInviteEmail('')
         setInviteName('')
+        setInviteRole('END_USER')
         fetchData()
       } else {
         toast.error(data.error || 'Failed to send invitation')
@@ -531,7 +532,7 @@ export function InvitationManagement({ user }: { user: any }) {
           <DialogHeader>
             <DialogTitle>Invite User</DialogTitle>
             <DialogDescription>
-              Send an invitation email to a new user. They will be able to create their account after accepting.
+              Clerk will send the invitation email. The user signs up with their assigned role already set.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -556,16 +557,15 @@ export function InvitationManagement({ user }: { user: any }) {
               />
             </div>
             <div>
-              <Label htmlFor="invite-expiry">Invitation Expiry</Label>
-              <Select value={inviteExpiry} onValueChange={setInviteExpiry}>
-                <SelectTrigger>
+              <Label htmlFor="invite-role">Role *</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger id="invite-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="24">24 hours</SelectItem>
-                  <SelectItem value="48">48 hours</SelectItem>
-                  <SelectItem value="72">72 hours (default)</SelectItem>
-                  <SelectItem value="168">7 days</SelectItem>
+                  {ROLE_OPTIONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

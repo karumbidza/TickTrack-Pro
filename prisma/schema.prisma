@@ -943,27 +943,30 @@ enum KYCStatus {
 
 // User Invitations - for inviting staff/managers to join a company
 model UserInvitation {
-  id          String    @id @default(cuid())
-  tenantId    String
-  email       String
-  name        String?   // Optional pre-filled name
-  token       String    @unique @default(cuid())
-  invitedById String    // User ID of admin who sent the invite
-  status      String    @default("pending") // pending, accepted, expired, cancelled
-  expiresAt   DateTime
-  acceptedAt  DateTime? // When user accepted the invitation
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // The user created from this invitation (after acceptance)
+  id                 String    @id @default(cuid())
+  tenantId           String
+  email              String
+  name               String?
+  token              String    @unique @default(cuid())
+  invitedById        String
+  status             String    @default("pending") // pending, accepted, expired, cancelled
+  expiresAt          DateTime
+  acceptedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Clerk integration
+  clerkInvitationId  String?   // Clerk's invitation ID (for revocation)
+  invitedRole        String?   // Role assigned on acceptance (END_USER, TENANT_ADMIN, etc.)
+
+  // The user created from this invitation
   userId      String?   @unique
   user        User?     @relation("InvitedFromInvitation", fields: [userId], references: [id])
-  
+
   tenant      Tenant    @relation(fields: [tenantId], references: [id])
   invitedBy   User      @relation("SentInvitations", fields: [invitedById], references: [id])
 
   @@unique([tenantId, email])
-  @@index([token])
   @@index([tenantId, status])
   @@map("user_invitations")
 }

@@ -35,16 +35,22 @@ export async function POST(req: Request) {
 
   const { type: eventType } = evt
 
-  // user.created — sync to DB
+  // user.created — sync to DB (publicMetadata already set from invitation)
   if (eventType === 'user.created') {
     const email = evt.data.email_addresses?.[0]?.email_address
     if (email) {
       const role = (evt.data.public_metadata?.role as string) ?? 'END_USER'
       const tenantId = evt.data.public_metadata?.tenantId as string | undefined
 
-      await prisma.user.upsert({
+      const dbUser = await prisma.user.upsert({
         where: { email },
-        update: { clerkId: evt.data.id },
+        update: {
+          clerkId: evt.data.id,
+          role: role as any,
+          tenantId: tenantId ?? null,
+          status: 'ACTIVE',
+          isActive: true,
+        },
         create: {
           clerkId: evt.data.id,
           email,
@@ -54,6 +60,29 @@ export async function POST(req: Request) {
           status: 'ACTIVE',
         },
       })
+
+      // Store dbUserId back in Clerk publicMetadata so API routes can use it directly
+      // (fire-and-forget — don't fail the webhook if this fails)
+      try {
+        const { clerkClient } = await import('@clerk/nextjs/server')
+        const client = await clerkClient()
+        await client.users.updateUserMetadata(evt.data.id, {
+          publicMetadata: {
+            ...evt.data.public_metadata,
+            dbUserId: dbUser.id,
+          },
+        })
+      } catch (e) {
+        console.error('[Webhook] Failed to write dbUserId to Clerk metadata:', e)
+      }
+
+      // Mark the DB invitation as accepted if one exists
+      if (tenantId) {
+        await prisma.userInvitation.updateMany({
+          where: { tenantId, email, status: 'pending' },
+          data: { status: 'accepted', acceptedAt: new Date(), userId: dbUser.id },
+        })
+      }
     }
   }
 
