@@ -4,7 +4,6 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { SuperAdminOverview } from '@/components/super-admin/overview'
-import { AuthGuard } from '@/components/auth/auth-guard'
 
 export default function SuperAdminPage() {
   const { user, isLoaded } = useUser()
@@ -18,11 +17,7 @@ export default function SuperAdminPage() {
     }
   }, [isLoaded, user, role, router])
 
-  const isSuperAdmin = role === 'SUPER_ADMIN'
+  if (!isLoaded || role !== 'SUPER_ADMIN') return null
 
-  return (
-    <AuthGuard>
-      {isSuperAdmin && <SuperAdminOverview />}
-    </AuthGuard>
-  )
+  return <SuperAdminOverview />
 }

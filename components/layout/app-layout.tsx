@@ -8,7 +8,7 @@ import { Menu } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 
 const PUBLIC_ROUTES = ['/', '/pricing', '/about', '/get-started', '/request-quote', '/register']
-const PUBLIC_ROUTE_PREFIXES = ['/contractor-registration/', '/auth/', '/sign-in', '/sign-up', '/onboarding', '/select-org']
+const PUBLIC_ROUTE_PREFIXES = ['/contractor-registration/', '/auth/', '/sign-in', '/sign-up', '/onboarding', '/select-org', '/super-admin']
 
 function shouldHideSidebar(pathname: string, isAuthenticated: boolean): boolean {
   if (PUBLIC_ROUTE_PREFIXES.some((p) => pathname.startsWith(p))) return true
