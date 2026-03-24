@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { auth, currentUser, clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(req: Request) {
-  const { userId, sessionClaims } = await auth()
+  const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+  // Use currentUser() to get live metadata (sessionClaims.publicMetadata is empty in Clerk v6)
+  const clerkUser = await currentUser()
+  const meta = (clerkUser?.publicMetadata ?? {}) as Record<string, string | null>
   if (meta.tenantId) {
     return NextResponse.json({ error: 'Already onboarded' }, { status: 400 })
   }

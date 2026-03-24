@@ -7,12 +7,13 @@ const nextConfig = {
   // Optimize production builds
   swcMinify: true,
 
+  // External packages that should not be bundled by Next.js (e.g. native modules)
+  serverExternalPackages: ['@aws-sdk/client-s3', '@aws-sdk/lib-storage'],
+
   // Experimental features
   experimental: {
     // Optimize package imports
     optimizePackageImports: ['@mui/material', '@mui/icons-material'],
-    // External packages for server components (for AWS SDK used by R2)
-    serverComponentsExternalPackages: ['@aws-sdk/client-s3', '@aws-sdk/lib-storage'],
   },
 
   // Security and Performance Headers
