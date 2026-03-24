@@ -13,10 +13,14 @@ export default function UserDashboardPage() {
   const role = (meta.role as string) ?? 'END_USER'
 
   useEffect(() => {
-    if (isLoaded && user && role === 'SUPER_ADMIN') {
+    if (!isLoaded || !user) return
+    if (role === 'SUPER_ADMIN') {
       router.replace('/super-admin')
+    } else if (!meta.tenantId && role !== 'END_USER') {
+      // TENANT_ADMIN who hasn't completed onboarding — send them back
+      router.replace('/onboarding')
     }
-  }, [isLoaded, user, role, router])
+  }, [isLoaded, user, role, meta.tenantId, router])
 
   const userObj = user ? {
     id: meta.dbUserId ?? user.id,
@@ -27,7 +31,7 @@ export default function UserDashboardPage() {
     branchName: meta.branchName ?? null,
   } : null
 
-  if (role === 'SUPER_ADMIN') return null
+  if (role === 'SUPER_ADMIN' || (!meta.tenantId && role !== 'END_USER')) return null
 
   return (
     <AuthGuard>

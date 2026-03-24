@@ -15,10 +15,14 @@ export default function AdminDashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (isLoaded && user && !ADMIN_ROLES.includes(role)) {
-      router.push('/dashboard')
+    if (!isLoaded || !user) return
+    if (!ADMIN_ROLES.includes(role)) {
+      router.replace('/dashboard')
+    } else if (!meta.tenantId) {
+      // Admin who hasn't completed onboarding
+      router.replace('/onboarding')
     }
-  }, [isLoaded, user, role, router])
+  }, [isLoaded, user, role, meta.tenantId, router])
 
   const isAdmin = isLoaded && user && ADMIN_ROLES.includes(role)
   const userObj = isAdmin ? {
