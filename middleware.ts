@@ -12,9 +12,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/health(.*)',
 ])
 
-const isSuperAdminRoute = createRouteMatcher(['/super-admin(.*)'])
-const isAdminRoute = createRouteMatcher(['/admin(.*)'])
-const isContractorRoute = createRouteMatcher(['/contractor(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return
@@ -25,27 +22,12 @@ export default clerkMiddleware(async (auth, req) => {
     return (await auth()).redirectToSignIn()
   }
 
-  const meta = ((sessionClaims?.metadata ?? sessionClaims?.publicMetadata ?? {}) as Record<string, string | undefined>)
-  const role = meta.role
-
-  if (isSuperAdminRoute(req)) {
-    if (role !== 'SUPER_ADMIN') {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
-    }
-  }
-
-  if (isContractorRoute(req)) {
-    if (role !== 'CONTRACTOR') {
-      return NextResponse.redirect(new URL('/dashboard', req.url))
-    }
-  }
-
-  // Generate request ID for correlation
+  // Role-based route protection is handled at the page level via useUser()
+  // Middleware only enforces authentication (userId check above)
   const response = NextResponse.next()
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     response.headers.set('x-request-id', crypto.randomUUID())
   }
-  if (role) response.headers.set('x-user-role', role)
 
   return response
 })
