@@ -39,7 +39,8 @@ export async function POST(req: Request) {
   if (eventType === 'user.created') {
     const email = evt.data.email_addresses?.[0]?.email_address
     if (email) {
-      const role = (evt.data.public_metadata?.role as string) ?? 'END_USER'
+      // Invited users have role set in publicMetadata; organic sign-ups become TENANT_ADMIN
+      const role = (evt.data.public_metadata?.role as string) ?? 'TENANT_ADMIN'
       const tenantId = evt.data.public_metadata?.tenantId as string | undefined
 
       const dbUser = await prisma.user.upsert({
