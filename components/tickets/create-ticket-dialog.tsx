@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -189,7 +189,9 @@ function FilePreviewItem({
 }
 
 export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlledOpen, onOpenChange, hideTrigger = false }: CreateTicketDialogProps) {
-  const { data: session } = useSession()
+  const { user } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const branchId = meta.branchId ?? null
   const [internalOpen, setInternalOpen] = useState(false)
   
   // Use controlled or internal state
@@ -359,8 +361,8 @@ export function CreateTicketDialog({ tenantId, onTicketCreated, open: controlled
       formDataToSend.append('department', formData.department)
       
       // Add user's branch automatically
-      if (session?.user?.branchId) {
-        formDataToSend.append('branchId', session.user.branchId)
+      if (branchId) {
+        formDataToSend.append('branchId', branchId)
       }
       
       if (formData.assetId) {

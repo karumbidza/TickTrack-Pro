@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
 import { logger } from '@/lib/logger'
@@ -15,11 +14,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const ticketId = params.id
     const { searchParams } = new URL(request.url)
@@ -44,24 +46,21 @@ export async function GET(
     }
 
     // Check access based on role
-    const userRole = session.user.role
-    const userId = session.user.id
-    
     let hasAccess = false
     let canSeeInternal = false // Can see internal messages (admin/contractor only)
 
-    if (userRole === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN') {
       hasAccess = true
       canSeeInternal = true
-    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(userRole)) {
+    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)) {
       // Admin can see tickets from their tenant
-      hasAccess = session.user.tenantId === ticket.tenantId
+      hasAccess = tenantId === ticket.tenantId
       canSeeInternal = true
-    } else if (userRole === 'CONTRACTOR') {
+    } else if (role === 'CONTRACTOR') {
       // Contractor can only see tickets assigned to them
       hasAccess = ticket.assignedToId === userId
       canSeeInternal = true
-    } else if (userRole === 'END_USER') {
+    } else if (role === 'END_USER') {
       // End user can only see their own tickets
       hasAccess = ticket.userId === userId
       canSeeInternal = false
@@ -132,11 +131,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const ticketId = params.id
 
@@ -159,22 +161,19 @@ export async function POST(
     }
 
     // Check access based on role
-    const userRole = session.user.role
-    const userId = session.user.id
-    
     let hasAccess = false
     let canSendInternal = false
 
-    if (userRole === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN') {
       hasAccess = true
       canSendInternal = true
-    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(userRole)) {
-      hasAccess = session.user.tenantId === ticket.tenantId
+    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)) {
+      hasAccess = tenantId === ticket.tenantId
       canSendInternal = true
-    } else if (userRole === 'CONTRACTOR') {
+    } else if (role === 'CONTRACTOR') {
       hasAccess = ticket.assignedToId === userId
       canSendInternal = true
-    } else if (userRole === 'END_USER') {
+    } else if (role === 'END_USER') {
       hasAccess = ticket.userId === userId
       canSendInternal = false
     }
@@ -318,8 +317,7 @@ export async function POST(
             ticketId,
             ticketNumber: ticket.ticketNumber,
             messageId: message.id,
-            senderId: userId,
-            senderName: session.user.name || session.user.email
+            senderId: userId
           })
         }
       })

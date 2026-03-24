@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Fetch completed tickets for the contractor that don't have invoices yet
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     // Get completed tickets assigned to this contractor
     const tickets = await prisma.ticket.findMany({
       where: {
-        assignedToId: session.user.id,
+        assignedToId: userId,
         status: 'COMPLETED'
       },
       include: {

@@ -1,33 +1,34 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { ContractorManagement } from '@/components/admin/contractor-management'
 
+const ALLOWED_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+
 export default function AdminContractorsPage() {
-  const { data: session, status } = useSession()
+  const { user, isLoaded } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const role = (meta.role as string) ?? 'END_USER'
   const router = useRouter()
 
   useEffect(() => {
-    if (status === 'loading') return
-    
-    if (!session?.user) {
-      router.push('/auth/signin')
+    if (!isLoaded) return
+
+    if (!user) {
+      router.push('/sign-in')
       return
     }
 
-    const userRole = session.user.role
-    const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    
-    if (!allowedRoles.includes(userRole)) {
+    if (!ALLOWED_ROLES.includes(role)) {
       router.push('/dashboard')
       return
     }
-  }, [session, status, router])
+  }, [isLoaded, user, role, router])
 
-  if (status === 'loading') {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
@@ -38,20 +39,21 @@ export default function AdminContractorsPage() {
     )
   }
 
-  if (!session?.user) {
+  if (!user || !ALLOWED_ROLES.includes(role)) {
     return null
   }
 
-  const userRole = session.user.role
-  const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-  
-  if (!allowedRoles.includes(userRole)) {
-    return null
+  const userObj = {
+    id: meta.dbUserId ?? user.id,
+    email: user.primaryEmailAddress?.emailAddress ?? '',
+    name: user.fullName,
+    role,
+    tenantId: meta.tenantId ?? null,
   }
 
   return (
     <AuthGuard>
-      <ContractorManagement user={session.user} />
+      <ContractorManagement user={userObj} />
     </AuthGuard>
   )
 }

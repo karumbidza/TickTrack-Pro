@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { sendPasswordResetEmail } from '@/lib/email'
@@ -11,14 +10,20 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const sessionUserId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+    const userName = meta.userName ?? null
+
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']
-    
-    if (!allowedRoles.includes(session.user.role)) {
+
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -39,8 +44,8 @@ export async function POST(
     }
 
     // For non-super admins, ensure user belongs to same tenant
-    if (session.user.role !== 'SUPER_ADMIN') {
-      if (user.tenantId !== session.user.tenantId) {
+    if (role !== 'SUPER_ADMIN') {
+      if (user.tenantId !== tenantId) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
     }
@@ -55,7 +60,7 @@ export async function POST(
     })
 
     // Send password reset email with new credentials (non-blocking)
-    const resetByName = session.user.name || session.user.email || 'Administrator'
+    const resetByName = userName || 'Administrator'
     sendPasswordResetEmail(
       user.email,
       user.name || user.email,

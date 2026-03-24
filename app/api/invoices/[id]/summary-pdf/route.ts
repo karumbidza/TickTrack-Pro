@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { generateInvoiceSummaryPDF } from '@/lib/pdf-generator'
 
@@ -9,11 +8,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId } = await auth()
+    if (!clerkUserId) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
 
     const invoiceId = params.id
 

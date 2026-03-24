@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -10,15 +9,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Check if user is an admin
     const adminRoles = ['SUPER_ADMIN', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

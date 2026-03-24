@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { metrics } from '@/lib/metrics'
 import { redisClient } from '@/lib/redis'
 
@@ -13,9 +12,16 @@ import { redisClient } from '@/lib/redis'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+    if (role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -51,9 +57,16 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+    if (role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

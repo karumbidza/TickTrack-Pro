@@ -1,166 +1,62 @@
-import NextAuth, { AuthOptions } from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
+import { auth, currentUser } from '@clerk/nextjs/server'
 
-export const authOptions: AuthOptions = {
-  // adapter: PrismaAdapter(prisma), // Commented out temporarily due to type compatibility
-  providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+export interface AuthContext {
+  userId: string
+  clerkUserId: string
+  tenantId: string | null
+  tenantName: string | null
+  role: string
+  branchId: string | null
+  branchName: string | null
+  isSuperAdmin: boolean
+  isTenantAdmin: boolean
+  isAdmin: boolean
+  isContractor: boolean
+  isEndUser: boolean
+}
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          include: { 
-            tenant: true,
-            branches: {
-              include: { branch: true },
-              take: 1 // Get the user's primary/first branch
-            }
-          }
-        })
+const ADMIN_ROLES = [
+  'TENANT_ADMIN',
+  'IT_ADMIN',
+  'SALES_ADMIN',
+  'RETAIL_ADMIN',
+  'MAINTENANCE_ADMIN',
+  'PROJECTS_ADMIN',
+]
 
-        if (!user || !user.password) {
-          return null
-        }
+export async function getAuthContext(): Promise<AuthContext | null> {
+  const { userId, sessionClaims } = await auth()
+  if (!userId) return null
 
-        // Check user status - only ACTIVE users can log in
-        // SUPER_ADMIN is exempt from status checks
-        if (user.role !== 'SUPER_ADMIN') {
-          switch (user.status) {
-            case 'PENDING_APPROVAL':
-              throw new Error('PENDING_APPROVAL: Your account is pending administrator approval.')
-            case 'APPROVED_EMAIL_PENDING':
-              throw new Error('EMAIL_PENDING: Please check your email and activate your account.')
-            case 'SUSPENDED':
-              throw new Error('SUSPENDED: Your account has been suspended. Contact your administrator.')
-            case 'DEACTIVATED':
-              throw new Error('DEACTIVATED: Your account has been deactivated.')
-            case 'ACTIVE':
-              // Continue with login
-              break
-            default:
-              // For backwards compatibility with existing users without status
-              break
-          }
+  const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
 
-          // Check trial expiry for tenant users
-          if (user.tenant && user.tenantId) {
-            const now = new Date()
-            const trialEndsAt = user.tenant.trialEndsAt
-            const tenantStatus = user.tenant.status
+  const role = (meta.role as string) ?? 'END_USER'
+  const dbUserId = (meta.dbUserId as string) ?? userId
 
-            // If trial has expired and tenant is still in TRIAL status
-            if (trialEndsAt && trialEndsAt < now && tenantStatus === 'TRIAL') {
-              throw new Error('TRIAL_EXPIRED: Your 14-day free trial has expired. Please subscribe to continue using TickTrack Pro.')
-            }
+  return {
+    userId: dbUserId,
+    clerkUserId: userId,
+    tenantId: meta.tenantId ?? null,
+    tenantName: meta.tenantName ?? null,
+    role,
+    branchId: meta.branchId ?? null,
+    branchName: meta.branchName ?? null,
+    isSuperAdmin: role === 'SUPER_ADMIN',
+    isTenantAdmin: role === 'TENANT_ADMIN',
+    isAdmin: ADMIN_ROLES.includes(role),
+    isContractor: role === 'CONTRACTOR',
+    isEndUser: role === 'END_USER',
+  }
+}
 
-            // If tenant is in READ_ONLY or SUSPENDED status
-            if (tenantStatus === 'READ_ONLY' || tenantStatus === 'SUSPENDED') {
-              throw new Error('ACCOUNT_LOCKED: Your account has been locked. Please visit the billing page to subscribe.')
-            }
-          }
-        }
+export async function requireAuth(): Promise<AuthContext> {
+  const ctx = await getAuthContext()
+  if (!ctx) throw new Error('Unauthorized')
+  return ctx
+}
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        // Get user's primary branch
-        const primaryBranch = user.branches?.[0]?.branch
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          tenantId: user.tenantId,
-          tenantName: user.tenant?.name || null,
-          image: user.image,
-          emailVerified: user.emailVerified,
-          branchId: primaryBranch?.id || null,
-          branchName: primaryBranch?.name || null
-        }
-      }
-    })
-  ],
-  session: {
-    strategy: "jwt",
-    // Session expires after 8 hours of inactivity
-    maxAge: 8 * 60 * 60, // 8 hours in seconds
-    // Update session expiry on each request (sliding window)
-    updateAge: 60 * 60, // Update every 1 hour
-  },
-  // JWT configuration
-  jwt: {
-    // Token expires after 8 hours
-    maxAge: 8 * 60 * 60, // 8 hours in seconds
-  },
-  callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
-        token.role = user.role
-        token.tenantId = user.tenantId
-        token.tenantName = user.tenantName || null
-        token.branchId = user.branchId || null
-        token.branchName = user.branchName || null
-      }
-
-      // If user updates their profile, refresh the token
-      if (trigger === "update" && session) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: token.email! },
-          include: { 
-            tenant: true,
-            branches: {
-              include: { branch: true },
-              take: 1
-            }
-          }
-        })
-        if (dbUser) {
-          token.role = dbUser.role
-          token.tenantId = dbUser.tenantId
-          token.tenantName = dbUser.tenant?.name || null
-          token.name = dbUser.name
-          const primaryBranch = dbUser.branches?.[0]?.branch
-          token.branchId = primaryBranch?.id || null
-          token.branchName = primaryBranch?.name || null
-        }
-      }
-
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub!
-        session.user.role = token.role as any
-        session.user.tenantId = token.tenantId as string | null
-        session.user.tenantName = token.tenantName as string | null
-        session.user.branchId = token.branchId as string | null
-        session.user.branchName = token.branchName as string | null
-      }
-      return session
-    },
-
-  },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error'
-  },
-  debug: process.env.NODE_ENV === 'development'
+export async function requireTenantAuth(): Promise<AuthContext & { tenantId: string }> {
+  const ctx = await requireAuth()
+  if (!ctx.tenantId) throw new Error('No organisation context')
+  return ctx as AuthContext & { tenantId: string }
 }

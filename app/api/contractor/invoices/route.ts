@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
@@ -21,15 +20,22 @@ const invoiceCreateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     // Check if contractor has invoice access
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       include: {
         contractorProfile: {
           include: {
@@ -48,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     const invoices = await prisma.invoice.findMany({
       where: {
-        contractorId: session.user.id,
+        contractorId: userId,
       },
       include: {
         ticket: {
@@ -75,9 +81,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -108,13 +121,13 @@ export async function POST(request: NextRequest) {
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
-        assignedToId: session.user.id,
+        assignedToId: userId,
         status: 'CLOSED' // Only allow invoice creation for closed tickets
       },
       include: {
         quoteRequests: {
           where: {
-            contractorId: session.user.id,
+            contractorId: userId,
             status: 'AWARDED'
           },
           select: {
@@ -138,7 +151,7 @@ export async function POST(request: NextRequest) {
     const existingActiveInvoice = await prisma.invoice.findFirst({
       where: {
         ticketId: ticketId,
-        contractorId: session.user.id,
+        contractorId: userId,
         isActive: true
       }
     })
@@ -190,7 +203,7 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
         balance: amount, // Initially, balance equals full amount
         paidAmount: 0,
-        contractorId: session.user.id,
+        contractorId: userId,
         ticketId: ticketId,
         tenantId: ticket.tenantId,
         isActive: true,

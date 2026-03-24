@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -10,23 +10,27 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
-  const { data: session, status } = useSession()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin')
-    }
-    
-    // Check role access if allowedRoles is specified
-    if (status === 'authenticated' && allowedRoles && session?.user?.role) {
-      if (!allowedRoles.includes(session.user.role)) {
-        router.push('/dashboard')
-      }
-    }
-  }, [status, router, session, allowedRoles])
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const role = meta.role ?? 'END_USER'
 
-  if (status === 'loading') {
+  useEffect(() => {
+    if (!isLoaded) return
+
+    if (!user) {
+      router.push('/sign-in')
+      return
+    }
+
+    // Check role access if allowedRoles is specified
+    if (allowedRoles && !allowedRoles.includes(role)) {
+      router.push('/dashboard')
+    }
+  }, [isLoaded, user, router, allowedRoles, role])
+
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface2">
         <div className="text-center">
@@ -37,7 +41,7 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
     )
   }
 
-  if (status === 'unauthenticated') {
+  if (!user) {
     return null
   }
 

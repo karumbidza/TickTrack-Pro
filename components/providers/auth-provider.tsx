@@ -1,11 +1,7 @@
 'use client'
 
-import { SessionProvider } from 'next-auth/react'
-
-interface AuthProviderProps {
-  children: React.ReactNode
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
-  return <SessionProvider>{children}</SessionProvider>
+// Clerk is provided at the root layout via ClerkProvider.
+// This file is kept as a no-op wrapper for backwards compatibility.
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
 }

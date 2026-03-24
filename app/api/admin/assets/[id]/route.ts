@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Get single asset with full history
@@ -9,18 +8,21 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(session.user.role)) {
+    if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { tenantId: true, role: true }
     })
 
@@ -118,18 +120,21 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(session.user.role)) {
+    if (!['SUPER_ADMIN', 'TENANT_ADMIN'].includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { tenantId: true, role: true }
     })
 
@@ -165,7 +170,7 @@ export async function PATCH(
           status: 'DECOMMISSIONED',
           decommissionedAt: new Date(),
           decommissionApprovedAt: new Date(),
-          decommissionApprovedById: session.user.id
+          decommissionApprovedById: userId
         }
       })
 
@@ -175,7 +180,7 @@ export async function PATCH(
           assetId: params.id,
           action: 'DECOMMISSION_APPROVED',
           description: `Decommission approved by admin. Reason: ${asset.decommissionReason || 'No reason provided'}`,
-          performedById: session.user.id,
+          performedById: userId,
           previousValue: { status: 'PENDING_DECOMMISSION' },
           newValue: { status: 'DECOMMISSIONED' }
         }
@@ -194,7 +199,7 @@ export async function PATCH(
         data: {
           status: 'ACTIVE', // Restore to active
           decommissionRejectedAt: new Date(),
-          decommissionRejectedById: session.user.id,
+          decommissionRejectedById: userId,
           decommissionRejectionReason: reason || 'Rejected by admin',
           // Clear the request fields
           decommissionRequestedAt: null,
@@ -209,7 +214,7 @@ export async function PATCH(
           assetId: params.id,
           action: 'DECOMMISSION_REJECTED',
           description: `Decommission rejected by admin. Reason: ${reason || 'No reason provided'}`,
-          performedById: session.user.id,
+          performedById: userId,
           previousValue: { status: 'PENDING_DECOMMISSION' },
           newValue: { status: 'ACTIVE' }
         }
@@ -231,7 +236,7 @@ export async function PATCH(
           assetId: params.id,
           action: 'UPDATED',
           description: `Asset details updated`,
-          performedById: session.user.id,
+          performedById: userId,
           previousValue: asset,
           newValue: updatedAsset
         }

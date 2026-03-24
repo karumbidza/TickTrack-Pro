@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Only admin roles can access reports
     const adminRoles = ['SUPER_ADMIN', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -26,8 +25,8 @@ export async function GET(request: Request) {
     const where: any = {}
 
     // Tenant filter for company admins (not super admin)
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.tenantId) {
-      where.tenantId = session.user.tenantId
+    if (role !== 'SUPER_ADMIN' && tenantId) {
+      where.tenantId = tenantId
     }
 
     // Date range filter

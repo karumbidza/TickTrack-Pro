@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // Get single user
@@ -9,21 +8,26 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    
-    if (!allowedRoles.includes(session.user.role)) {
+
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.id
+    const targetUserId = params.id
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: targetUserId },
       select: {
         id: true,
         name: true,
@@ -52,23 +56,28 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
     const allowedRoles = ['TENANT_ADMIN']
-    
-    if (!allowedRoles.includes(session.user.role)) {
+
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ error: 'Only tenant admins can update users' }, { status: 403 })
     }
 
-    const userId = params.id
-    const { name, email, phone, role, isActive, branchIds } = await request.json()
+    const targetUserId = params.id
+    const { name, email, phone, role: newRole, isActive, branchIds } = await request.json()
 
     // Find the user
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: targetUserId }
     })
 
     if (!user) {
@@ -76,12 +85,12 @@ export async function PATCH(
     }
 
     // Ensure user belongs to same tenant
-    if (user.tenantId !== session.user.tenantId) {
+    if (user.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Prevent changing own role (prevent self-lockout)
-    if (userId === session.user.id && role && role !== session.user.role) {
+    if (targetUserId === userId && newRole && newRole !== role) {
       return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
     }
 
@@ -91,22 +100,22 @@ export async function PATCH(
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (isActive !== undefined) updateData.isActive = isActive
-    
+
     // Only allow valid roles
-    if (role !== undefined) {
+    if (newRole !== undefined) {
       const validRoles = ['END_USER', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-      if (validRoles.includes(role)) {
-        updateData.role = role
+      if (validRoles.includes(newRole)) {
+        updateData.role = newRole
       }
     }
 
     // Handle branch assignments if provided
-    if (branchIds && Array.isArray(branchIds) && branchIds.length > 0 && session.user.tenantId) {
+    if (branchIds && Array.isArray(branchIds) && branchIds.length > 0 && tenantId) {
       // Verify all branches belong to the tenant
       const branches = await prisma.branch.findMany({
         where: {
           id: { in: branchIds },
-          tenantId: session.user.tenantId
+          tenantId: tenantId
         }
       })
 
@@ -115,7 +124,7 @@ export async function PATCH(
       }
 
       // Check if HQ branch is selected and user is admin - auto-assign all branches
-      const isAdminRole = (role || user.role).includes('ADMIN')
+      const isAdminRole = (newRole || user.role).includes('ADMIN')
       const hqBranch = branches.find(b => b.isHeadOffice)
       let finalBranchIds = branchIds
 
@@ -123,7 +132,7 @@ export async function PATCH(
         // Auto-assign all tenant branches
         const allBranches = await prisma.branch.findMany({
           where: {
-            tenantId: session.user.tenantId,
+            tenantId: tenantId,
             isActive: true
           },
           select: { id: true }
@@ -133,19 +142,19 @@ export async function PATCH(
 
       // Delete existing branch assignments and create new ones
       await prisma.userBranch.deleteMany({
-        where: { userId }
+        where: { userId: targetUserId }
       })
 
       await prisma.userBranch.createMany({
         data: finalBranchIds.map(branchId => ({
-          userId,
+          userId: targetUserId,
           branchId
         }))
       })
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: targetUserId },
       data: updateData,
       select: {
         id: true,

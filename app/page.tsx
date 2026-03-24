@@ -1,7 +1,6 @@
-import { getServerSession } from 'next-auth/next'
+import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { authOptions } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'TickTrack Pro — Maintenance Management for Multi-Branch Organisations',
@@ -357,8 +356,8 @@ const css = `
 `
 
 export default async function HomePage() {
-  const session = await getServerSession(authOptions)
-  if (session?.user) {
+  const { userId } = await auth()
+  if (userId) {
     redirect('/dashboard')
   }
 
@@ -383,7 +382,7 @@ export default async function HomePage() {
             <a href="#pricing">Pricing</a>
           </div>
           <div className="nav-cta">
-            <a href="/auth/login" className="btn-ghost">Sign in</a>
+            <a href="/sign-in" className="btn-ghost">Sign in</a>
             <a href="/get-started" className="btn-primary">Start free trial</a>
           </div>
         </div>

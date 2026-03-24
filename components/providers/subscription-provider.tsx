@@ -15,7 +15,7 @@
  */
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { useRouter, usePathname } from 'next/navigation'
 import { AlertTriangle, XCircle, AlertCircle } from 'lucide-react'
 
@@ -59,23 +59,26 @@ const EXEMPT_PATHS = [
 ]
 
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
-  const { data: session, status: sessionStatus } = useSession()
+  const { user, isLoaded } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const tenantId = meta.tenantId ?? null
+  const role = meta.role ?? 'END_USER'
   const router = useRouter()
   const pathname = usePathname()
-  
+
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus>({
     level: 'full',
     loading: true
   })
 
   const fetchSubscriptionStatus = async () => {
-    if (!session?.user?.tenantId) {
+    if (!tenantId) {
       setSubscriptionStatus({ level: 'full', loading: false })
       return
     }
 
     // Super admin bypasses all checks
-    if (session.user.role === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN') {
       setSubscriptionStatus({ level: 'full', loading: false })
       return
     }
@@ -100,12 +103,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (sessionStatus === 'authenticated') {
+    if (!isLoaded) return
+    if (user) {
       fetchSubscriptionStatus()
-    } else if (sessionStatus === 'unauthenticated') {
+    } else {
       setSubscriptionStatus({ level: 'full', loading: false })
     }
-  }, [sessionStatus, session?.user?.tenantId])
+  }, [isLoaded, user, tenantId])
 
   // Check if current path is exempt
   const isExemptPath = EXEMPT_PATHS.some(path => pathname?.startsWith(path))

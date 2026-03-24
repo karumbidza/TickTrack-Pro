@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // POST - Submit clarification response
@@ -9,9 +8,16 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -29,7 +35,7 @@ export async function POST(
     const invoice = await prisma.invoice.findFirst({
       where: {
         id: invoiceId,
-        contractorId: session.user.id
+        contractorId: userId
       },
       include: {
         ticket: {

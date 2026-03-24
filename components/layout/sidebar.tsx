@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession, signOut } from 'next-auth/react'
+import { useUser, useClerk } from '@clerk/nextjs'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -112,12 +112,16 @@ function SectionLabel({ label }: { label: string }) {
 }
 
 export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
-  const { data: session } = useSession()
+  const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
   const pathname = usePathname()
 
-  if (!session) return null
+  if (!isLoaded || !user) return null
 
-  const role = session.user.role
+  const meta = user.publicMetadata as Record<string, string | null>
+  const role = (meta.role as string) ?? 'END_USER'
+  const tenantName = meta.tenantName ?? null
+  const branchName = meta.branchName ?? null
   const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)
   const isTenantAdmin = role === 'TENANT_ADMIN'
   const isSettingsActive = pathname?.startsWith('/admin/settings')
@@ -277,7 +281,7 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
         {/* Notifications row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 6px', marginBottom: 4 }}>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', letterSpacing: 'var(--tracking-wide)' }}>
-            {session.user.tenantName || (role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack')}
+            {tenantName || (role === 'SUPER_ADMIN' ? 'Super Admin' : 'TickTrack')}
           </span>
           <NotificationBell pollInterval={30000} />
         </div>
@@ -298,20 +302,20 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
             flexShrink: 0,
             fontFamily: 'DM Mono, monospace',
           }}>
-            {getInitials(session.user.name, session.user.email)}
+            {getInitials(user.fullName, user.primaryEmailAddress?.emailAddress)}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {session.user.name || session.user.email}
+              {user.fullName || user.primaryEmailAddress?.emailAddress}
             </div>
-            {session.user.branchName && (
+            {branchName && (
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {session.user.branchName}
+                {branchName}
               </div>
             )}
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+            onClick={() => signOut({ redirectUrl: '/sign-in' })}
             title="Sign out"
             style={{
               flexShrink: 0,

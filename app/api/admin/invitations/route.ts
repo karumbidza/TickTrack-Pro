@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { z } from 'zod'
@@ -14,20 +13,20 @@ const createInvitationSchema = z.object({
 // GET - List all invitations for the tenant
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Only admins can view invitations
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const tenantId = session.user.tenantId
-    if (!tenantId && session.user.role !== 'SUPER_ADMIN') {
+    if (!tenantId && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 400 })
     }
 
@@ -69,20 +68,20 @@ export async function GET(request: NextRequest) {
 // POST - Create a new invitation
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Only admins can create invitations
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
-    const tenantId = session.user.tenantId
-    if (!tenantId && session.user.role !== 'SUPER_ADMIN') {
+    if (!tenantId && role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 400 })
     }
 
@@ -132,7 +131,7 @@ export async function POST(request: NextRequest) {
         tenantId: tenantId!,
         email: validatedData.email,
         name: validatedData.name || null,
-        invitedById: session.user.id,
+        invitedById: userId,
         expiresAt,
         status: 'pending'
       },
@@ -144,7 +143,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Send invitation email
-    const inviteLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/accept-invitation/${invitation.token}`
+    const inviteLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/accept-invitation/${invitation.token}`
     
     // Log invite link for development (when email may not work)
     console.log('📧 INVITATION LINK (for development testing):')
@@ -158,7 +157,7 @@ export async function POST(request: NextRequest) {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">You've Been Invited!</h2>
           <p>Hi${validatedData.name ? ` ${validatedData.name}` : ''},</p>
-          <p><strong>${session.user.name}</strong> has invited you to join <strong>${tenant?.name}</strong> on TickTrack Pro.</p>
+          <p><strong>${meta.userName ?? 'An admin'}</strong> has invited you to join <strong>${tenant?.name}</strong> on TickTrack Pro.</p>
           <p>Click the button below to accept the invitation and create your account:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">

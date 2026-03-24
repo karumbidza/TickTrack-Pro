@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import crypto from 'crypto'
@@ -21,14 +20,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -58,7 +57,7 @@ export async function GET(
     }
 
     // Verify tenant access
-    if (session.user.role !== 'SUPER_ADMIN' && user.tenantId !== session.user.tenantId) {
+    if (role !== 'SUPER_ADMIN' && user.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -79,14 +78,15 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -103,7 +103,7 @@ export async function POST(
     }
 
     // Verify tenant access
-    if (session.user.role !== 'SUPER_ADMIN' && user.tenantId !== session.user.tenantId) {
+    if (role !== 'SUPER_ADMIN' && user.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -140,7 +140,7 @@ export async function POST(
           status: 'APPROVED_EMAIL_PENDING',
           role: validatedData.role,
           department: validatedData.department || null,
-          approvedById: session.user.id,
+          approvedById: userId,
           approvedAt: new Date(),
           activationToken,
           activationExpires
@@ -156,7 +156,7 @@ export async function POST(
     })
 
     // Send activation email
-    const activationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/activate-account/${activationToken}`
+    const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/activate-account/${activationToken}`
     
     // Get branch names for the email
     const branchNames = result.branches.map(ub => ub.branch.name)
@@ -277,14 +277,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
     }
 
@@ -298,7 +298,7 @@ export async function DELETE(
     }
 
     // Verify tenant access
-    if (session.user.role !== 'SUPER_ADMIN' && user.tenantId !== session.user.tenantId) {
+    if (role !== 'SUPER_ADMIN' && user.tenantId !== tenantId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

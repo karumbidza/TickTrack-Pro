@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
@@ -12,25 +11,28 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!allowedRoles.includes(session.user.role)) {
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ message: 'Invalid tenant' }, { status: 400 })
     }
 
     const kyc = await prisma.contractorKYC.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        tenantId: tenantId
       }
     })
 
@@ -55,18 +57,21 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!allowedRoles.includes(session.user.role)) {
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ message: 'Invalid tenant' }, { status: 400 })
     }
 
@@ -75,7 +80,7 @@ export async function PATCH(
     const kyc = await prisma.contractorKYC.findFirst({
       where: {
         id: params.id,
-        tenantId: session.user.tenantId
+        tenantId: tenantId
       },
       include: {
         tenant: true
@@ -96,7 +101,7 @@ export async function PATCH(
         where: { id: params.id },
         data: {
           status: 'APPROVED',
-          reviewedBy: session.user.id,
+          reviewedBy: userId,
           reviewedAt: new Date(),
           reviewNotes,
           passwordSetupToken,
@@ -143,7 +148,7 @@ export async function PATCH(
         where: { id: params.id },
         data: {
           status: 'REJECTED',
-          reviewedBy: session.user.id,
+          reviewedBy: userId,
           reviewedAt: new Date(),
           reviewNotes,
           rejectionReason
@@ -166,7 +171,7 @@ export async function PATCH(
         where: { id: params.id },
         data: {
           status: 'UNDER_REVIEW',
-          reviewedBy: session.user.id
+          reviewedBy: userId
         }
       })
 

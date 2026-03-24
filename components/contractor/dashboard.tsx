@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -182,7 +182,12 @@ interface ContractorCategory {
 }
 
 export function ContractorDashboard() {
-  const { data: session } = useSession()
+  const { user } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const userId = meta.dbUserId ?? user?.id ?? ''
+  const userName = user?.fullName ?? null
+  const userEmail = user?.primaryEmailAddress?.emailAddress ?? ''
+  const userRole = (meta.role as string) ?? 'CONTRACTOR'
   const [jobs, setJobs] = useState<Job[]>([])
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([])
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS)
@@ -258,10 +263,10 @@ export function ContractorDashboard() {
   const refreshInterval = 30
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       fetchContractorData()
     }
-  }, [session])
+  }, [user])
 
   // Apply filters whenever jobs, filters, or search changes
   useEffect(() => {
@@ -310,8 +315,8 @@ export function ContractorDashboard() {
 
   // Auto-refresh effect (background) - runs independently
   useEffect(() => {
-    if (!session?.user) return
-    
+    if (!user) return
+
     const interval = setInterval(async () => {
       try {
         const response = await fetch('/api/contractor/jobs')
@@ -325,7 +330,7 @@ export function ContractorDashboard() {
     }, refreshInterval * 1000)
     
     return () => clearInterval(interval)
-  }, [session])
+  }, [user])
 
   const fetchContractorData = async () => {
     try {
@@ -1070,13 +1075,13 @@ export function ContractorDashboard() {
     )
   }
 
-  if (!session?.user) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="text-center">
           <h2 className="text-2xl font-medium mb-4" style={{ color: 'var(--text-primary)' }}>Access Denied</h2>
           <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>You need to be logged in as a contractor to access this page.</p>
-          <Button onClick={() => window.location.href = '/auth/login'}>
+          <Button onClick={() => window.location.href = '/sign-in'}>
             Go to Login
           </Button>
         </div>
@@ -1110,7 +1115,7 @@ export function ContractorDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-medium" style={{ color: 'var(--text-primary)' }}>
-              Welcome, {session.user.name}!
+              Welcome, {userName}!
             </h1>
             <p className="text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Manage your assigned jobs and track your work</p>
           </div>
@@ -1690,14 +1695,14 @@ export function ContractorDashboard() {
                 )}
 
                 {/* Ticket Chat */}
-                {session?.user && (
-                  <TicketChat 
+                {user && (
+                  <TicketChat
                     ticketId={selectedJob.id}
                     currentUser={{
-                      id: session.user.id,
-                      name: session.user.name,
-                      email: session.user.email || '',
-                      role: session.user.role
+                      id: userId,
+                      name: userName,
+                      email: userEmail,
+                      role: userRole
                     }}
                     ticketStatus={selectedJob.status}
                     pollInterval={5000}

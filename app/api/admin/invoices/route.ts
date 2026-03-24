@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || !['TENANT_ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (!['TENANT_ADMIN', 'SUPER_ADMIN'].includes(role)) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -16,8 +22,8 @@ export async function GET(request: NextRequest) {
 
     // For tenant admins, only show invoices from their tenant
     // By default, only show active invoices (not superseded revisions)
-    const whereCondition: Record<string, unknown> = session.user.role === 'TENANT_ADMIN' 
-      ? { tenantId: session.user.tenantId }
+    const whereCondition: Record<string, unknown> = role === 'TENANT_ADMIN'
+      ? { tenantId }
       : {} // Super admin can see all
     
     // Only show active invoices unless history is requested

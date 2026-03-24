@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Fetch notifications for the current user
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const whereClause: any = {
-      userId: session.user.id
+      userId: userId
     }
 
     if (unreadOnly) {
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
       prisma.notification.count({ where: whereClause }),
       prisma.notification.count({
         where: {
-          userId: session.user.id,
+          userId: userId,
           read: false
         }
       })
@@ -64,11 +66,14 @@ export async function GET(request: NextRequest) {
 // PATCH - Mark notifications as read
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { notificationIds, markAllRead } = await request.json()
 
@@ -76,7 +81,7 @@ export async function PATCH(request: NextRequest) {
       // Mark all as read
       await prisma.notification.updateMany({
         where: {
-          userId: session.user.id,
+          userId: userId,
           read: false
         },
         data: { read: true }
@@ -86,7 +91,7 @@ export async function PATCH(request: NextRequest) {
       await prisma.notification.updateMany({
         where: {
           id: { in: notificationIds },
-          userId: session.user.id
+          userId: userId
         },
         data: { read: true }
       })
@@ -100,7 +105,7 @@ export async function PATCH(request: NextRequest) {
     // Get updated unread count
     const unreadCount = await prisma.notification.count({
       where: {
-        userId: session.user.id,
+        userId: userId,
         read: false
       }
     })
@@ -118,11 +123,14 @@ export async function PATCH(request: NextRequest) {
 // DELETE - Delete notifications
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { searchParams } = new URL(request.url)
     const notificationId = searchParams.get('id')
@@ -130,13 +138,13 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteAll) {
       await prisma.notification.deleteMany({
-        where: { userId: session.user.id }
+        where: { userId: userId }
       })
     } else if (notificationId) {
       await prisma.notification.delete({
         where: {
           id: notificationId,
-          userId: session.user.id
+          userId: userId
         }
       })
     } else {

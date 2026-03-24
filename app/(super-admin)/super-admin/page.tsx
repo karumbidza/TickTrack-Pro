@@ -1,22 +1,24 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { SuperAdminOverview } from '@/components/super-admin/overview'
 import { AuthGuard } from '@/components/auth/auth-guard'
 
 export default function SuperAdminPage() {
-  const { data: session } = useSession()
+  const { user, isLoaded } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const role = meta.role ?? 'END_USER'
   const router = useRouter()
 
   useEffect(() => {
-    if (session?.user && session.user.role !== 'SUPER_ADMIN') {
+    if (isLoaded && user && role !== 'SUPER_ADMIN') {
       router.push('/dashboard')
     }
-  }, [session, router])
+  }, [isLoaded, user, role, router])
 
-  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
+  const isSuperAdmin = role === 'SUPER_ADMIN'
 
   return (
     <AuthGuard>

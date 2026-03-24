@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { unlink } from 'fs/promises'
@@ -16,11 +15,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const ticketId = params.id
 
@@ -86,11 +88,10 @@ export async function GET(
     }
 
     // Check access permissions
-    const user = session.user
-    const isOwner = ticket.userId === user.id
-    const isAssignedContractor = ticket.assignedToId === user.id
-    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN'].includes(user.role)
-    const isSameTenant = ticket.tenantId === user.tenantId
+    const isOwner = ticket.userId === userId
+    const isAssignedContractor = ticket.assignedToId === userId
+    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN'].includes(role)
+    const isSameTenant = ticket.tenantId === tenantId
 
     if (!isOwner && !isAssignedContractor && !(isAdmin && isSameTenant)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -111,12 +112,15 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       logger.warn('PATCH ticket - Unauthorized: no session')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const ticketId = params.id
     logger.info(`PATCH ticket ${ticketId} - Starting update`)
@@ -183,10 +187,9 @@ export async function PATCH(
     }
 
     // Check if user owns this ticket
-    const user = session.user
-    const isOwner = ticket.userId === user.id
-    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN'].includes(user.role)
-    const isSameTenant = ticket.tenantId === user.tenantId
+    const isOwner = ticket.userId === userId
+    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN'].includes(role)
+    const isSameTenant = ticket.tenantId === tenantId
 
     if (!isOwner && !(isAdmin && isSameTenant)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -262,7 +265,7 @@ export async function PATCH(
             size: file.size,
             type: fileType,
             ticketId,
-            uploadedById: user.id
+            uploadedById: userId
           }
         })
       }
@@ -323,7 +326,7 @@ export async function PATCH(
       }
     })
 
-    logger.info(`Ticket ${ticketId} updated by user ${user.id}`)
+    logger.info(`Ticket ${ticketId} updated by user ${userId}`)
 
     return NextResponse.json({ 
       message: 'Ticket updated successfully',

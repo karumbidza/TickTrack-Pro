@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -228,7 +228,9 @@ const plans: Plan[] = [
 // ============================================
 
 export function BillingManagement() {
-  const { data: session } = useSession()
+  const { user } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const tenantId = meta.tenantId ?? null
   
   // Core state
   const [billingData, setBillingData] = useState<BillingData | null>(null)

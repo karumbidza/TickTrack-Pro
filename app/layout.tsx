@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { DM_Sans, DM_Mono } from 'next/font/google'
 import './globals.css'
-import { AuthProvider } from '@/components/providers/auth-provider'
+import { ClerkProvider } from '@clerk/nextjs'
 import { MUIThemeProvider } from '@/components/providers/mui-theme-provider'
 import { AppLayout } from '@/components/layout/app-layout'
 import { Toaster } from '@/components/ui/sonner'
@@ -36,17 +36,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`}>
-      <body className={dmSans.className}>
-        <AuthProvider>
+    <ClerkProvider>
+      <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`}>
+        <body className={dmSans.className}>
           <MUIThemeProvider>
             <AppLayout>
               {children}
               <Toaster />
             </AppLayout>
           </MUIThemeProvider>
-        </AuthProvider>
-      </body>
-    </html>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

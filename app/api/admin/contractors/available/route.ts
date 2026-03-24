@@ -1,39 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // GET - Get available contractors for a specific category
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { searchParams } = new URL(request.url)
     const categoryId = searchParams.get('categoryId')
     const ticketId = searchParams.get('ticketId')
 
-    // Get user's tenant
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { tenantId: true, role: true }
-    })
-
-    if (!user?.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check if user is admin
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']
-    if (!adminRoles.includes(user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
     // Build the query
     const whereClause: any = {
-      tenantId: user.tenantId,
+      tenantId: tenantId,
       status: 'AVAILABLE',
       user: {
         isActive: true

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 /**
@@ -12,15 +11,15 @@ import { prisma } from '@/lib/prisma'
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Super Admin should manage billing from Super Admin dashboard, not here
-    if (session.user.role === 'SUPER_ADMIN') {
-      return NextResponse.json({ 
+    if (role === 'SUPER_ADMIN') {
+      return NextResponse.json({
         error: 'Tenant billing is managed from the Super Admin Dashboard',
         redirectTo: '/super-admin'
       }, { status: 403 })
@@ -28,16 +27,14 @@ export async function GET(request: NextRequest) {
 
     // Only Tenant Admins (TENANT_ADMIN and department admins) can access billing
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!adminRoles.includes(session.user.role)) {
+    if (!adminRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Tenant Admin must have a tenant
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'No tenant associated with your account' }, { status: 400 })
     }
-
-    const tenantId = session.user.tenantId
 
     // Get tenant info
     const tenant = await prisma.tenant.findUnique({

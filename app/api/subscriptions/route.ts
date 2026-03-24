@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SubscriptionStatus } from '@prisma/client'
-import { getServerSession } from 'next-auth'
+import { auth } from '@clerk/nextjs/server'
 import PaynowService from '@/lib/paynow-service'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
       )
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const body = await request.json()
     const {
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's tenant
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
+      where: { id: userId },
       include: { tenant: true }
     })
 
@@ -137,18 +139,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
       )
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Get user's tenant and subscription
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
+      where: { id: userId },
       include: { 
         tenant: {
           include: {

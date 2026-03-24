@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { sendVerificationEmail } from '@/lib/email'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
@@ -13,9 +12,12 @@ export async function GET(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -91,9 +93,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -177,15 +182,16 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Create verification token
+      // Create activation token on user record (Clerk handles email verification)
       const verificationToken = crypto.randomBytes(32).toString('hex')
-      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      const expires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
 
-      await tx.verificationToken.create({
+      await tx.user.update({
+        where: { id: adminUser.id },
         data: {
-          identifier: adminEmail,
-          token: verificationToken,
-          expires
+          activationToken: verificationToken,
+          activationExpires: expires,
+          status: 'APPROVED_EMAIL_PENDING',
         }
       })
 
@@ -194,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     // Send verification email (outside transaction)
     try {
-      const verificationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${result.verificationToken}`
+      const verificationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${result.verificationToken}`
       await sendVerificationEmail(adminEmail, adminName || name + ' Admin', verificationLink)
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError)

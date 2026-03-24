@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger, generateRequestId } from '@/lib/async-logger'
 import { withCache, CacheInvalidation } from '@/lib/cache-middleware'
@@ -37,13 +36,18 @@ export async function GET(request: NextRequest) {
     return await withCache(
       request,
       async () => {
-        const session = await getServerSession(authOptions)
-        if (!session?.user) {
+        const { userId: clerkUserId, sessionClaims } = await auth()
+        if (!clerkUserId) {
           requestLogger.warn('Unauthorized access attempt')
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
+        const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+        const userId = meta.dbUserId ?? clerkUserId
+        const tenantId = meta.tenantId ?? null
+        const role = (meta.role as string) ?? 'END_USER'
 
-        const user = session.user
+        const user = { id: userId, tenantId, role }
+
         const allowedRoles = [
           'TENANT_ADMIN',
           'IT_ADMIN',
@@ -209,10 +213,13 @@ export async function POST(request: NextRequest) {
   const requestLogger = logger.withRequest(requestId)
 
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
 
     const body = await request.json()
 
@@ -220,15 +227,15 @@ export async function POST(request: NextRequest) {
     const ticket = await prisma.ticket.create({
       data: {
         ...body,
-        tenantId: session.user.tenantId,
-        userId: session.user.id,
+        tenantId,
+        userId,
       },
     })
 
     // Invalidate caches asynchronously (non-blocking)
     setImmediate(async () => {
-      await CacheInvalidation.tickets(session.user.tenantId || undefined)
-      await CacheInvalidation.stats(session.user.tenantId || undefined)
+      await CacheInvalidation.tickets(tenantId || undefined)
+      await CacheInvalidation.stats(tenantId || undefined)
     })
 
     requestLogger.info(`Ticket created: ${ticket.id}`)

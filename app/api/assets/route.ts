@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Parse pagination params
     const { searchParams } = new URL(request.url)
@@ -17,13 +20,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     const whereClause = {
-      tenant: {
-        users: {
-          some: {
-            email: session.user.email
-          }
-        }
-      }
+      tenantId: tenantId ?? undefined
     }
 
     // Run count and data query in parallel
@@ -161,14 +158,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+    const branchId = meta.branchId ?? null
 
     // Get user and tenant info
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
+      where: { id: userId },
       include: { tenant: true }
     })
 
@@ -185,12 +187,12 @@ export async function POST(request: NextRequest) {
     const assetNumber = `AST${String(assetCount + 1).padStart(6, '0')}`
 
     // Get branch name for location if branchId is provided
-    const branchId = data.branchId || session.user.branchId || null
+    const resolvedBranchId = data.branchId || branchId || null
     let locationFromBranch = data.location || ''
     
-    if (branchId) {
+    if (resolvedBranchId) {
       const branch = await prisma.branch.findUnique({
-        where: { id: branchId },
+        where: { id: resolvedBranchId },
         select: { name: true }
       })
       if (branch) {
@@ -210,7 +212,7 @@ export async function POST(request: NextRequest) {
         serialNumber: data.serialNumber,
         status: data.status || 'ACTIVE',
         location: locationFromBranch,
-        branchId: branchId,
+        branchId: resolvedBranchId,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
         warrantyExpires: data.warrantyExpires ? new Date(data.warrantyExpires) : null,
         purchasePrice: data.purchasePrice,
@@ -234,17 +236,21 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const data = await request.json()
     const { id, ...updateData } = data
 
     // Get user and tenant info
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
+      where: { id: userId },
       include: { tenant: true }
     })
 
@@ -273,10 +279,14 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -287,7 +297,7 @@ export async function DELETE(request: NextRequest) {
 
     // Get user and tenant info
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email! },
+      where: { id: userId },
       include: { tenant: true }
     })
 

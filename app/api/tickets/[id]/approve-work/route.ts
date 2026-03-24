@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // POST - User approves or rejects work description
@@ -9,10 +8,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { approved, rejectionReason } = await request.json()
 
@@ -41,8 +44,8 @@ export async function POST(
     }
 
     // Check if user owns the ticket or is an admin
-    const isOwner = ticket.userId === session.user.id
-    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(session.user.role)
+    const isOwner = ticket.userId === userId
+    const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json({ error: 'You do not have permission to approve this work description' }, { status: 403 })
@@ -87,7 +90,7 @@ export async function POST(
           ticketId: params.id,
           fromStatus: 'AWAITING_WORK_APPROVAL',
           toStatus: 'COMPLETED',
-          changedById: session.user.id,
+          changedById: userId,
           reason: 'User approved the work description'
         }
       })
@@ -95,9 +98,9 @@ export async function POST(
       // Create a message about the approval
       await prisma.message.create({
         data: {
-          content: `**Work Description Approved ✓**\n\n${session.user.name || session.user.email} has approved the work description. The contractor can now upload an invoice.`,
+          content: `**Work Description Approved ✓**\n\nThe work description has been approved. The contractor can now upload an invoice.`,
           ticketId: params.id,
-          userId: session.user.id
+          userId: userId
         }
       })
 
@@ -156,7 +159,7 @@ export async function POST(
           ticketId: params.id,
           fromStatus: 'AWAITING_WORK_APPROVAL',
           toStatus: 'AWAITING_DESCRIPTION',
-          changedById: session.user.id,
+          changedById: userId,
           reason: `User rejected the work description: ${rejectionReason}`
         }
       })
@@ -164,9 +167,9 @@ export async function POST(
       // Create a message about the rejection
       await prisma.message.create({
         data: {
-          content: `**Work Description Rejected ✗**\n\n${session.user.name || session.user.email} has rejected the work description.\n\n**Reason:** ${rejectionReason}\n\nContractor must provide a revised description.`,
+          content: `**Work Description Rejected ✗**\n\nThe work description has been rejected.\n\n**Reason:** ${rejectionReason}\n\nContractor must provide a revised description.`,
           ticketId: params.id,
-          userId: session.user.id
+          userId: userId
         }
       })
 

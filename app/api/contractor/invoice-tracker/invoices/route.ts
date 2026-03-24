@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
 import { logger } from '@/lib/logger'
@@ -12,16 +11,23 @@ export const dynamic = 'force-dynamic'
 // GET - Fetch all invoices for the contractor
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     // Get all invoices for this contractor (only active ones by default)
     const invoices = await prisma.invoice.findMany({
       where: {
-        contractorId: session.user.id,
+        contractorId: userId,
         isActive: true  // Only show active invoices
       },
       include: {
@@ -70,9 +76,16 @@ export async function GET(request: NextRequest) {
 // POST - Create a new invoice
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -97,7 +110,7 @@ export async function POST(request: NextRequest) {
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
-        assignedToId: session.user.id,
+        assignedToId: userId,
         status: 'COMPLETED'
       }
     })
@@ -159,7 +172,7 @@ export async function POST(request: NextRequest) {
     // Create the invoice
     const invoice = await prisma.invoice.create({
       data: {
-        contractorId: session.user.id,
+        contractorId: userId,
         ticketId,
         tenantId: ticket.tenantId,
         invoiceNumber,

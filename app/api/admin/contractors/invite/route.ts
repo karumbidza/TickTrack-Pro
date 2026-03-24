@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
@@ -9,24 +8,27 @@ import { sendContractorInvitationEmail } from '@/lib/email'
 // POST - Send contractor invitation
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!allowedRoles.includes(session.user.role)) {
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ message: 'Invalid tenant. Super admins must switch to a tenant context to invite contractors.' }, { status: 400 })
     }
 
     // Verify tenant exists
     const tenant = await prisma.tenant.findUnique({
-      where: { id: session.user.tenantId },
+      where: { id: tenantId },
       select: { id: true, name: true }
     })
 
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
     const existingInvitation = await prisma.contractorInvitation.findUnique({
       where: {
         tenantId_email: {
-          tenantId: session.user.tenantId,
+          tenantId: tenantId,
           email: email.toLowerCase()
         }
       }
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
     // Check if there's already a KYC submission
     const existingKYC = await prisma.contractorKYC.findFirst({
       where: {
-        tenantId: session.user.tenantId,
+        tenantId: tenantId,
         companyEmail: email.toLowerCase()
       }
     })
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     const invitation = await prisma.contractorInvitation.upsert({
       where: {
         tenantId_email: {
-          tenantId: session.user.tenantId,
+          tenantId: tenantId,
           email: email.toLowerCase()
         }
       },
@@ -106,13 +108,13 @@ export async function POST(request: NextRequest) {
         token,
         status: 'pending',
         expiresAt,
-        invitedBy: session.user.id
+        invitedBy: userId
       },
       create: {
-        tenantId: session.user.tenantId,
+        tenantId: tenantId,
         email: email.toLowerCase(),
         token,
-        invitedBy: session.user.id,
+        invitedBy: userId,
         expiresAt
       }
     })
@@ -165,23 +167,26 @@ export async function POST(request: NextRequest) {
 // GET - List all invitations
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    if (!allowedRoles.includes(session.user.role)) {
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ message: 'Invalid tenant' }, { status: 400 })
     }
 
     const invitations = await prisma.contractorInvitation.findMany({
-      where: { tenantId: session.user.tenantId },
+      where: { tenantId: tenantId },
       orderBy: { createdAt: 'desc' }
     })
 

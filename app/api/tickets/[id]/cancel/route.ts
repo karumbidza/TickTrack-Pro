@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -10,10 +9,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { id } = await params
     const { reason } = await request.json()
@@ -35,7 +38,7 @@ export async function POST(
     }
 
     // Check ownership
-    if (ticket.userId !== session.user.id) {
+    if (ticket.userId !== userId) {
       return NextResponse.json({ error: 'You can only cancel your own tickets' }, { status: 403 })
     }
 
@@ -56,7 +59,7 @@ export async function POST(
           status: 'CANCELLED',
           cancellationReason: reason.trim(),
           cancellationRequestedAt: new Date(),
-          cancellationRequestedBy: session.user.id,
+          cancellationRequestedBy: userId,
           cancelledAt: new Date()
         }
       })
@@ -73,11 +76,11 @@ export async function POST(
       data: {
         cancellationReason: reason.trim(),
         cancellationRequestedAt: new Date(),
-        cancellationRequestedBy: session.user.id
+        cancellationRequestedBy: userId
       }
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Cancellation request submitted. An admin will review your request.',
       status: 'pending_approval'
     })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, ReactNode } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -43,16 +43,16 @@ export function FeatureGate({
   fallback,
   showUpgradePrompt = true
 }: FeatureGateProps) {
-  const { data: session } = useSession()
+  const { user, isLoaded } = useUser()
   const [hasAccess, setHasAccess] = useState<boolean | null>(null)
   const [tenantLimits, setTenantLimits] = useState<TenantLimits | null>(null)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
 
   useEffect(() => {
-    if (session?.user) {
+    if (isLoaded && user) {
       checkFeatureAccess()
     }
-  }, [session, feature, plan])
+  }, [isLoaded, user, feature, plan])
 
   const checkFeatureAccess = async () => {
     try {

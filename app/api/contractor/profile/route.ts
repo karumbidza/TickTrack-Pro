@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Get contractor profile
     const contractor = await prisma.contractor.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: userId },
       include: {
         ratings: {
           orderBy: { createdAt: 'desc' },

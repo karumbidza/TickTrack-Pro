@@ -1,15 +1,14 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useAuth } from '@clerk/nextjs'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { Menu } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 
-// Routes where no sidebar or nav should be shown
 const PUBLIC_ROUTES = ['/', '/pricing', '/about', '/get-started', '/request-quote', '/register']
-const PUBLIC_ROUTE_PREFIXES = ['/contractor-registration/', '/auth/']
+const PUBLIC_ROUTE_PREFIXES = ['/contractor-registration/', '/auth/', '/sign-in', '/sign-up', '/onboarding', '/select-org']
 
 function shouldHideSidebar(pathname: string, isAuthenticated: boolean): boolean {
   if (PUBLIC_ROUTE_PREFIXES.some((p) => pathname.startsWith(p))) return true
@@ -21,11 +20,11 @@ function shouldHideSidebar(pathname: string, isAuthenticated: boolean): boolean 
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { isSignedIn, isLoaded } = useAuth()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const isAuthenticated = status === 'authenticated'
+  const isAuthenticated = isLoaded && !!isSignedIn
   const hide = shouldHideSidebar(pathname, isAuthenticated)
 
   if (hide || !isAuthenticated) {
@@ -48,10 +47,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar */}
       <Sidebar mobileOpen={mobileOpen} />
 
-      {/* Main content */}
       <div className="sidebar-content" style={{ display: 'flex', flexDirection: 'column' }}>
         {/* Mobile topbar */}
         <div

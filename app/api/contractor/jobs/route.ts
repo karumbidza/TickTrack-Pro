@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
@@ -17,15 +23,10 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
     const skip = (page - 1) * limit
 
-    // Get tickets directly assigned to the contractor
-    const assignedWhereClause = {
-      assignedToId: session.user.id,
-    }
-
     // Get tickets where contractor has a pending/submitted quote request
     const quoteRequestTickets = await prisma.quoteRequest.findMany({
       where: {
-        contractorId: session.user.id,
+        contractorId: userId,
         status: { in: ['pending', 'submitted'] }
       },
       select: {
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Combined where clause: either assigned directly OR has a quote request
     const whereClause = {
       OR: [
-        { assignedToId: session.user.id },
+        { assignedToId: userId },
         { id: { in: quoteRequestTicketIds } }
       ]
     }

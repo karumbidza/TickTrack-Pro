@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { sendUserActivationEmail } from '@/lib/email'
 import { z } from 'zod'
@@ -18,25 +17,30 @@ const createUserSchema = z.object({
 // Get all users for tenant
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
     const allowedRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
-    
-    if (!allowedRoles.includes(session.user.role)) {
+
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
     // Fetch all non-contractor users for this tenant
     const users = await prisma.user.findMany({
       where: {
-        tenantId: session.user.tenantId,
+        tenantId: tenantId,
         role: {
           not: 'CONTRACTOR'
         }
@@ -78,18 +82,23 @@ export async function GET() {
 // Create new user
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
     const allowedRoles = ['TENANT_ADMIN']
-    
-    if (!allowedRoles.includes(session.user.role)) {
+
+    if (!allowedRoles.includes(role)) {
       return NextResponse.json({ error: 'Only tenant admins can create users' }, { status: 403 })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'Invalid tenant' }, { status: 400 })
     }
 
@@ -102,7 +111,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400 })
     }
 
-    const { name, email, role, branchIds, phone } = parseResult.data
+    const { name, email, role: newUserRole, branchIds, phone } = parseResult.data
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -117,7 +126,7 @@ export async function POST(request: NextRequest) {
     const branches = await prisma.branch.findMany({
       where: {
         id: { in: branchIds },
-        tenantId: session.user.tenantId
+        tenantId: tenantId
       }
     })
 
@@ -126,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if HQ branch is selected and user is admin - auto-assign all branches
-    const isAdminRole = role.includes('ADMIN')
+    const isAdminRole = newUserRole.includes('ADMIN')
     const hqBranch = branches.find(b => b.isHeadOffice)
     let finalBranchIds = branchIds
 
@@ -134,7 +143,7 @@ export async function POST(request: NextRequest) {
       // Auto-assign all tenant branches
       const allBranches = await prisma.branch.findMany({
         where: {
-          tenantId: session.user.tenantId,
+          tenantId: tenantId,
           isActive: true
         },
         select: { id: true }
@@ -153,8 +162,8 @@ export async function POST(request: NextRequest) {
         email,
         phone,
         password: '', // Empty - user will set via activation
-        role: role as any,
-        tenantId: session.user.tenantId,
+        role: newUserRole as any,
+        tenantId: tenantId,
         isActive: false, // Not active until they set password
         status: 'APPROVED_EMAIL_PENDING',
         activationToken,
@@ -189,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     // Get tenant name for email
     const tenant = await prisma.tenant.findUnique({
-      where: { id: session.user.tenantId },
+      where: { id: tenantId },
       select: { name: true }
     })
 

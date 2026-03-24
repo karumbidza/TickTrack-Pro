@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { sendRatingEmailToContractor, sendJobClosedEmail } from '@/lib/email'
@@ -51,15 +50,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     const { id: ticketId } = await params
     const body = await request.json()
-    
+
     const validatedData = ratingSchema.parse(body)
 
     // Get the ticket to verify ownership and get contractor info
@@ -90,7 +92,7 @@ export async function POST(
     }
 
     // Only the ticket creator can rate the contractor
-    if (ticket.userId !== session.user.id) {
+    if (ticket.userId !== userId) {
       return NextResponse.json({ error: 'Only the ticket creator can rate the contractor' }, { status: 403 })
     }
 
@@ -98,7 +100,7 @@ export async function POST(
     const existingRating = await prisma.rating.findFirst({
       where: {
         ticketId: ticketId,
-        userId: session.user.id
+        userId: userId
       }
     })
 
@@ -138,7 +140,7 @@ export async function POST(
     const rating = await prisma.rating.create({
       data: {
         ticketId: ticketId,
-        userId: session.user.id,
+        userId: userId,
         contractorId: contractorId,
         punctualityRating: validatedData.punctualityRating,
         customerServiceRating: validatedData.customerServiceRating,
@@ -166,7 +168,7 @@ export async function POST(
         ticketId: ticketId,
         fromStatus: ticket.status,
         toStatus: 'CLOSED',
-        changedById: session.user.id,
+        changedById: userId,
         reason: 'Ticket rated and closed by user'
       }
     })
@@ -256,9 +258,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

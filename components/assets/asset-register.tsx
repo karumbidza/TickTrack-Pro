@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -205,16 +205,11 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 
   const fetchUserBranches = async () => {
     try {
-      const response = await fetch('/api/auth/session')
-      const session = await response.json()
-      if (session?.user?.id) {
-        // Fetch user's assigned branches
-        const userResponse = await fetch(`/api/admin/users/${session.user.id}`)
-        if (userResponse.ok) {
-          const userData = await userResponse.json()
-          if (userData.user?.branches) {
-            setUserBranches(userData.user.branches.map((ub: UserBranch) => ub.branch))
-          }
+      const response = await fetch('/api/admin/users/me/branches')
+      if (response.ok) {
+        const userData = await response.json()
+        if (userData.user?.branches) {
+          setUserBranches(userData.user.branches.map((ub: UserBranch) => ub.branch))
         }
       }
     } catch (error) {
@@ -1131,10 +1126,12 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
 }
 
 function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, onOpenCategoryManager }: { onAssetCreated: () => void; tenantId: string; onCancel: () => void; categories: AssetCategory[]; branches: Branch[]; onOpenCategoryManager?: () => void }) {
-  const { data: session } = useSession()
-  
+  const { user } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const branchId = meta.branchId ?? null
+
   // Get user's branch or first available branch
-  const defaultBranchId = session?.user?.branchId || (branches.length > 0 ? branches[0].id : '')
+  const defaultBranchId = branchId || (branches.length > 0 ? branches[0].id : '')
   const defaultBranch = branches.find(b => b.id === defaultBranchId)
   
   const [formData, setFormData] = useState({
@@ -1156,13 +1153,13 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
   const [images, setImages] = useState<File[]>([])
   const [submitted, setSubmitted] = useState(false)
   
-  // Update branchId when session loads
+  // Update branchId when user loads
   useEffect(() => {
     // Always lock to user's assigned branch if they have one
-    if (session?.user?.branchId) {
-      setFormData(prev => ({ ...prev, branchId: session.user.branchId! }))
+    if (branchId) {
+      setFormData(prev => ({ ...prev, branchId }))
     }
-  }, [session])
+  }, [branchId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1326,12 +1323,12 @@ function AssetForm({ onAssetCreated, tenantId, onCancel, categories, branches, o
           </div>
           <div>
             <Label htmlFor="branchId">Branch / Site *</Label>
-            {session?.user?.branchId ? (
+            {branchId ? (
               // User has an assigned branch - lock to that branch
               <div className="flex items-center gap-2">
                 <Input
                   id="branchId"
-                  value={branches.find(b => b.id === session.user.branchId)?.name || 'Your Assigned Branch'}
+                  value={branches.find(b => b.id === branchId)?.name || 'Your Assigned Branch'}
                   disabled
                   className="bg-surface2"
                 />

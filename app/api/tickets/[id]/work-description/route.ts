@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 
 // POST - Contractor submits work description
@@ -9,13 +8,17 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Only contractors can submit work descriptions
-    if (session.user.role !== 'CONTRACTOR') {
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ error: 'Only contractors can submit work descriptions' }, { status: 403 })
     }
 
@@ -29,7 +32,7 @@ export async function POST(
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id // Must be assigned to this contractor
+        assignedToId: userId // Must be assigned to this contractor
       },
       include: {
         user: {
@@ -83,7 +86,7 @@ export async function POST(
         ticketId: params.id,
         fromStatus: 'AWAITING_DESCRIPTION',
         toStatus: 'AWAITING_WORK_APPROVAL',
-        changedById: session.user.id,
+        changedById: userId,
         reason: 'Contractor submitted work description for user approval'
       }
     })
@@ -93,7 +96,7 @@ export async function POST(
       data: {
         content: `**Work Description Submitted**\n\nThe contractor has submitted a description of the work done:\n\n---\n${workDescription}\n---\n\nAwaiting user approval.`,
         ticketId: params.id,
-        userId: session.user.id
+        userId: userId
       }
     })
 
@@ -106,8 +109,7 @@ export async function POST(
         message: `The contractor has submitted a work description for ticket ${ticket.ticketNumber}. Please review and approve.`,
         data: JSON.stringify({
           ticketId: ticket.id,
-          ticketNumber: ticket.ticketNumber,
-          contractorName: session.user.name || session.user.email
+          ticketNumber: ticket.ticketNumber
         })
       }
     })

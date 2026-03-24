@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { BillingService } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
 
@@ -17,18 +16,21 @@ import { logger } from '@/lib/logger'
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
       )
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Only SUPER_ADMIN can confirm bank transfers
-    if (session.user.role !== 'SUPER_ADMIN') {
-      logger.warn(`[BankTransfer] Non-admin user ${session.user.id} attempted to confirm transfer`)
+    if (role !== 'SUPER_ADMIN') {
+      logger.warn(`[BankTransfer] Non-admin user ${userId} attempted to confirm transfer`)
       return NextResponse.json(
         { message: 'Only Super Admin can confirm bank transfers' },
         { status: 403 }
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
       // Confirm the bank transfer
       const result = await BillingService.confirmBankTransfer(
         paymentId,
-        session.user.id,
+        userId,
         bankReference
       )
 
@@ -82,16 +84,19 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json(
         { message: 'Unauthorized' },
         { status: 401 }
       )
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (session.user.role !== 'SUPER_ADMIN') {
+    if (role !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { message: 'Only Super Admin can view pending transfers' },
         { status: 403 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -10,16 +9,23 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id
+        assignedToId: userId
       },
       include: {
         tenant: {
@@ -69,9 +75,16 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'CONTRACTOR') {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -82,7 +95,7 @@ export async function PATCH(
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: params.id,
-        assignedToId: session.user.id
+        assignedToId: userId
       },
       include: {
         admin: { select: { id: true, name: true, phone: true } },
@@ -126,7 +139,7 @@ export async function PATCH(
             `**Contact Number:** ${jobPlan.contactNumber || 'Not provided'}\n` +
             `**Notes:** ${jobPlan.notes || 'None'}`,
           ticketId: params.id,
-          userId: session.user.id
+          userId: userId
         }
       })
 
@@ -136,7 +149,7 @@ export async function PATCH(
           ticketId: params.id,
           fromStatus: ticket.status as any,
           toStatus: 'ACCEPTED',
-          changedById: session.user.id,
+          changedById: userId,
           reason: `Job accepted. Technician: ${jobPlan.technicianName}. Arrival: ${new Date(jobPlan.arrivalDate).toLocaleDateString()}`
         }
       })
@@ -176,7 +189,7 @@ export async function PATCH(
         data: {
           content: `**Job Rejected by Contractor**\n\nReason: ${rejectionReason || 'No reason provided'}`,
           ticketId: params.id,
-          userId: session.user.id
+          userId: userId
         }
       })
 
@@ -186,7 +199,7 @@ export async function PATCH(
           ticketId: params.id,
           fromStatus: ticket.status as any,
           toStatus: 'OPEN',
-          changedById: session.user.id,
+          changedById: userId,
           reason: `Job rejected by contractor. Reason: ${rejectionReason || 'No reason provided'}`
         }
       })
@@ -210,7 +223,7 @@ export async function PATCH(
           ticketId: params.id,
           fromStatus: ticket.status as any,
           toStatus: 'IN_PROGRESS',
-          changedById: session.user.id,
+          changedById: userId,
           reason: 'Contractor started work on the job'
         }
       })
@@ -235,7 +248,7 @@ export async function PATCH(
           ticketId: params.id,
           fromStatus: ticket.status as any,
           toStatus: 'ON_SITE',
-          changedById: session.user.id,
+          changedById: userId,
           reason: 'Contractor arrived on site'
         }
       })
@@ -267,7 +280,7 @@ export async function PATCH(
           data: {
             content: `**Job Completed**\n\nActual Hours: ${actualHours || 'Not recorded'}\n\nNotes: ${completionNotes}`,
             ticketId: params.id,
-            userId: session.user.id
+            userId: userId
           }
         })
       }
@@ -277,7 +290,7 @@ export async function PATCH(
           ticketId: params.id,
           fromStatus: ticket.status as any,
           toStatus: 'COMPLETED',
-          changedById: session.user.id,
+          changedById: userId,
           reason: `Job completed. Actual hours: ${actualHours || 'Not recorded'}`
         }
       })

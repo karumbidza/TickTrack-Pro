@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { BillingService, getSubscriptionPricing } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
@@ -16,13 +15,16 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'No tenant associated' }, { status: 400 })
     }
 
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Get tenant
     const tenant = await prisma.tenant.findUnique({
-      where: { id: session.user.tenantId },
+      where: { id: tenantId },
       include: { subscription: true }
     })
 
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           popFile: uploadResult.url,
           popSubmittedAt: new Date().toISOString(),
-          submittedByUserId: session.user.id
+          submittedByUserId: userId
         }
       }
     })

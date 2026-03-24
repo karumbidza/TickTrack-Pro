@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { checkSubscriptionAccess } from '@/lib/subscription-guard'
 
 /**
@@ -10,14 +9,17 @@ import { checkSubscriptionAccess } from '@/lib/subscription-guard'
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Super admin always has full access
-    if (session.user.role === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN') {
       return NextResponse.json({
         level: 'full',
         message: null,
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({
         level: 'full',
         message: 'No tenant associated',
@@ -33,7 +35,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const access = await checkSubscriptionAccess(session.user.tenantId, 'read')
+    const access = await checkSubscriptionAccess(tenantId, 'read')
 
     return NextResponse.json({
       level: access.level,

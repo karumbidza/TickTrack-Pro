@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -87,7 +87,7 @@ interface InvoiceStats {
 }
 
 export default function InvoiceTrackerPage() {
-  const { data: session, status } = useSession()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [paymentBatches, setPaymentBatches] = useState<PaymentBatch[]>([])
@@ -129,16 +129,16 @@ export default function InvoiceTrackerPage() {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin')
+    if (isLoaded && !user) {
+      router.push('/sign-in')
     }
-  }, [status, router])
+  }, [isLoaded, user, router])
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (isLoaded && user) {
       fetchData()
     }
-  }, [status])
+  }, [isLoaded, user])
 
   const fetchData = async () => {
     try {
@@ -316,8 +316,8 @@ export default function InvoiceTrackerPage() {
     )
   }
 
-  // Don't render content if not authenticated
-  if (status !== 'authenticated') {
+  // Don't render content if not loaded or not authenticated
+  if (!isLoaded || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useUser } from '@clerk/nextjs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -25,7 +25,9 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ ticketId }: ChatWindowProps) {
-  const { data: session } = useSession()
+  const { user } = useUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
+  const currentUserId = meta.dbUserId ?? user?.id ?? null
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -51,7 +53,7 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !session?.user) return
+    if (!newMessage.trim() || !user) return
 
     setIsLoading(true)
     try {
@@ -114,7 +116,7 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
               <div
                 key={message.id}
                 className={`flex items-start space-x-3 ${
-                  message.user.id === session?.user?.id ? 'flex-row-reverse space-x-reverse' : ''
+                  message.user.id === currentUserId ? 'flex-row-reverse space-x-reverse' : ''
                 }`}
               >
                 <div className="flex-shrink-0">
@@ -124,7 +126,7 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
                 </div>
                 
                 <div className={`flex-1 max-w-xs lg:max-w-md ${
-                  message.user.id === session?.user?.id ? 'text-right' : ''
+                  message.user.id === currentUserId ? 'text-right' : ''
                 }`}>
                   <div className="flex items-center space-x-2 mb-1">
                     <span className="text-sm font-medium text-text-primary">
@@ -136,7 +138,7 @@ export function ChatWindow({ ticketId }: ChatWindowProps) {
                   </div>
                   
                   <div className={`px-4 py-2 rounded-lg ${
-                    message.user.id === session?.user?.id
+                    message.user.id === currentUserId
                       ? 'bg-blue-bg text-bg ml-auto'
                       : 'bg-surface2 text-text-primary'
                   }`}>

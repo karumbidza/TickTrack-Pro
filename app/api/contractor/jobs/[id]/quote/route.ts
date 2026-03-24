@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
@@ -19,12 +18,16 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
-    if (session.user.role !== 'CONTRACTOR') {
+    if (role !== 'CONTRACTOR') {
       return NextResponse.json({ error: 'Forbidden - Only contractors can submit quotes' }, { status: 403 })
     }
 
@@ -45,7 +48,7 @@ export async function POST(
     const quoteRequest = await prisma.quoteRequest.findFirst({
       where: {
         ticketId: ticketId,
-        contractorId: session.user.id,
+        contractorId: userId,
         status: 'pending'
       }
     })
@@ -84,14 +87,14 @@ export async function POST(
       // Create a message about the quote submission
       await prisma.message.create({
         data: {
-          content: `Quote submitted by ${session.user.name || session.user.email}: $${quoteAmount.toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}${estimatedDays ? `. Estimated completion: ${estimatedDays} days` : ''}`,
+          content: `Quote submitted: $${quoteAmount.toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}${estimatedDays ? `. Estimated completion: ${estimatedDays} days` : ''}`,
           ticketId,
-          userId: session.user.id,
+          userId: userId,
           isInternal: true
         }
       })
 
-      logger.info('Quote submitted via QuoteRequest', { ticketId, quoteRequestId: quoteRequest.id, quoteAmount, contractorId: session.user.id })
+      logger.info('Quote submitted via QuoteRequest', { ticketId, quoteRequestId: quoteRequest.id, quoteAmount, contractorId: userId })
 
       return NextResponse.json({ 
         success: true,
@@ -104,7 +107,7 @@ export async function POST(
     const ticket = await prisma.ticket.findFirst({
       where: {
         id: ticketId,
-        assignedToId: session.user.id,
+        assignedToId: userId,
         status: 'AWAITING_QUOTE' as any,
         quoteRequested: true
       } as any
@@ -145,12 +148,12 @@ export async function POST(
       data: {
         content: `Quote submitted: $${quoteAmount.toFixed(2)}${quoteDescription ? `. Details: ${quoteDescription}` : ''}`,
         ticketId,
-        userId: session.user.id,
+        userId: userId,
         isInternal: true
       }
     })
 
-    logger.info('Quote submitted', { ticketId, quoteAmount, contractorId: session.user.id })
+    logger.info('Quote submitted', { ticketId, quoteAmount, contractorId: userId })
 
     return NextResponse.json({ ticket: updatedTicket })
   } catch (error) {

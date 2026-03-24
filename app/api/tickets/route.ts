@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
 import { calculateSLADeadlines } from '@/lib/sla-utils'
 import { sendNewTicketEmailToAdmin } from '@/lib/email'
@@ -26,23 +25,26 @@ export async function GET(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
 
     // Build where clause based on user role
     let whereClause: any = {}
-    
-    if (session.user.role === 'END_USER') {
+
+    if (role === 'END_USER') {
       // End users see only their own tickets
-      whereClause.userId = session.user.id
-    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(session.user.role)) {
+      whereClause.userId = userId
+    } else if (['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)) {
       // Admins see tickets for their tenant and type
-      whereClause.tenantId = session.user.tenantId
-      
-      if (session.user.role !== 'TENANT_ADMIN') {
+      whereClause.tenantId = tenantId
+
+      if (role !== 'TENANT_ADMIN') {
         // Specific admin roles see only their type
         const typeMap: Record<string, string> = {
           'IT_ADMIN': 'IT',
@@ -51,11 +53,11 @@ export async function GET(request: NextRequest) {
           'MAINTENANCE_ADMIN': 'MAINTENANCE',
           'PROJECTS_ADMIN': 'PROJECTS'
         }
-        whereClause.type = typeMap[session.user.role]
+        whereClause.type = typeMap[role]
       }
-    } else if (session.user.role === 'CONTRACTOR') {
+    } else if (role === 'CONTRACTOR') {
       // Contractors see assigned tickets
-      whereClause.assignedToId = session.user.id
+      whereClause.assignedToId = userId
     }
 
     const tickets = await prisma.ticket.findMany({
@@ -116,25 +118,29 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
+    const { userId: clerkUserId, sessionClaims } = await auth()
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
+    const userId = meta.dbUserId ?? clerkUserId
+    const tenantId = meta.tenantId ?? null
+    const role = (meta.role as string) ?? 'END_USER'
+    const branchId = meta.branchId ?? null
 
     // Only END_USER can create tickets
-    if (session.user.role !== 'END_USER') {
-      return NextResponse.json({ 
-        error: 'Only end users can create tickets. Admins create projects, contractors view assigned work.' 
+    if (role !== 'END_USER') {
+      return NextResponse.json({
+        error: 'Only end users can create tickets. Admins create projects, contractors view assigned work.'
       }, { status: 403 })
     }
 
     // End users must have a tenant association
-    if (!session.user.tenantId) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'No tenant associated with user account' }, { status: 400 })
     }
 
-    const userTenantId = session.user.tenantId
+    const userTenantId = tenantId
 
     const contentType = request.headers.get('content-type')
     let data: any
@@ -191,9 +197,9 @@ export async function POST(request: NextRequest) {
         assetId: data.assetId || null,
         categoryId: data.categoryId || null,
         location: data.location || null,
-        branchId: data.branchId || session.user.branchId || null,
+        branchId: data.branchId || branchId || null,
         status: 'OPEN',
-        userId: session.user.id,
+        userId: userId,
         tenantId: userTenantId,
         responseDeadline,
         resolutionDeadline,
@@ -217,7 +223,7 @@ export async function POST(request: NextRequest) {
       data: {
         ticketId: ticket.id,
         toStatus: 'OPEN',
-        changedById: session.user.id,
+        changedById: userId,
         reason: 'Ticket created'
       }
     })
@@ -258,7 +264,7 @@ export async function POST(request: NextRequest) {
               type: getAttachmentType(file.type || 'application/octet-stream'),
               size: file.size,
               ticketId: ticket.id,
-              uploadedById: session.user.id
+              uploadedById: userId
             }
           })
           
@@ -283,7 +289,7 @@ export async function POST(request: NextRequest) {
     
     // Find admins in the user's branch(es) or tenant admins
     const userBranches = await prisma.userBranch.findMany({
-      where: { userId: session.user.id },
+      where: { userId: userId },
       select: { branchId: true, branch: { select: { name: true, isHeadOffice: true } } }
     })
     
@@ -344,8 +350,8 @@ export async function POST(request: NextRequest) {
         priority: data.priority,
         type: data.type,
         branchName: branchName,
-        userName: session.user.name || 'User',
-        userEmail: session.user.email || '',
+        userName: 'User',
+        userEmail: '',
         responseDeadline: responseDeadline
       }).catch(err => logger.error('Failed to send new ticket email:', err))
     }
