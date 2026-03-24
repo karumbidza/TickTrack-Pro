@@ -16,6 +16,7 @@ export default function SignInPage() {
           <Logo size="sm" href="/" />
         </div>
         <SignIn
+          fallbackRedirectUrl="/dashboard"
           appearance={{
             variables: {
               colorPrimary: '#1a1916',
