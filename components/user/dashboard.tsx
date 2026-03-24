@@ -997,6 +997,25 @@ export function UserDashboard({ user, initialTab = 'tickets' }: UserDashboardPro
           /* Asset Register Tab */
           <AssetRegister tenantId={user.tenantId || ''} userRole={user.role} />
         )
+        ) : user.role === 'SUPER_ADMIN' ? (
+          /* Super Admin - Direct them to super admin section */
+          <Card>
+            <CardHeader>
+              <CardTitle>Super Admin Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center py-8">
+              <div className="space-y-4">
+                <div style={{ color: 'var(--text-secondary)' }}>
+                  Manage all tenants, billing, and platform settings from the Super Admin panel.
+                </div>
+                <div className="flex justify-center space-x-4">
+                  <Button asChild>
+                    <Link href="/super-admin">Super Admin Panel</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           /* Admin Users - Direct them to proper admin sections */
           <Card>
