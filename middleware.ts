@@ -25,7 +25,7 @@ export default clerkMiddleware(async (auth, req) => {
     return (await auth()).redirectToSignIn()
   }
 
-  const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | undefined>
+  const meta = ((sessionClaims?.metadata ?? sessionClaims?.publicMetadata ?? {}) as Record<string, string | undefined>)
   const role = meta.role
 
   if (isSuperAdminRoute(req)) {
