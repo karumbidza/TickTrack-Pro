@@ -9,21 +9,15 @@ export async function GET(request: NextRequest) {
     if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const { userId, tenantId, role } = authCtx
+    const { tenantId } = authCtx
 
-    // Get user's tenant
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true }
-    })
-
-    if (!user?.tenant) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 400 })
     }
 
     const branches = await prisma.branch.findMany({
       where: {
-        tenantId: user.tenant.id,
+        tenantId,
         isActive: true
       },
       orderBy: [
@@ -47,19 +41,14 @@ export async function POST(request: NextRequest) {
     if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const { userId, tenantId, role } = authCtx
+    const { tenantId, role } = authCtx
 
     // Check if user is tenant admin
     if (role !== 'TENANT_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true }
-    })
-
-    if (!user?.tenant) {
+    if (!tenantId) {
       return NextResponse.json({ error: 'No tenant found' }, { status: 400 })
     }
 
@@ -72,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Check for duplicate name
     const existing = await prisma.branch.findFirst({
       where: {
-        tenantId: user.tenant.id,
+        tenantId,
         name: data.name.trim()
       }
     })
@@ -85,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (data.isHeadOffice) {
       const existingHQ = await prisma.branch.findFirst({
         where: {
-          tenantId: user.tenant.id,
+          tenantId,
           isHeadOffice: true
         }
       })
@@ -96,14 +85,14 @@ export async function POST(request: NextRequest) {
 
     // Get max sort order
     const maxOrder = await prisma.branch.findFirst({
-      where: { tenantId: user.tenant.id },
+      where: { tenantId },
       orderBy: { sortOrder: 'desc' },
       select: { sortOrder: true }
     })
 
     const branch = await prisma.branch.create({
       data: {
-        tenantId: user.tenant.id,
+        tenantId,
         name: data.name.trim(),
         address: data.address?.trim() || null,
         type: data.isHeadOffice ? 'HEAD_OFFICE' : (data.type || 'BRANCH'),

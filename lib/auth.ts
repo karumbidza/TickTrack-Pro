@@ -25,16 +25,14 @@ const ADMIN_ROLES = [
 ]
 
 export async function getAuthContext(): Promise<AuthContext | null> {
-  const { userId, sessionClaims } = await auth()
+  const { userId } = await auth()
   if (!userId) return null
 
-  // sessionClaims.publicMetadata is only populated if the Clerk JWT template includes it.
-  // Fall back to currentUser() to get live metadata when the JWT claims are empty.
-  let meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-  if (!meta.role) {
-    const user = await currentUser()
-    meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
-  }
+  // Always use currentUser() for live metadata — sessionClaims.publicMetadata
+  // is only populated when a custom Clerk JWT template explicitly includes it,
+  // and partial templates (e.g. role only, no tenantId) cause silent data loss.
+  const user = await currentUser()
+  const meta = (user?.publicMetadata ?? {}) as Record<string, string | null>
 
   const role = (meta.role as string) ?? 'END_USER'
   const dbUserId = (meta.dbUserId as string) ?? userId
