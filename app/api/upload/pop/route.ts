@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
-import { uploadToR2, isR2Configured, validateFileSize } from '@/lib/r2-storage'
+import { uploadToR2, isR2Configured, validateFileSize, verifyFileSignature } from '@/lib/r2-storage'
 
 // Route segment config for large file uploads
 export const maxDuration = 300
@@ -58,6 +58,13 @@ export async function POST(request: NextRequest) {
     // Get file buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
+
+    // Verify actual bytes match the declared type (client MIME is not trusted).
+    if (!verifyFileSignature(buffer, file.type)) {
+      return NextResponse.json({
+        message: 'File content does not match its declared type, or the type is not permitted.'
+      }, { status: 400 })
+    }
 
     // Generate filename
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')

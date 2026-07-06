@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
-import { uploadToR2, isR2Configured, validateFileType, validateFileSize } from '@/lib/r2-storage'
+import { uploadToR2, isR2Configured, validateFileSize, verifyFileSignature } from '@/lib/r2-storage'
+
+const ASSET_UPLOAD_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp']
 
 // Route segment config for large file uploads (100MB for videos)
 export const maxDuration = 300 // 5 minutes timeout for large uploads
@@ -14,6 +17,10 @@ export async function POST(request: NextRequest) {
     }
     const { userId, tenantId, role } = authCtx
 
+    // Asset images are managed from the admin asset register.
+    if (!authCtx.isSuperAdmin && !ASSET_UPLOAD_ROLES.includes(role)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
 
     // Check if R2 is configured
     if (!isR2Configured()) {
@@ -35,9 +42,9 @@ export async function POST(request: NextRequest) {
 
     for (const file of files) {
       try {
-        // Validate file type (images only)
-        if (!validateFileType(file.type, ['image/'])) {
-          errors.push(`${file.name}: Only image files are allowed`)
+        // Validate declared type against an explicit allowlist (no SVG — XSS risk).
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          errors.push(`${file.name}: Only JPEG, PNG, GIF, WEBP or BMP images are allowed`)
           continue
         }
 
@@ -50,6 +57,12 @@ export async function POST(request: NextRequest) {
         // Get file buffer
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
+
+        // Verify actual bytes match the declared type (client MIME is not trusted).
+        if (!verifyFileSignature(buffer, file.type)) {
+          errors.push(`${file.name}: File content does not match its declared image type`)
+          continue
+        }
 
         // Generate filename with asset ID prefix
         const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'

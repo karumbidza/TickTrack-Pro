@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
-import { uploadToR2, isR2Configured, validateFileSize } from '@/lib/r2-storage'
+import { uploadToR2, isR2Configured, validateFileSize, verifyFileSignature } from '@/lib/r2-storage'
+
+const UPLOAD_ROLES = ['CONTRACTOR', 'TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
 
 // Route segment config for large file uploads
 export const maxDuration = 300
@@ -14,6 +16,10 @@ export async function POST(request: NextRequest) {
     }
     const { userId, tenantId, role } = authCtx
 
+    // Only contractors (submitting invoices) and tenant admins may upload here.
+    if (!authCtx.isSuperAdmin && !UPLOAD_ROLES.includes(role)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
 
     // Check if R2 is configured
     if (!isR2Configured()) {
@@ -62,6 +68,13 @@ export async function POST(request: NextRequest) {
     // Get file buffer
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
+
+    // Verify the file's actual bytes match its declared type (client MIME is not trusted).
+    if (!verifyFileSignature(buffer, file.type)) {
+      return NextResponse.json({
+        message: 'File content does not match its declared type, or the type is not permitted.'
+      }, { status: 400 })
+    }
 
     // Generate filename with ticket ID prefix
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
