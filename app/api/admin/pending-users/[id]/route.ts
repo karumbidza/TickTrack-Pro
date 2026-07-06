@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import crypto from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 import { z } from 'zod'
 
 const approveUserSchema = z.object({
@@ -110,7 +111,9 @@ export async function POST(
     }
 
     // Generate activation token for email verification + password setup
-    const activationToken = crypto.randomBytes(32).toString('hex')
+    // (store the hash; email the raw token)
+    const rawActivationToken = generateToken()
+    const activationToken = hashToken(rawActivationToken)
     const activationExpires = new Date(Date.now() + 72 * 60 * 60 * 1000) // 72 hours
 
     // Update user and assign branches
@@ -151,7 +154,7 @@ export async function POST(
     })
 
     // Send activation email
-    const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/activate-account/${activationToken}`
+    const activationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/activate-account/${rawActivationToken}`
     
     // Get branch names for the email
     const branchNames = result.branches.map(ub => ub.branch.name)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
+import { hashToken } from '@/lib/tokens'
 
 // Route segment config for large file uploads
 export const maxDuration = 300
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Validate invitation
     const invitation = await prisma.contractorInvitation.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
       include: { tenant: true }
     })
 

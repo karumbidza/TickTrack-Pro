@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { hashToken } from '@/lib/tokens'
 
 // GET - Validate invitation token and get tenant info
 export async function GET(
@@ -14,7 +15,7 @@ export async function GET(
     }
 
     const invitation = await prisma.contractorInvitation.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
       include: {
         tenant: {
           select: {

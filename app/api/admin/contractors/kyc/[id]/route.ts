@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { randomBytes } from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 import { logger } from '@/lib/logger'
 import { sendContractorPasswordSetupEmail } from '@/lib/email'
 
@@ -86,8 +86,9 @@ export async function PATCH(
     }
 
     if (action === 'approve') {
-      // Generate password setup token
-      const passwordSetupToken = randomBytes(32).toString('hex')
+      // Generate password setup token (store the hash; email the raw token).
+      const rawSetupToken = generateToken()
+      const passwordSetupToken = hashToken(rawSetupToken)
       const passwordSetupExpires = new Date()
       passwordSetupExpires.setDate(passwordSetupExpires.getDate() + 7) // 7 days
 
@@ -105,7 +106,7 @@ export async function PATCH(
 
       // Generate password setup link
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const passwordSetupLink = `${appUrl}/contractor-setup/${passwordSetupToken}`
+      const passwordSetupLink = `${appUrl}/contractor-setup/${rawSetupToken}`
 
       // Send email with password setup link
       try {

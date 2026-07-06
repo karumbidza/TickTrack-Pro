@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import crypto from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 
 // POST - Send or resend activation email to user
 export async function POST(
@@ -42,8 +43,9 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Generate new activation token
-    const activationToken = crypto.randomBytes(32).toString('hex')
+    // Generate new activation token (store the hash; email the raw token)
+    const rawActivationToken = generateToken()
+    const activationToken = hashToken(rawActivationToken)
     const activationExpires = new Date(Date.now() + 72 * 60 * 60 * 1000) // 72 hours
 
     // Update user with new token
@@ -57,7 +59,7 @@ export async function POST(
     })
 
     // Build activation email
-    const activationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/activate-account/${activationToken}`
+    const activationLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/activate-account/${rawActivationToken}`
     const branchNames = user.branches.map(ub => ub.branch.name)
     const branchListHtml = branchNames.map(name => `<li style="padding: 4px 0;">${name}</li>`).join('')
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { logger } from '@/lib/logger'
+import { hashToken } from '@/lib/tokens'
 
 // GET - Validate password setup token
 export async function GET(
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const kyc = await prisma.contractorKYC.findUnique({
-      where: { passwordSetupToken: token },
+      where: { passwordSetupToken: hashToken(token) },
       include: {
         tenant: {
           select: {
@@ -91,7 +92,7 @@ export async function POST(
     }
 
     const kyc = await prisma.contractorKYC.findUnique({
-      where: { passwordSetupToken: token },
+      where: { passwordSetupToken: hashToken(token) },
       include: { tenant: true }
     })
 

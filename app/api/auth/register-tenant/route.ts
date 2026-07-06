@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { randomBytes } from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 import { logger } from '@/lib/logger'
 import { sendVerificationEmail, sendTrialStartedEmail } from '@/lib/email'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
@@ -88,8 +88,9 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // Create admin user with activation token (NO password - user sets via email)
-      const activationToken = randomBytes(32).toString('hex')
+      // Create admin user with activation token (store the hash; email the raw token)
+      const rawActivationToken = generateToken()
+      const activationToken = hashToken(rawActivationToken)
       const activationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
       
       const adminUser = await tx.user.create({
@@ -121,12 +122,12 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return { tenant, adminUser, subscription }
+      return { tenant, adminUser, subscription, rawActivationToken }
     })
 
     // Send verification email
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-    const verificationLink = `${baseUrl}/auth/activate-account/${result.adminUser.activationToken}`
+    const verificationLink = `${baseUrl}/auth/activate-account/${result.rawActivationToken}`
     
     try {
       await sendVerificationEmail(

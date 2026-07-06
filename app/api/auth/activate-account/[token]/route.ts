@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { hashToken } from '@/lib/tokens'
 
 // Strong password validation - requires complexity
 const passwordSchema = z.string()
@@ -35,7 +36,7 @@ export async function GET(
     }
 
     const user = await prisma.user.findUnique({
-      where: { activationToken: token },
+      where: { activationToken: hashToken(token) },
       select: {
         id: true,
         name: true,
@@ -107,7 +108,7 @@ export async function POST(
     const validatedData = activateAccountSchema.parse(body)
 
     const user = await prisma.user.findUnique({
-      where: { activationToken: token },
+      where: { activationToken: hashToken(token) },
       include: {
         tenant: { select: { name: true } }
       }

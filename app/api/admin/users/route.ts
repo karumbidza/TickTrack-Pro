@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { sendUserActivationEmail } from '@/lib/email'
 import { z } from 'zod'
 import crypto from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 
 // Validation schema for creating users (NO PASSWORD - user sets it via activation)
 const createUserSchema = z.object({
@@ -149,8 +150,9 @@ export async function POST(request: NextRequest) {
       finalBranchIds = allBranches.map(b => b.id)
     }
 
-    // Generate activation token (user will set their own password)
-    const activationToken = crypto.randomBytes(32).toString('hex')
+    // Generate activation token (store the hash; email the raw token)
+    const rawActivationToken = generateToken()
+    const activationToken = hashToken(rawActivationToken)
     const activationExpires = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hours
 
     // Create user with branch assignments (NO password - pending activation)
@@ -205,7 +207,7 @@ export async function POST(request: NextRequest) {
 
     // Generate activation link
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-    const activationLink = `${baseUrl}/auth/activate-account/${activationToken}`
+    const activationLink = `${baseUrl}/auth/activate-account/${rawActivationToken}`
 
     // Send activation email (user will set their own password)
     sendUserActivationEmail(

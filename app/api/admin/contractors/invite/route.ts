@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
 import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
-import { randomBytes } from 'crypto'
+import { generateToken, hashToken } from '@/lib/tokens'
 import { logger } from '@/lib/logger'
 import { sendContractorInvitationEmail } from '@/lib/email'
 
@@ -92,8 +92,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Generate invitation token
-    const token = randomBytes(32).toString('hex')
+    // Generate invitation token. Only the hash is stored; the raw token is what
+    // travels in the emailed registration link.
+    const rawToken = generateToken()
+    const token = hashToken(rawToken)
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 7) // 7 days expiry
 
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // Generate registration link
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const registrationLink = `${appUrl}/contractor-registration/${token}`
+    const registrationLink = `${appUrl}/contractor-registration/${rawToken}`
 
     // Send invitation email
     try {
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
       invitation: {
         id: invitation.id,
         email: invitation.email,
-        token: invitation.token,
+        token: rawToken,
         expiresAt: invitation.expiresAt
       },
       registrationLink,

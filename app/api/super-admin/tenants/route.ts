@@ -5,6 +5,7 @@ import { sendVerificationEmail } from '@/lib/email'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
+import { hashToken } from '@/lib/tokens'
 
 export async function GET(request: NextRequest) {
   // Rate limit: 200 requests per minute for super admin
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
       await tx.user.update({
         where: { id: adminUser.id },
         data: {
-          activationToken: verificationToken,
+          activationToken: hashToken(verificationToken),
           activationExpires: expires,
           status: 'APPROVED_EMAIL_PENDING',
         }
