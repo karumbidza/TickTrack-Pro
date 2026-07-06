@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { requireTenantResource } from '@/lib/tenant-guard'
 import { prisma } from '@/lib/prisma'
 
 // Get contractor's categories
@@ -22,12 +23,9 @@ export async function GET(
 
     const contractorId = params.id
 
-    // Find the contractor user
-    const contractor = await prisma.user.findUnique({
-      where: { id: contractorId },
-      include: {
-        contractorProfile: true
-      }
+    // Find the contractor user (tenant-scoped; fails closed)
+    const contractor = await requireTenantResource(prisma.user, contractorId, authCtx, {
+      include: { contractorProfile: true }
     })
 
     if (!contractor || !contractor.contractorProfile) {

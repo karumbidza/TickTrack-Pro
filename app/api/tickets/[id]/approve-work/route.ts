@@ -40,11 +40,12 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
     }
 
-    // Check if user owns the ticket or is an admin
+    // Check if user owns the ticket or is an admin in the ticket's tenant.
     const isOwner = ticket.userId === userId
     const isAdmin = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN'].includes(role)
+    const isSameTenant = ticket.tenantId === tenantId
 
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !(isAdmin && isSameTenant)) {
       return NextResponse.json({ error: 'You do not have permission to approve this work description' }, { status: 403 })
     }
 

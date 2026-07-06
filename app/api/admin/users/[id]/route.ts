@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { requireTenantResource } from '@/lib/tenant-guard'
 import { prisma } from '@/lib/prisma'
 
 // Get single user
@@ -22,8 +23,8 @@ export async function GET(
 
     const targetUserId = params.id
 
-    const user = await prisma.user.findUnique({
-      where: { id: targetUserId },
+    // Tenant-scoped lookup (fails closed; SUPER_ADMIN may cross tenants).
+    const user = await requireTenantResource(prisma.user, targetUserId, authCtx, {
       select: {
         id: true,
         name: true,

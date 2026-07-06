@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
+import { requireTenantResource } from '@/lib/tenant-guard'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -8,18 +9,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId } = await auth()
-    if (!clerkUserId) {
+    const authCtx = await getAuthContext()
+    if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: ticketId } = await params
 
-    // Get the ticket with scheduled arrival and status history
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
+    // Tenant-scoped lookup (fails closed; SUPER_ADMIN may cross tenants).
+    const ticket = await requireTenantResource(prisma.ticket, ticketId, authCtx, {
       select: {
         id: true,
+        userId: true,
         scheduledArrival: true,
         assignedTo: {
           select: {
@@ -41,6 +42,11 @@ export async function GET(
     })
 
     if (!ticket) {
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+    }
+
+    // End users may only read rating data for their own ticket.
+    if (authCtx.isEndUser && ticket.userId !== authCtx.userId) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
     }
 

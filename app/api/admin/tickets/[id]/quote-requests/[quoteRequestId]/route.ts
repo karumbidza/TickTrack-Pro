@@ -58,6 +58,11 @@ export async function POST(
       return NextResponse.json({ error: 'Quote request not found' }, { status: 404 })
     }
 
+    // Tenant isolation: the parent ticket must belong to the caller's tenant.
+    if (quoteRequest.ticket.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Quote request not found' }, { status: 404 })
+    }
+
     if (action === 'award') {
       // Check if quote was submitted
       if (quoteRequest.status !== 'submitted') {

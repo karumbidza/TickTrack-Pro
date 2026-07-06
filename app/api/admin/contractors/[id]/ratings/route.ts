@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { requireTenantResource } from '@/lib/tenant-guard'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -23,10 +24,9 @@ export async function GET(
 
     const { id: contractorId } = await params
 
-    // Get the contractor to verify it exists
-    const contractor = await prisma.contractor.findUnique({
-      where: { id: contractorId }
-    })
+    // Verify the contractor exists AND belongs to the caller's tenant (fails closed;
+    // SUPER_ADMIN may cross tenants). Ratings are then safe to read by contractorId.
+    const contractor = await requireTenantResource(prisma.contractor, contractorId, authCtx)
 
     if (!contractor) {
       return NextResponse.json({ error: 'Contractor not found' }, { status: 404 })

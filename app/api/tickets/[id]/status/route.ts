@@ -55,6 +55,11 @@ export async function PATCH(
     
     // ADMIN can update to CLOSED
     else if (['TENANT_ADMIN', 'SUPER_ADMIN', 'IT_ADMIN', 'MAINTENANCE_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'PROJECTS_ADMIN'].includes(userRole)) {
+      // Tenant isolation: non-super-admins may only act on their own tenant's tickets.
+      if (userRole !== 'SUPER_ADMIN' && ticket.tenantId !== tenantId) {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+      }
+
       const allowedTransitions: Record<string, string[]> = {
         'COMPLETED': ['CLOSED']
       }
