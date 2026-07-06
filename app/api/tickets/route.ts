@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 import { calculateSLADeadlines } from '@/lib/sla-utils'
 import { sendNewTicketEmailToAdmin } from '@/lib/email'
@@ -120,6 +121,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { userId, tenantId, role, branchId } = authCtx
+
+    // Block writes for tenants without an active subscription (READ_ONLY/SUSPENDED/etc.)
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     // Only END_USER can create tickets
     if (role !== 'END_USER') {

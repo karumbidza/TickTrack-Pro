@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 import { sendUserActivationEmail } from '@/lib/email'
 import { z } from 'zod'
@@ -85,6 +86,9 @@ export async function POST(request: NextRequest) {
     }
 
     const { userId, tenantId, role } = authCtx
+
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     const allowedRoles = ['TENANT_ADMIN']
 

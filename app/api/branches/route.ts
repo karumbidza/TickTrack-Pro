@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 
 // GET - List all branches for tenant
@@ -42,6 +43,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { tenantId, role } = authCtx
+
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     // Check if user is tenant admin
     if (role !== 'TENANT_ADMIN') {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
@@ -165,6 +166,9 @@ export async function POST(request: NextRequest) {
     }
     const { userId, tenantId, role, branchId } = authCtx
 
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
+
     // Get user and tenant info
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -239,6 +243,9 @@ export async function PUT(request: NextRequest) {
     }
     const { userId, tenantId, role } = authCtx
 
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
+
     const data = await request.json()
     const { id, ...updateData } = data
 
@@ -278,6 +285,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { userId, tenantId, role } = authCtx
+
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

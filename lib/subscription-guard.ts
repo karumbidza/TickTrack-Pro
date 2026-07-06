@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext, type AuthContext } from '@/lib/auth'
 import { prisma } from './prisma'
 
 export type SubscriptionAccessLevel = 'full' | 'grace' | 'read_only' | 'blocked'
@@ -90,12 +90,10 @@ export function withSubscriptionGuard(
 
   return async (request: NextRequest, context?: { params?: Record<string, string> }) => {
     try {
-      const { userId: clerkUserId, sessionClaims } = await auth()
-      if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const ctx = await getAuthContext()
+      if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-      const role = (meta.role as string) ?? 'END_USER'
-      const tenantId = meta.tenantId ?? null
+      const { role, tenantId } = ctx
 
       if (skipForRoles.includes(role)) return handler(request, context)
 
@@ -123,19 +121,35 @@ export async function subscriptionCheck(
   request: NextRequest,
   requiredLevel: 'read' | 'write' = 'write'
 ): Promise<NextResponse | null> {
-  const { userId: clerkUserId, sessionClaims } = await auth()
-  if (!clerkUserId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getAuthContext()
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return enforceSubscription(ctx, requiredLevel)
+}
 
-  const meta = (sessionClaims?.publicMetadata ?? {}) as Record<string, string | null>
-  const role = (meta.role as string) ?? 'END_USER'
-  const tenantId = meta.tenantId ?? null
+/**
+ * Enforce subscription access for an already-resolved AuthContext. Call this at
+ * the top of mutating tenant handlers (after getAuthContext) to gate writes on
+ * subscription status server-side:
+ *
+ *   const gate = await enforceSubscription(authCtx, 'write')
+ *   if (gate) return gate
+ *
+ * Returns a 403 NextResponse when the tenant may not perform the action, or null
+ * when the request may proceed. SUPER_ADMIN bypasses; a null tenantId is blocked.
+ */
+export async function enforceSubscription(
+  ctx: AuthContext,
+  requiredLevel: 'read' | 'write' = 'write'
+): Promise<NextResponse | null> {
+  if (ctx.isSuperAdmin) return null
+  if (!ctx.tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 403 })
 
-  if (role === 'SUPER_ADMIN') return null
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 403 })
-
-  const access = await checkSubscriptionAccess(tenantId, requiredLevel)
+  const access = await checkSubscriptionAccess(ctx.tenantId, requiredLevel)
   if (!access.allowed) {
-    return NextResponse.json({ error: 'Subscription required', message: access.message, level: access.level }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Subscription required', message: access.message, level: access.level },
+      { status: 403 }
+    )
   }
   return null
 }
