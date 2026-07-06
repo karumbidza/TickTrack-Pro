@@ -23,23 +23,49 @@ type ApiHandler = (
   context?: { params?: Record<string, string> }
 ) => Promise<NextResponse> | NextResponse
 
+// Number of trusted reverse-proxy hops in front of the app (e.g. 1 for a single
+// nginx). The client-controlled portion of X-Forwarded-For is on the LEFT, so we
+// must count in from the RIGHT — never trust the leftmost entry, which any caller
+// can spoof to mint a fresh rate-limit bucket per request.
+const TRUSTED_PROXY_HOPS = Math.max(1, parseInt(process.env.TRUSTED_PROXY_HOPS || '1', 10))
+
+// Rate-limit types that must FAIL CLOSED if the limiter errors (auth/OTP/login):
+// availability is less important than preventing brute force on these paths.
+const FAIL_CLOSED_TYPES = new Set<keyof typeof RATE_LIMITS>(['auth'])
+
 /**
- * Get client IP from request headers
+ * Get the client IP, resolving X-Forwarded-For against the trusted-proxy count.
+ * With TRUSTED_PROXY_HOPS=1 and `X-Forwarded-For: client, nginxPeer`, this returns
+ * the IP nginx actually observed (the last entry), not the spoofable first entry.
  */
 function getClientIp(request: NextRequest): string {
-  // Check various headers for the real IP
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) {
-    return forwarded.split(',')[0].trim()
+    const parts = forwarded.split(',').map(s => s.trim()).filter(Boolean)
+    if (parts.length > 0) {
+      const idx = Math.max(0, parts.length - TRUSTED_PROXY_HOPS)
+      return parts[idx] ?? parts[parts.length - 1]
+    }
   }
-  
+
   const realIp = request.headers.get('x-real-ip')
   if (realIp) {
     return realIp
   }
-  
+
   // Fallback - this may not work in all environments
   return request.headers.get('x-client-ip') || 'unknown'
+}
+
+/** Build the fail-open/closed fallback when the limiter itself errors. */
+function limiterErrorFallback(limitType: keyof typeof RATE_LIMITS): NextResponse | null {
+  if (FAIL_CLOSED_TYPES.has(limitType)) {
+    return NextResponse.json(
+      { error: 'Service temporarily unavailable', message: 'Please try again shortly.' },
+      { status: 503 }
+    )
+  }
+  return null // fail open for non-sensitive endpoints to preserve availability
 }
 
 /**
@@ -87,9 +113,9 @@ export function withRateLimit(
       
       return response
     } catch (error) {
-      // If rate limiting fails, allow the request (fail open)
       console.error('[RateLimit] Error checking rate limit:', error)
-      return handler(request, context)
+      const blocked = limiterErrorFallback(limitType)
+      return blocked ?? handler(request, context)
     }
   }
 }
@@ -171,6 +197,7 @@ export async function rateLimitCheck(
     return null // Allowed
   } catch (error) {
     console.error('[RateLimit] Error:', error)
-    return null // Fail open
+    // Fail closed for sensitive limiters (auth/OTP/login), fail open otherwise.
+    return limiterErrorFallback(limitType)
   }
 }
