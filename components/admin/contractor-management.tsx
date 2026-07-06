@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { ContractorKYCManagement } from './contractor-kyc-management'
+import { Card, MonoLabel, Badge, Avatar, avatarTint } from '@/components/admin/kit'
 
 interface ContractorRating {
   id: string
@@ -415,7 +416,7 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
   const avgRating = useMemo(() => {
     const rated = contractors.filter(c => c.rating && c.rating > 0)
     if (rated.length === 0) return null
-    return (rated.reduce((sum, c) => sum + (c.rating || 0), 0) / rated.length).toFixed(1)
+    return (rated.reduce((sum, c) => sum + (c.rating || 0), 0) / rated.length).toFixed(2)
   }, [contractors])
 
   const filteredContractors = useMemo(() => {
@@ -444,8 +445,10 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
     )
   }
 
+  const activeFilterCount = contractorFilters.status ? 1 : 0
+
   return (
-    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh', padding: '26px 32px 48px' }}>
       {/* Filter drawer overlay */}
       {filterDrawerOpen && <div onClick={() => setFilterDrawerOpen(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(26,25,22,0.25)', zIndex: 49 }} />}
       {/* Filter drawer */}
@@ -469,135 +472,132 @@ export function ContractorManagement({ user }: ContractorManagementProps) {
         </div>
       </div>
 
-      {/* Topbar — 52px */}
-      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Contractors</div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredContractors.length} contractors</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-            Filters
-            {contractorFilters.status && <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>1</span>}
-          </button>
-          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Invite</button>
-          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--bg)' }}>+ Quick Add</button>
-        </div>
-      </div>
+      <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* 4 stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          <div onClick={() => setStatFilter(statFilter === '' ? '' : '')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{contractors.length}</div>
-          </div>
-          <div onClick={() => setStatFilter(statFilter === 'available' ? '' : 'available')} style={{ background: 'var(--surface)', border: statFilter === 'available' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Available</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{availableCount}</div>
-          </div>
-          <div onClick={() => setStatFilter(statFilter === 'active' ? '' : 'active')} style={{ background: 'var(--surface)', border: statFilter === 'active' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Active / On Jobs</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{activeContractors.length}</div>
-          </div>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, padding: '11px 13px' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Avg Rating</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{avgRating ?? '—'}</div>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+            {activeContractors.length} active contractor{activeContractors.length === 1 ? '' : 's'}
+            {avgRating != null && <> · avg rating <span style={{ color: 'var(--amber)' }}>★</span> {avgRating}</>}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => setFilterDrawerOpen(o => !o)} className="filter-chip" style={{ height: 34, position: 'relative' }}>
+              <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'currentColor', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              Filters
+              {activeFilterCount > 0 && <span className="chip-count">{activeFilterCount}</span>}
+            </button>
+            <button onClick={() => setShowCreateDialog(true)} style={{ height: 36, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)' }}>Quick add</button>
+            <button onClick={() => setShowInviteDialog(true)} className="btn-accent">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              Invite contractor
+            </button>
           </div>
         </div>
 
-        {/* Tabs + search merged row */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border)', borderRadius: '8px 8px 0 0', borderBottom: 'none', padding: '0 12px', backgroundColor: 'var(--surface)' }}>
-            <div style={{ display: 'flex' }}>
-              {[{ value: 'active', label: 'Active Contractors' }, { value: 'kyc', label: 'KYC Applications' }].map(tab => (
-                <button key={tab.value} onClick={() => setActiveTab(tab.value)} style={{ padding: '10px 12px', fontSize: 'var(--text-xs)', fontWeight: activeTab === tab.value ? 500 : 400, color: activeTab === tab.value ? 'var(--text-primary)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: activeTab === tab.value ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.12s', marginBottom: -1 }}>
-                  {tab.label}
-                </button>
-              ))}
+        {/* Stat cards (clickable quick-filters) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {[
+            { key: '', label: 'Total', value: contractors.length, color: 'var(--text-primary)', clickable: true },
+            { key: 'available', label: 'Available', value: availableCount, color: 'var(--green)', clickable: true },
+            { key: 'active', label: 'Active / On jobs', value: activeContractors.length, color: 'var(--blue)', clickable: true },
+            { key: '__avg', label: 'Avg rating', value: avgRating ?? '—', color: 'var(--text-primary)', clickable: false },
+          ].map(card => {
+            const active = card.clickable && statFilter === card.key
+            return (
+              <Card
+                key={card.label}
+                padding="16px 18px"
+                onClick={card.clickable ? () => setStatFilter(statFilter === card.key ? '' : card.key) : undefined}
+                style={active ? { border: '1px solid var(--accent-color)', background: 'var(--accent-soft)' } : undefined}
+              >
+                <MonoLabel>{card.label}</MonoLabel>
+                <div className="stat-number" style={{ marginTop: 6, color: card.color }}>{card.value}</div>
+              </Card>
+            )
+          })}
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[{ value: 'active', label: 'Active contractors' }, { value: 'kyc', label: 'KYC applications' }].map(tab => (
+              <button key={tab.value} onClick={() => setActiveTab(tab.value)} style={{ padding: '9px 4px', marginRight: 14, fontSize: 13, fontWeight: activeTab === tab.value ? 500 : 400, color: activeTab === tab.value ? 'var(--accent-color)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: activeTab === tab.value ? '2px solid var(--accent-color)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.12s', marginBottom: -1 }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ position: 'relative', marginBottom: 8 }}>
+            <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contractors…" style={{ paddingLeft: 30, paddingRight: 12, height: 34, fontSize: 13, border: '1px solid var(--border)', borderRadius: 9, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', width: 220 }} />
+          </div>
+        </div>
+
+        {/* Table / KYC */}
+        {activeTab === 'active' ? (
+          <Card padding={0} style={{ overflow: 'hidden' }}>
+            {/* Column header */}
+            <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.3fr 90px 90px 110px 110px 130px', gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+              <span>Contractor</span><span>Specialties</span><span>Rate</span><span>Rating</span><span>Active jobs</span><span>Status</span><span />
             </div>
-            {/* Search floated right */}
-            <div style={{ position: 'relative' }}>
-              <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contractors..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 5, paddingBottom: 5, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 190 }} />
-            </div>
-          </div>
-
-          {/* Table card — connected to tab row */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-            {activeTab === 'active' ? (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['Contractor', 'Specialty', 'Jobs Done', 'Rating', 'Status', 'Joined', 'Actions'].map(col => (
-                        <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredContractors.map((contractor, i) => (
-                      <tr key={contractor.id} style={{ borderBottom: i === filteredContractors.length - 1 ? 'none' : '1px solid var(--surface2)' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        <td style={{ padding: '9px 14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                            <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                              {getInitials(contractor.name, contractor.email)}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{contractor.name}</div>
-                              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{contractor.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>
-                          {contractor.categories && contractor.categories.length > 0
-                            ? contractor.categories.slice(0, 2).map(c => c.name).join(', ')
-                            : <span style={{ color: 'var(--text-muted)' }}>—</span>
-                          }
-                        </td>
-                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px' }}>{contractor.totalJobs ?? 0}</td>
-                        <td style={{ padding: '9px 14px' }}>
-                          {contractor.rating ? (
-                            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: '#92400e' }}>{contractor.rating.toFixed(1)} ★</span>
-                          ) : <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>—</span>}
-                        </td>
-                        <td style={{ padding: '9px 14px' }}>
-                          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: contractor.isAvailable ? '#e8f5ee' : contractor.isActive ? '#eff6ff' : '#f0efe9', color: contractor.isAvailable ? '#2d6a4f' : contractor.isActive ? '#1e40af' : '#6b6860' }}>
-                            {contractor.isAvailable ? 'Available' : contractor.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
-                          —
-                        </td>
-                        <td style={{ padding: '9px 14px' }}>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button onClick={() => handleEditContractor(contractor)} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Edit</button>
-                            <button onClick={() => handleViewRatings(contractor)} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Ratings</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {filteredContractors.length === 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
-                    <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                      <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-                    </div>
-                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No contractors found</div>
-                  </div>
-                )}
+            {filteredContractors.map(contractor => {
+              const t = avatarTint(contractor.name || contractor.email)
+              const specs = (contractor.categories && contractor.categories.length > 0)
+                ? contractor.categories.map(c => c.name)
+                : (contractor.specializations || [])
+              const statusVariant = contractor.isAvailable ? 'green' : contractor.isActive ? 'blue' : 'neutral'
+              const statusText = contractor.isAvailable ? 'Available' : contractor.isActive ? 'Active' : 'Inactive'
+              return (
+                <div
+                  key={contractor.id}
+                  className="ds-row"
+                  onClick={() => handleViewRatings(contractor)}
+                  style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.3fr 90px 90px 110px 110px 130px', gap: 12, alignItems: 'center', padding: '14px 22px', cursor: 'pointer' }}
+                >
+                  {/* Contractor */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                    <Avatar initials={getInitials(contractor.name, contractor.email)} size={36} tint={t.tint} color={t.color} />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500 }}>{contractor.name}</span>
+                      <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contractor.email}</span>
+                    </span>
+                  </span>
+                  {/* Specialties */}
+                  <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {specs.length > 0 ? specs.slice(0, 3).map((s, idx) => (
+                      <span key={idx} style={{ fontSize: 11, background: 'var(--hover-strong)', color: 'var(--text-tertiary)', borderRadius: 99, padding: '2px 9px', whiteSpace: 'nowrap' }}>{s}</span>
+                    )) : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>}
+                  </span>
+                  {/* Rate */}
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12.5 }}>{contractor.hourlyRate != null ? `$${contractor.hourlyRate}/hr` : '—'}</span>
+                  {/* Rating */}
+                  <span style={{ fontSize: 13, color: contractor.rating ? 'var(--amber)' : 'var(--text-muted)' }}>{contractor.rating ? `★ ${contractor.rating.toFixed(1)}` : '—'}</span>
+                  {/* Active jobs */}
+                  <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>{contractor.totalJobs ?? 0} done</span>
+                  {/* Status */}
+                  <span><Badge variant={statusVariant}>{statusText}</Badge></span>
+                  {/* Actions */}
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
+                    <span onClick={e => { e.stopPropagation(); handleEditContractor(contractor) }} style={{ fontSize: 12.5, color: 'var(--text-muted)', cursor: 'pointer' }}>Edit</span>
+                    <span onClick={e => { e.stopPropagation(); handleViewRatings(contractor) }} className="link-accent" style={{ fontSize: 12.5 }}>View profile →</span>
+                  </span>
+                </div>
+              )
+            })}
+            {filteredContractors.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px' }}>
+                <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                </div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>No contractors found</div>
               </div>
-            ) : (
-              /* KYC tab — render ContractorKYCManagement */
-              <ContractorKYCManagement />
             )}
-          </div>
-        </div>
+          </Card>
+        ) : (
+          /* KYC tab — render ContractorKYCManagement */
+          <Card padding={0} style={{ overflow: 'hidden' }}>
+            <ContractorKYCManagement />
+          </Card>
+        )}
       </div>
 
       {/* Invite Dialog */}

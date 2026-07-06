@@ -40,6 +40,17 @@ import {
 import { toast } from 'sonner'
 import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
 import type { FilterState } from '@/components/FilterDrawer'
+import { Card as DsCard, MonoLabel, Badge as DsBadge, type BadgeVariant } from '@/components/admin/kit'
+
+const CONDITION_VARIANT: Record<string, BadgeVariant> = {
+  ACTIVE: 'green',
+  MAINTENANCE: 'amber',
+  REPAIR_NEEDED: 'amber',
+  OUT_OF_SERVICE: 'red',
+  RETIRED: 'neutral',
+  DECOMMISSIONED: 'neutral',
+  TRANSFERRED: 'blue',
+}
 
 interface Asset {
   id: string
@@ -603,6 +614,20 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
     outOfService: filteredAssets.filter(a => ['OUT_OF_SERVICE', 'RETIRED'].includes(a.status)).length
   }
 
+  const dueForService = assets.filter(a => {
+    if (!a.nextMaintenanceDate) return false
+    const d = new Date(a.nextMaintenanceDate)
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  }).length
+
+  const formatServiceDate = (dateStr?: string) => {
+    if (!dateStr) return '—'
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading assets...</div>
   }
@@ -618,7 +643,7 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
   ]
 
   return (
-    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh', padding: '26px 32px 48px' }}>
       {/* Filter Drawer */}
       <FilterDrawer
         isOpen={filterDrawerOpen}
@@ -629,202 +654,173 @@ export function AssetRegister({ tenantId, userRole = 'END_USER' }: AssetRegister
         statusOptions={ASSET_STATUS_OPTIONS}
       />
 
-      {/* Page Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 52, minHeight: 52, padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <h1 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Asset Register</h1>
-          {userBranches.length > 0 && (
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0 }}>
-              {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
+      <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+              {assets.length} registered asset{assets.length === 1 ? '' : 's'} · {dueForService} due for service this month
             </p>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ position: 'relative' }}>
-            <Search style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-muted)' }} />
-            <Input
-              placeholder="Search assets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ height: 32, fontSize: 12, paddingLeft: 28, width: 200, backgroundColor: 'var(--surface2)', border: '1px solid var(--border)' }}
-            />
+            {userBranches.length > 0 && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                {userBranches.map(b => b.name + (b.isHeadOffice ? ' (HQ)' : '')).join(', ')}
+              </p>
+            )}
           </div>
-          <FilterButton
-            isOpen={filterDrawerOpen}
-            activeCount={countActiveFilters(filters)}
-            onClick={() => setFilterDrawerOpen(o => !o)}
-          />
-          {isAdmin && (
-            <Button size="sm" variant="outline" onClick={() => setShowCategoryDialog(true)}>
-              Categories
-            </Button>
-          )}
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Asset
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
-              <AssetForm
-                onAssetCreated={() => {
-                  fetchAssets()
-                  setShowCreateDialog(false)
-                }}
-                tenantId={tenantId}
-                onCancel={() => setShowCreateDialog(false)}
-                categories={categories}
-                branches={branches}
-                onOpenCategoryManager={() => {
-                  setShowCreateDialog(false)
-                  setShowCategoryDialog(true)
-                }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-muted)' }} />
+              <Input
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ height: 34, fontSize: 13, paddingLeft: 30, width: 200, backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9 }}
               />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {/* Active Filter Tags */}
-      <ActiveFilterTags
-        filters={filters}
-        onRemove={removeFilter}
-        onClearAll={() => setFilters(EMPTY_FILTERS)}
-      />
-
-      {/* Category Pills */}
-      {categories.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setCategoryFilter('all')}
-            style={{
-              fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer',
-              border: `1px solid ${categoryFilter === 'all' ? '#1a1916' : 'var(--border)'}`,
-              backgroundColor: categoryFilter === 'all' ? '#1a1916' : 'transparent',
-              color: categoryFilter === 'all' ? '#f7f6f3' : 'var(--text-secondary)',
-            }}
-          >
-            All Categories
-          </button>
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setCategoryFilter(categoryFilter === cat.id ? 'all' : cat.id)}
-              style={{
-                fontSize: 11, padding: '3px 10px', borderRadius: 99, cursor: 'pointer',
-                border: `1px solid ${categoryFilter === cat.id ? '#1a1916' : 'var(--border)'}`,
-                backgroundColor: categoryFilter === cat.id ? '#1a1916' : 'transparent',
-                color: categoryFilter === cat.id ? '#f7f6f3' : 'var(--text-secondary)',
-              }}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Content */}
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowX: 'hidden' }}>
-          {/* Stats Strip */}
-          <div className="stats-strip">
-            {[
-              { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
-              { label: 'Active', value: stats.active, color: 'var(--green)' },
-              { label: 'Maintenance', value: stats.maintenance, color: 'var(--amber)' },
-              { label: 'Out of Service', value: stats.outOfService, color: 'var(--red)' },
-            ].map((s, i) => (
-              <div key={i} className="stats-strip-item">
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 300, color: s.color, letterSpacing: '-0.025em', lineHeight: 1 }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Assets Table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-                Asset Inventory
-                {(filters.status.length > 0 || filters.date || categoryFilter !== 'all' || searchTerm) && (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 8 }}>
-                    {filteredAssets.length} of {assets.length}
-                  </span>
-                )}
-              </span>
-            </CardHeader>
-            <CardContent style={{ paddingTop: 0 }}>
-              {filteredAssets.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
-                  <FileText style={{ width: 28, height: 28, marginBottom: 10, color: 'var(--text-muted)' }} />
-                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
-                    {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
-                  </p>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
-                    {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
-                  </p>
-                  <Button size="sm" onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />Add Asset
-                  </Button>
-                </div>
-            ) : (
-              <Box sx={{ width: '100%' }}>
-                <ScrollableDataGrid
-                  rows={filteredAssets}
-                  columns={assetColumns}
-                  initialState={{
-                    pagination: {
-                      paginationModel: { pageSize: 10 },
-                    },
+            </div>
+            <FilterButton
+              isOpen={filterDrawerOpen}
+              activeCount={countActiveFilters(filters)}
+              onClick={() => setFilterDrawerOpen(o => !o)}
+            />
+            {isAdmin && (
+              <button onClick={() => setShowCategoryDialog(true)} style={{ height: 36, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)' }}>
+                Categories
+              </button>
+            )}
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <button className="btn-accent">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                  Add asset
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
+                <AssetForm
+                  onAssetCreated={() => {
+                    fetchAssets()
+                    setShowCreateDialog(false)
                   }}
-                  pageSizeOptions={[10, 25, 50]}
-                  disableRowSelectionOnClick
-                  autoHeight
-                  getRowHeight={() => 'auto'}
-                  sx={{
-                    border: 'none',
-                    '& .MuiDataGrid-cell': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      py: 1,
-                    },
+                  tenantId={tenantId}
+                  onCancel={() => setShowCreateDialog(false)}
+                  categories={categories}
+                  branches={branches}
+                  onOpenCategoryManager={() => {
+                    setShowCreateDialog(false)
+                    setShowCategoryDialog(true)
                   }}
                 />
-              </Box>
-            )}
-
-            {/* Image Hover Popup */}
-            {hoveredImageAsset && hoveredImageAsset.images && hoveredImageAsset.images.length > 0 && (
-              <div
-                className="fixed z-50 rounded-lg shadow-lg p-2 pointer-events-none"
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  left: Math.min(imagePopupPosition.x, window.innerWidth - 340),
-                  top: Math.max(10, Math.min(imagePopupPosition.y - 100, window.innerHeight - 350)),
-                }}
-              >
-                <div className="space-y-2">
-                  <img
-                    src={hoveredImageAsset.images[0]}
-                    alt={hoveredImageAsset.name}
-                    className="w-80 h-60 object-cover rounded-md"
-                  />
-                  <div className="px-1">
-                    <p className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{hoveredImageAsset.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hoveredImageAsset.assetNumber}</p>
-                    {hoveredImageAsset.images.length > 1 && (
-                      <p className="text-xs mt-1" style={{ color: 'var(--ds-blue)' }}>
-                        {hoveredImageAsset.images.length} photos available
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            </CardContent>
-          </Card>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
+
+        {/* Active Filter Tags */}
+        <ActiveFilterTags
+          filters={filters}
+          onRemove={removeFilter}
+          onClearAll={() => setFilters(EMPTY_FILTERS)}
+        />
+
+        {/* Category filter chips */}
+        {categories.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setCategoryFilter('all')} className={`filter-chip${categoryFilter === 'all' ? ' active' : ''}`}>
+              All categories
+            </button>
+            {categories.map(cat => (
+              <button key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? 'all' : cat.id)} className={`filter-chip${categoryFilter === cat.id ? ' active' : ''}`}>
+                {cat.color && <span style={{ width: 7, height: 7, borderRadius: 99, background: cat.color, flex: 'none' }} />}
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Stats Strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          {[
+            { label: 'Total', value: stats.total, color: 'var(--text-primary)' },
+            { label: 'Active', value: stats.active, color: 'var(--green)' },
+            { label: 'Maintenance', value: stats.maintenance, color: 'var(--amber)' },
+            { label: 'Out of service', value: stats.outOfService, color: 'var(--red)' },
+          ].map((s, i) => (
+            <DsCard key={i} padding="16px 18px">
+              <MonoLabel>{s.label}</MonoLabel>
+              <div className="stat-number" style={{ marginTop: 6, color: s.color }}>{s.value}</div>
+            </DsCard>
+          ))}
+        </div>
+
+        {/* Assets Table */}
+        <DsCard padding={0} style={{ overflow: 'hidden' }}>
+          {/* Column header */}
+          <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: '1.4fr 150px 150px 130px 120px 80px 132px', gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+            <span>Asset</span><span>Category</span><span>Branch</span><span>Condition</span><span>Last service</span><span>Tickets</span><span />
+          </div>
+          {filteredAssets.map(asset => {
+            const ticketCount = asset._count?.tickets ?? asset.tickets?.length ?? 0
+            const openHistory = () => { setSelectedAsset(asset); setExpandedRepairId(null); setShowHistoryDialog(true) }
+            return (
+              <div
+                key={asset.id}
+                className="ds-row"
+                onClick={openHistory}
+                style={{ display: 'grid', gridTemplateColumns: '1.4fr 150px 150px 130px 120px 80px 132px', gap: 12, alignItems: 'center', padding: '13px 22px', cursor: 'pointer' }}
+              >
+                {/* Asset */}
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.name}</span>
+                  <span style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10.5, color: 'var(--text-muted)' }}>{asset.assetNumber}</span>
+                </span>
+                {/* Category */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-tertiary)', minWidth: 0 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 99, background: asset.category?.color || '#9E9C94', flex: 'none' }} />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.category?.name || 'Uncategorized'}</span>
+                </span>
+                {/* Branch */}
+                <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.location || '—'}</span>
+                {/* Condition */}
+                <span><DsBadge variant={CONDITION_VARIANT[asset.status] || 'neutral'}>{asset.status.replace(/_/g, ' ')}</DsBadge></span>
+                {/* Last service */}
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatServiceDate(asset.lastMaintenanceDate)}</span>
+                {/* Tickets */}
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-tertiary)' }}>{ticketCount}</span>
+                {/* Actions */}
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                  <button title="View history" onClick={e => { e.stopPropagation(); openHistory() }} style={{ display: 'flex', padding: 5, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <FileText style={{ width: 14, height: 14 }} />
+                  </button>
+                  <button title="Edit" onClick={e => { e.stopPropagation(); setSelectedAsset(asset); setShowEditDialog(true) }} style={{ display: 'flex', padding: 5, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <Edit style={{ width: 14, height: 14 }} />
+                  </button>
+                  <button title="Decommission" onClick={e => { e.stopPropagation(); setSelectedAsset(asset); setShowDecommissionDialog(true) }} style={{ display: 'flex', padding: 5, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--amber)' }}>
+                    <Archive style={{ width: 14, height: 14 }} />
+                  </button>
+                  <button title="Transfer" onClick={e => { e.stopPropagation(); setSelectedAsset(asset); setShowTransferDialog(true) }} style={{ display: 'flex', padding: 5, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--accent-color)' }}>
+                    <ArrowRightLeft style={{ width: 14, height: 14 }} />
+                  </button>
+                </span>
+              </div>
+            )
+          })}
+          {filteredAssets.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+              <FileText style={{ width: 28, height: 28, marginBottom: 10, color: 'var(--text-muted)' }} />
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                {assets.length === 0 ? 'No assets registered' : 'No assets match your filters'}
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                {assets.length === 0 ? 'Start by adding your first asset' : 'Try adjusting your search criteria'}
+              </p>
+              <button className="btn-accent" onClick={() => setShowCreateDialog(true)}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                Add asset
+              </button>
+            </div>
+          )}
+        </DsCard>
+      </div>
 
       {/* Decommission Dialog */}
         <Dialog open={showDecommissionDialog} onOpenChange={setShowDecommissionDialog}>

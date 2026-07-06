@@ -42,6 +42,7 @@ import {
 import { toast } from 'sonner'
 import { FilterDrawer, FilterButton, ActiveFilterTags, EMPTY_FILTERS, countActiveFilters } from '@/components/FilterDrawer'
 import type { FilterState } from '@/components/FilterDrawer'
+import { Badge as DSBadge, Avatar, MonoLabel, getInitials, avatarTint, type BadgeVariant } from '@/components/admin/kit'
 
 interface User {
   id: string
@@ -222,6 +223,33 @@ function getPriorityPill(priority: string): React.CSSProperties {
   return map[priority] || { backgroundColor: '#f0efe9', color: '#6b6860' }
 }
 
+// ── Redesign: status/priority → kit Badge variant (matches dashboard) ──
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  OPEN: 'amber', ASSIGNED: 'blue', ACCEPTED: 'blue', IN_PROGRESS: 'blue', PROCESSING: 'blue',
+  ON_SITE: 'violet', AWAITING_QUOTE: 'amber', QUOTE_SUBMITTED: 'amber',
+  AWAITING_DESCRIPTION: 'amber', AWAITING_WORK_APPROVAL: 'amber', AWAITING_APPROVAL: 'amber',
+  COMPLETED: 'green', CLOSED: 'neutral', CANCELLED: 'red',
+}
+const PRIORITY_VARIANT: Record<string, BadgeVariant> = { LOW: 'green', MEDIUM: 'amber', HIGH: 'orange', CRITICAL: 'red', URGENT: 'red' }
+// Category dot colour: prefer ticket.category.color, else derive from type (seed-style palette).
+const TYPE_COLOR: Record<string, string> = {
+  REPAIR: '#5A51D6', MAINTENANCE: '#2D6A4F', INSPECTION: '#1E40AF',
+  INSTALLATION: '#9A3412', REPLACEMENT: '#5B21B6', EMERGENCY: '#991B1B', OTHER: '#9E9C94',
+}
+const statusLabel = (s: string) => s.replace(/_/g, ' ')
+
+// Filter chip definitions. Counts always reflect the full dataset.
+const CHIP_DEFS: Array<{ key: string; label: string; statuses?: string[] }> = [
+  { key: '', label: 'All' },
+  { key: 'open', label: 'Open', statuses: ['OPEN'] },
+  { key: 'assigned', label: 'Assigned', statuses: ['ASSIGNED', 'ACCEPTED', 'PROCESSING'] },
+  { key: 'in_progress', label: 'In progress', statuses: ['IN_PROGRESS'] },
+  { key: 'on_site', label: 'On site', statuses: ['ON_SITE'] },
+  { key: 'awaiting', label: 'Awaiting approval', statuses: ['AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED'] },
+  { key: 'completed', label: 'Completed', statuses: ['COMPLETED'] },
+  { key: 'closed', label: 'Closed', statuses: ['CLOSED'] },
+]
+
 export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const [tickets, setTickets] = useState<TicketDetails[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
@@ -245,6 +273,9 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
 
   // Stat card filter
   const [statFilter, setStatFilter] = useState('') // '' | 'open' | 'in_progress' | 'completed'
+
+  // Redesign: single-select filter chip ('' = All)
+  const [chipFilter, setChipFilter] = useState('')
 
   // Assignment states
   const [selectedContractor, setSelectedContractor] = useState('')
@@ -336,9 +367,15 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
   const filteredTickets = useMemo(() => {
     let result = tickets
 
-    // Hide closed unless stat filter is completed or status filter includes CLOSED
-    if (!showClosedTickets && !filters.status.includes('CLOSED') && statFilter !== 'completed') {
+    // Hide closed unless stat filter is completed, status filter includes CLOSED, or Closed chip active
+    if (!showClosedTickets && !filters.status.includes('CLOSED') && statFilter !== 'completed' && chipFilter !== 'closed') {
       result = result.filter(t => t.status !== 'CLOSED')
+    }
+
+    // Filter chip (single-select status group)
+    if (chipFilter) {
+      const def = CHIP_DEFS.find(d => d.key === chipFilter)
+      if (def?.statuses) result = result.filter(t => def.statuses!.includes(t.status))
     }
 
     // Stat card filter
@@ -379,7 +416,32 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
     }
 
     return result
-  }, [tickets, searchTerm, filters, showClosedTickets, statFilter])
+  }, [tickets, searchTerm, filters, showClosedTickets, statFilter, chipFilter])
+
+  // Chip counts always reflect the full dataset.
+  const chips = CHIP_DEFS.map(d => ({
+    key: d.key,
+    label: d.label,
+    count: d.key === '' ? tickets.length : tickets.filter(t => d.statuses!.includes(t.status)).length,
+  }))
+
+  // Export the currently visible tickets as CSV.
+  const handleExport = () => {
+    const header = ['Ticket', 'Title', 'Branch', 'Priority', 'Status', 'Assignee', 'Created']
+    const rows = filteredTickets.map(t => [
+      t.ticketNumber, t.title, t.branch?.name || '', t.priority, t.status,
+      t.assignedTo?.name || 'Unassigned', new Date(t.createdAt).toLocaleDateString(),
+    ])
+    const csv = [header, ...rows]
+      .map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'tickets.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   const fetchTickets = async () => {
     try {
@@ -1044,131 +1106,108 @@ export function AdminTicketManagement({ user }: AdminTicketManagementProps) {
         branches={branches}
       />
 
-      {/* Topbar */}
-      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Tickets</div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>
-            {filteredTickets.length} tickets
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FilterButton isOpen={filterDrawerOpen} activeCount={countActiveFilters(filters)} onClick={() => setFilterDrawerOpen(o => !o)} />
-          <button onClick={fetchTickets} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
-            <RefreshCw size={13} strokeWidth={1.5} />
-          </button>
-        </div>
-      </div>
+      {/* Page */}
+      <div style={{ padding: '26px 32px 48px' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* ActiveFilterTags */}
-        <ActiveFilterTags
-          filters={filters}
-          statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
-          branches={branches}
-          onRemove={removeFilter}
-          onClearAll={clearAllFilters}
-        />
+          {/* Title */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 300, letterSpacing: '-0.03em' }}>Tickets</h1>
+              <p style={{ margin: '5px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace' }}>{filteredTickets.length}</span> of {tickets.length} shown
+              </p>
+            </div>
+          </div>
 
-        {/* 4 Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          {/* Total card */}
-          <div onClick={() => setStatFilter('')} style={{ background: 'var(--surface)', border: statFilter === '' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Total</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>{tickets.length}</div>
+          {/* Filter chips + controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {chips.map(chip => (
+              <button
+                key={chip.key || 'all'}
+                className={`filter-chip${chipFilter === chip.key ? ' active' : ''}`}
+                onClick={() => setChipFilter(chip.key)}
+              >
+                {chip.label}
+                <span className="chip-count">{chip.count}</span>
+              </button>
+            ))}
+            <div style={{ flex: 1 }} />
+            <div style={{ position: 'relative' }}>
+              <Search size={13} strokeWidth={1.6} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search tickets…"
+                style={{ height: 34, width: 220, paddingLeft: 32, paddingRight: 12, fontSize: 13, border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <FilterButton isOpen={filterDrawerOpen} activeCount={countActiveFilters(filters)} onClick={() => setFilterDrawerOpen(o => !o)} />
+            <button onClick={fetchTickets} title="Refresh" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 34, width: 34, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, cursor: 'pointer', color: 'var(--text-tertiary)' }}>
+              <RefreshCw size={13} strokeWidth={1.6} />
+            </button>
+            <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+              <Download size={13} strokeWidth={1.6} />
+              Export
+            </button>
           </div>
-          {/* Open card */}
-          <div onClick={() => setStatFilter(statFilter === 'open' ? '' : 'open')} style={{ background: 'var(--surface)', border: statFilter === 'open' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Open</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#92400e' }}>{tickets.filter(t => t.status === 'OPEN').length}</div>
-          </div>
-          {/* In Progress card */}
-          <div onClick={() => setStatFilter(statFilter === 'in_progress' ? '' : 'in_progress')} style={{ background: 'var(--surface)', border: statFilter === 'in_progress' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>In Progress</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#1e40af' }}>{tickets.filter(t => ['IN_PROGRESS', 'ASSIGNED', 'ON_SITE', 'AWAITING_APPROVAL', 'AWAITING_QUOTE', 'AWAITING_DESCRIPTION', 'AWAITING_WORK_APPROVAL', 'QUOTE_SUBMITTED', 'PROCESSING', 'ACCEPTED'].includes(t.status)).length}</div>
-          </div>
-          {/* Completed card */}
-          <div onClick={() => setStatFilter(statFilter === 'completed' ? '' : 'completed')} style={{ background: 'var(--surface)', border: statFilter === 'completed' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-            <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>Completed</div>
-            <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: '#2d6a4f' }}>{tickets.filter(t => ['COMPLETED', 'CLOSED'].includes(t.status)).length}</div>
-          </div>
-        </div>
 
-        {/* Search bar */}
-        <div style={{ position: 'relative' }}>
-          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by title, ticket number, or reporter..."
-            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 8, paddingBottom: 8, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+          {/* Active advanced-filter tags */}
+          <ActiveFilterTags
+            filters={filters}
+            statusOptions={statusOptions.map(s => ({ value: s, label: s.replace(/_/g, ' ') }))}
+            branches={branches}
+            onRemove={removeFilter}
+            onClearAll={clearAllFilters}
           />
-        </div>
 
-        {/* Table card */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
-          {/* Card header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Tickets</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{filteredTickets.length} results</span>
-          </div>
-          {/* Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Ticket ID', 'Title', 'Branch', 'Priority', 'Status', 'Created', 'Actions'].map(col => (
-                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTickets.map((ticket, i) => (
-                  <tr key={ticket.id} style={{ borderBottom: i === filteredTickets.length - 1 ? 'none' : '1px solid var(--surface2)', cursor: 'pointer' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    onClick={() => { setSelectedTicket(ticket); setShowTicketModal(true) }}
-                  >
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.ticketNumber}</td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', padding: '9px 14px', maxWidth: 240 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.title}</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 1 }}>{ticket.user?.name || ticket.user?.email}</div>
-                    </td>
-                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{ticket.branch?.name || '—'}</td>
-                    <td style={{ padding: '9px 14px' }}>
-                      <span style={{
-                        fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
-                        padding: '2px 7px', borderRadius: 99,
-                        ...getPriorityPill(ticket.priority)
-                      }}>{ticket.priority}</span>
-                    </td>
-                    <td style={{ padding: '9px 14px' }}>
-                      <span style={{
-                        fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em',
-                        padding: '2px 7px', borderRadius: 99,
-                        ...getStatusPill(ticket.status)
-                      }}>{ticket.status.replace(/_/g, ' ')}</span>
-                    </td>
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{new Date(ticket.createdAt).toLocaleDateString()}</td>
-                    <td style={{ padding: '9px 14px' }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); setSelectedTicket(ticket); setShowTicketModal(true) }}
-                        style={{ fontSize: 'var(--text-xs)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                      >View</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredTickets.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
-                <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                  <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          {/* Table card */}
+          <div className="ds-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: '88px 1fr 150px 100px 140px 150px 86px', gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+              <span>ID</span><span>SUBJECT</span><span>BRANCH</span><span>PRIORITY</span><span>STATUS</span><span>ASSIGNEE</span><span>CREATED</span>
+            </div>
+            {filteredTickets.map(ticket => {
+              const at = ticket.assignedTo ? avatarTint(ticket.assignedTo.name || ticket.assignedTo.email) : null
+              const catColor = ticket.category?.color || TYPE_COLOR[ticket.type] || 'var(--text-muted)'
+              return (
+                <div
+                  key={ticket.id}
+                  className="ds-row"
+                  onClick={() => { setSelectedTicket(ticket); setShowTicketModal(true) }}
+                  style={{ display: 'grid', gridTemplateColumns: '88px 1fr 150px 100px 140px 150px 86px', gap: 12, alignItems: 'center', padding: '14px 22px', cursor: 'pointer' }}
+                >
+                  <MonoLabel size={11.5} spacing="0" color="var(--text-secondary)" style={{ textTransform: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.ticketNumber}</MonoLabel>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 99, background: catColor, flex: 'none' }} />
+                    <span style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ticket.title}</span>
+                  </span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ticket.branch?.name || '—'}</span>
+                  <span><DSBadge variant={PRIORITY_VARIANT[ticket.priority] || 'neutral'}>{ticket.priority}</DSBadge></span>
+                  <span><DSBadge variant={STATUS_VARIANT[ticket.status] || 'neutral'}>{statusLabel(ticket.status)}</DSBadge></span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {ticket.assignedTo && at ? (
+                      <>
+                        <Avatar initials={getInitials(ticket.assignedTo.name, ticket.assignedTo.email)} size={24} tint={at.tint} color={at.color} />
+                        <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ticket.assignedTo.name || ticket.assignedTo.email}</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Unassigned</span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                 </div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No tickets found</div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+              )
+            })}
+            {filteredTickets.length === 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: 6 }}>
+                <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>No tickets found</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Try adjusting your filters</div>
               </div>
             )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', fontSize: 12, color: 'var(--text-muted)', borderTop: '1px solid var(--row-sep)' }}>
+              <span>Showing {filteredTickets.length} of {tickets.length} tickets</span>
+              <MonoLabel size={11} spacing="0" color="var(--text-muted)" style={{ textTransform: 'none' }}>‹ 1 ›</MonoLabel>
+            </div>
           </div>
         </div>
       </div>

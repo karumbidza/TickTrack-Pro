@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { ChatWindow } from '@/components/chat/chat-window'
 import { RatingModal } from '@/components/tickets/rating-modal'
 import { MediaViewer } from '@/components/ui/media-viewer'
+import { Badge as DSBadge, MonoLabel, type BadgeVariant } from '@/components/admin/kit'
 import { toast } from 'sonner'
 import { 
   Clock,
@@ -54,6 +55,16 @@ interface TicketDetailModalProps {
   onOpenChange: (open: boolean) => void
   onTicketUpdated: () => void
 }
+
+// ── Redesign: status/priority → kit Badge variant (matches dashboard) ──
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  OPEN: 'amber', ASSIGNED: 'blue', ACCEPTED: 'blue', IN_PROGRESS: 'blue', PROCESSING: 'blue',
+  ON_SITE: 'violet', AWAITING_QUOTE: 'amber', QUOTE_SUBMITTED: 'amber',
+  AWAITING_DESCRIPTION: 'amber', AWAITING_WORK_APPROVAL: 'amber', AWAITING_APPROVAL: 'amber',
+  COMPLETED: 'green', CLOSED: 'neutral', CANCELLED: 'red',
+}
+const PRIORITY_VARIANT: Record<string, BadgeVariant> = { LOW: 'green', MEDIUM: 'amber', HIGH: 'orange', CRITICAL: 'red', URGENT: 'red' }
+const statusLabel = (s: string) => s.replace(/_/g, ' ')
 
 export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated }: TicketDetailModalProps) {
   const [showRatingModal, setShowRatingModal] = useState(false)
@@ -178,65 +189,52 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <span>{ticket.title}</span>
-              <Badge style={getStatusStyle(ticket.status)}>
-                {ticket.status.replace('_', ' ')}
-              </Badge>
-            </DialogTitle>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <MonoLabel size={12} spacing="0.04em" color="var(--text-muted)" style={{ textTransform: 'none' }}>{ticket.id.slice(0, 8)}</MonoLabel>
+              <DSBadge variant={PRIORITY_VARIANT[ticket.priority] || 'neutral'}>{ticket.priority}</DSBadge>
+              <DSBadge variant={STATUS_VARIANT[currentTicket.status] || 'neutral'}>{statusLabel(currentTicket.status)}</DSBadge>
+            </div>
+            <DialogTitle style={{ fontSize: 24, fontWeight: 300, letterSpacing: '-0.02em' }}>{ticket.title}</DialogTitle>
           </DialogHeader>
-          
-          <div className="space-y-6">
-            {/* Ticket Details */}
-            <div className="grid grid-cols-2 gap-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Created</span>
-                  <span className="text-sm font-medium">
-                    {new Date(ticket.createdAt).toLocaleDateString()}
-                  </span>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {/* Details */}
+            <div className="ds-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 500 }}>Details</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <MonoLabel size={10} spacing="0.08em">Type</MonoLabel>
+                  <span style={{ fontSize: 13 }}>{ticket.type}</span>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Type</span>
-                  <span className="text-sm font-medium">{ticket.type}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <MonoLabel size={10} spacing="0.08em">Priority</MonoLabel>
+                  <DSBadge variant={PRIORITY_VARIANT[ticket.priority] || 'neutral'}>{ticket.priority}</DSBadge>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Priority</span>
-                  <Badge style={getPriorityStyle(ticket.priority)}>
-                    {ticket.priority}
-                  </Badge>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <MonoLabel size={10} spacing="0.08em">Created</MonoLabel>
+                  <span style={{ fontSize: 13 }}>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                 </div>
-                
                 {ticket.assignedTo && (
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Assigned to</span>
-                    <span className="text-sm font-medium">{ticket.assignedTo.name}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <MonoLabel size={10} spacing="0.08em">Assigned to</MonoLabel>
+                    <span style={{ fontSize: 13 }}>{ticket.assignedTo.name}</span>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Description */}
-            <div>
-              <h3 className="text-lg font-medium mb-2">Description</h3>
-              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
-                <p className="whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{currentTicket.description}</p>
-              </div>
+            <div className="ds-card" style={{ padding: '18px 20px' }}>
+              <div style={{ fontSize: 14.5, fontWeight: 500, marginBottom: 10 }}>Description</div>
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.55, color: 'var(--text-tertiary)', margin: 0 }}>{currentTicket.description}</p>
             </div>
 
             {/* Attachments Section */}
             {attachments.length > 0 && (
               <div>
-                <MediaViewer 
+                <MediaViewer
                   files={attachments}
                   title="Attachments"
                   gridCols={3}
@@ -249,24 +247,23 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
             {canChat && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium flex items-center space-x-2">
+                  <h3 className="text-lg font-medium flex items-center space-x-2" style={{ fontSize: 14.5, fontWeight: 500 }}>
                     <MessageSquare className="h-5 w-5" />
-                    <span>Communication</span>
+                    <span>Conversation</span>
                     {ticket._count.messages > 0 && (
-                      <Badge variant="outline">{ticket._count.messages}</Badge>
+                      <DSBadge variant="neutral">{ticket._count.messages}</DSBadge>
                     )}
                   </h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                  <button
+                    className="filter-chip"
                     onClick={() => setShowChat(!showChat)}
                   >
-                    {showChat ? 'Hide Chat' : 'Show Chat'}
-                  </Button>
+                    {showChat ? 'Hide chat' : 'Show chat'}
+                  </button>
                 </div>
-                
+
                 {showChat && (
-                  <div className="border rounded-lg">
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 11, overflow: 'hidden' }}>
                     <ChatWindow ticketId={ticket.id} />
                   </div>
                 )}
@@ -274,7 +271,7 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
             )}
 
             {/* Actions */}
-            <div className="flex justify-between">
+            <div className="flex justify-between" style={{ borderTop: '1px solid var(--row-sep)', paddingTop: 16 }}>
               <div>
                 {canCancel && (
                   <Button
@@ -286,30 +283,32 @@ export function TicketDetailModal({ ticket, open, onOpenChange, onTicketUpdated 
                   </Button>
                 )}
               </div>
-              <div className="flex space-x-2">
+              <div className="flex" style={{ gap: 8 }}>
                 {canApproveCompletion && (
                   <>
-                    <Button
-                      variant="outline"
+                    <button
+                      className="filter-chip"
                       onClick={() => handleApproval(false)}
                     >
-                      Request Changes
-                    </Button>
-                    <Button
+                      Request changes
+                    </button>
+                    <button
+                      className="btn-accent"
                       onClick={() => handleApproval(true)}
                     >
-                      Approve Completion
-                    </Button>
+                      Approve completion
+                    </button>
                   </>
                 )}
-                
+
                 {canRate && (
-                  <Button
+                  <button
+                    className="btn-accent"
                     onClick={() => setShowRatingModal(true)}
                   >
-                    <Star className="h-4 w-4 mr-2" />
-                    Rate Service
-                  </Button>
+                    <Star className="h-4 w-4" />
+                    Rate service
+                  </button>
                 )}
               </div>
             </div>

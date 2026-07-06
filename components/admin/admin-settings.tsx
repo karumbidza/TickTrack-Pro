@@ -31,6 +31,7 @@ import {
   CreditCard
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Card as DsCard, MonoLabel, Badge as DsBadge, Toggle as DsToggle } from '@/components/admin/kit'
 import { UserManagement } from './user-management'
 import { ContractorManagement } from './contractor-management'
 import { AdminAssetManagement } from './asset-management'
@@ -113,6 +114,14 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
   }
   const activeTab = tabMap[section] || 'categories'
   const [loading, setLoading] = useState(false)
+
+  // Notification preferences (client-side; persistence coming soon)
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    newTicket: true,
+    slaBreach: true,
+    invoiceSubmitted: true,
+    sms: false,
+  })
 
   // Reports State
   const [reportLoading, setReportLoading] = useState(false)
@@ -563,109 +572,63 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
     else if (section === 'ticket-types') setShowTicketTypeDialog(true)
   }
 
-  return (
-    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
-      {/* Topbar */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>Settings — {meta.title}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{meta.subtitle}</div>
-        </div>
-        {meta.cta && (
-          <button onClick={handleCtaClick} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: 'var(--bg)' }}>
-            {meta.cta}
-          </button>
-        )}
-      </div>
+  // ── Redesign presentation helpers ──
+  const iconBtn: React.CSSProperties = {
+    width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    border: 'none', background: 'transparent', borderRadius: 7, cursor: 'pointer',
+  }
+  const addBtn: React.CSSProperties = { height: 34, padding: '0 14px', fontSize: 12.5 }
+  const cardHeadTitle: React.CSSProperties = { fontSize: 15, fontWeight: 500 }
+  const cardHeadSub: React.CSSProperties = { fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }
+  const monoCount: React.CSSProperties = { fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text-muted)' }
+  const fieldLabel: React.CSSProperties = { fontFamily: 'DM Mono, monospace', fontSize: 10, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }
+  const fieldInput: React.CSSProperties = { height: 38, border: '1px solid var(--border)', borderRadius: 9, padding: '0 12px', fontSize: 13.5, background: 'var(--surface)', color: 'var(--text-primary)', width: '100%' }
 
-      {/* Content */}
-      <div style={{ padding: '20px' }}>
-          <div className="flex-1 min-w-0">
-            {/* NO assets/contractors/users tabs — they have dedicated sidebar nav items */}
+  return (
+    <div style={{ padding: '26px 32px 48px' }}>
+      <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
             {/* Users Tab */}
             {activeTab === 'users' && (
-              <div className="rounded-lg border" style={{ backgroundColor: 'var(--surface)' }}>
+              <DsCard padding={0} style={{ overflow: 'hidden' }}>
                 <UserManagement user={user} />
-              </div>
+              </DsCard>
             )}
 
             {/* Categories Tab */}
             {activeTab === 'categories' && (
             <>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Asset Categories</CardTitle>
-                    <CardDescription>
-                      Define categories to organize your assets.
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => { resetCategoryForm(); setShowCategoryDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
+            <DsCard padding={0} style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px' }}>
+                <div>
+                  <div style={cardHeadTitle}>Asset categories</div>
+                  <div style={cardHeadSub}>Categories route tickets to the right department admin</div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Categories List */}
-                {categories.length === 0 ? (
-                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                    <Layers className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-                    <p>No categories yet. Click "Add Category" to create one.</p>
+                <button className="btn-accent" style={addBtn} onClick={() => { resetCategoryForm(); setShowCategoryDialog(true) }}>
+                  <Plus size={14} strokeWidth={2} />
+                  Add category
+                </button>
+              </div>
+              {categories.length === 0 ? (
+                <div style={{ padding: '30px 22px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, borderTop: '1px solid var(--row-sep)' }}>
+                  No categories yet. Click &quot;Add category&quot; to create one.
+                </div>
+              ) : (
+                categories.map((category) => (
+                  <div key={category.id} className="ds-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 4, background: category.color || '#3B82F6', flex: 'none' }} />
+                    <span style={{ width: 160, fontSize: 13.5, fontWeight: 500, flex: 'none' }}>{category.name}</span>
+                    <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{category.description}</span>
+                    {category.isDefault && <DsBadge variant="neutral">Default</DsBadge>}
+                    <span style={monoCount}>{category._count?.assets || 0} assets</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <button style={iconBtn} onClick={() => openEditCategory(category)} title="Edit"><Edit size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                      <button style={iconBtn} onClick={() => handleDeleteCategory(category)} title="Delete"><Trash2 size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {categories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="flex items-center justify-between p-4 border rounded-lg transition-shadow"
-                        style={{ backgroundColor: 'var(--surface)' }}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-bg font-medium"
-                            style={{ backgroundColor: category.color || '#3B82F6' }}
-                          >
-                            {category.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{category.name}</div>
-                            {category.description && (
-                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{category.description}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge variant="secondary">
-                            {category._count?.assets || 0} assets
-                          </Badge>
-                          {category.isDefault && (
-                            <Badge variant="outline">Default</Badge>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditCategory(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category)}
-                            style={{ color: 'var(--red)' }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                ))
+              )}
+            </DsCard>
 
             {/* Category Dialog */}
             <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
@@ -729,78 +692,35 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
           {/* ==================== BRANCHES TAB ==================== */}
           {activeTab === 'branches' && (
             <>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Branches</CardTitle>
-                    <CardDescription>
-                      Manage your organization's branches, sites, and locations where users operate.
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => { resetBranchForm(); setShowBranchDialog(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Branch
-                  </Button>
+            <DsCard padding={0} style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px' }}>
+                <div>
+                  <div style={cardHeadTitle}>Branches</div>
+                  <div style={cardHeadSub}>Users and tickets are scoped to branches</div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {branches.length === 0 ? (
-                  <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                    <MapPin className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--border-strong)' }} />
-                    <p>No branches defined yet. Add your first branch.</p>
+                <button className="btn-accent" style={addBtn} onClick={() => { resetBranchForm(); setShowBranchDialog(true) }}>
+                  <Plus size={14} strokeWidth={2} />
+                  Add branch
+                </button>
+              </div>
+              {branches.length === 0 ? (
+                <div style={{ padding: '30px 22px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, borderTop: '1px solid var(--row-sep)' }}>
+                  No branches defined yet. Add your first branch.
+                </div>
+              ) : (
+                branches.map((branch) => (
+                  <div key={branch.id} className="ds-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px' }}>
+                    <span style={{ width: 190, fontSize: 13.5, fontWeight: 500, flex: 'none' }}>{branch.name}</span>
+                    <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{branch.address}</span>
+                    <DsBadge variant={branch.isHeadOffice ? 'accent' : 'neutral'}>{branch.type.replace(/_/g, ' ')}</DsBadge>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <button style={iconBtn} onClick={() => openEditBranch(branch)} title="Edit"><Edit size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                      <button style={iconBtn} onClick={() => handleDeleteBranch(branch)} title="Delete"><Trash2 size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {branches.map((branch) => (
-                      <div
-                        key={branch.id}
-                        className="flex items-center justify-between p-4 border rounded-lg transition-shadow"
-                        style={{ backgroundColor: 'var(--surface)' }}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center"
-                            style={{ backgroundColor: branch.isHeadOffice ? 'var(--blue-bg)' : 'var(--green-bg)' }}
-                          >
-                            <MapPin className="h-5 w-5" style={{ color: branch.isHeadOffice ? 'var(--blue)' : 'var(--green)' }} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{branch.name}</div>
-                              {branch.isHeadOffice && (
-                                <Badge style={{ backgroundColor: 'var(--blue-bg)', color: 'var(--blue)' }}>HQ</Badge>
-                              )}
-                            </div>
-                            {branch.address && (
-                              <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{branch.address}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge variant="outline" className="text-xs">{branch.type.replace('_', ' ')}</Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditBranch(branch)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteBranch(branch)}
-                            style={{ color: 'var(--red)' }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                ))
+              )}
+            </DsCard>
 
             {/* Branch Dialog */}
             <Dialog open={showBranchDialog} onOpenChange={setShowBranchDialog}>
@@ -877,102 +797,52 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
           {/* ==================== TICKET TYPES TAB ==================== */}
           {activeTab === 'tickets' && (
             <>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Ticket Types</CardTitle>
-                    <CardDescription className="text-sm">
-                      Configure the types of tickets users can create.
-                    </CardDescription>
+            <DsCard padding={0} style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px' }}>
+                <div>
+                  <div style={cardHeadTitle}>Ticket types</div>
+                  <div style={cardHeadSub}>Each type sets a default priority and SLA target</div>
+                </div>
+                <button className="btn-accent" style={addBtn} onClick={() => { resetTicketTypeForm(); setShowTicketTypeDialog(true) }}>
+                  <Plus size={14} strokeWidth={2} />
+                  Add type
+                </button>
+              </div>
+              {ticketTypes.length === 0 ? (
+                <div style={{ padding: '30px 22px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, borderTop: '1px solid var(--row-sep)' }}>
+                  No ticket types configured. Click &quot;Add type&quot; to create one.
+                </div>
+              ) : (
+                ticketTypes.map((type) => (
+                  <div key={type.id} className="ds-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 22px' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 4, background: type.color, flex: 'none' }} />
+                    <span style={{ width: 150, fontSize: 13.5, fontWeight: 500, flex: 'none' }}>{type.name}</span>
+                    <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{type.description}</span>
+                    {type.requiresAsset && <DsBadge variant="neutral">Requires asset</DsBadge>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <button style={iconBtn} onClick={() => openEditTicketType(type)} title="Edit"><Edit size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                      <button style={iconBtn} onClick={() => handleDeleteTicketType(type)} title="Delete"><Trash2 size={14} strokeWidth={1.7} style={{ color: 'var(--text-muted)' }} /></button>
+                    </div>
                   </div>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      resetTicketTypeForm()
-                      setShowTicketTypeDialog(true)
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Type
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {ticketTypes.map((type) => (
-                    <div
-                      key={type.id}
-                      className="flex items-center justify-between p-3 rounded-lg border transition-colors"
-                      style={{ backgroundColor: 'var(--surface2)' }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: type.color }}
-                        />
-                        <div>
-                          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{type.name}</div>
-                          {type.description && (
-                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{type.description}</div>
-                          )}
-                        </div>
-                        {type.requiresAsset && (
-                          <Badge variant="secondary" className="text-xs">Requires Asset</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditTicketType(type)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteTicketType(type)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" style={{ color: 'var(--text-muted)' }} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {ticketTypes.length === 0 && (
-                    <div className="text-center py-6 text-sm" style={{ color: 'var(--text-muted)' }}>
-                      No ticket types configured. Click "Add Type" to create one.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                ))
+              )}
+            </DsCard>
 
             {/* Priority Levels Card */}
-            <Card className="mt-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Priority Levels</CardTitle>
-                <CardDescription className="text-sm">
-                  System-defined priority levels for tickets.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {[
-                    { name: 'Low', style: { backgroundColor: 'var(--green-bg)', color: 'var(--green)', borderColor: 'var(--green)' } },
-                    { name: 'Medium', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber)' } },
-                    { name: 'High', style: { backgroundColor: 'var(--amber-bg)', color: 'var(--amber)', borderColor: 'var(--amber)' } },
-                    { name: 'Critical', style: { backgroundColor: 'var(--red-bg)', color: 'var(--red)', borderColor: 'var(--red)' } }
-                  ].map((priority) => (
-                    <div key={priority.name} className="px-3 py-2 rounded-md border text-sm font-medium" style={priority.style}>
-                      {priority.name}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <DsCard padding="18px 22px">
+              <div style={cardHeadTitle}>Priority levels</div>
+              <div style={cardHeadSub}>System-defined priority levels for tickets</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                {([
+                  { name: 'Low', variant: 'green' },
+                  { name: 'Medium', variant: 'amber' },
+                  { name: 'High', variant: 'orange' },
+                  { name: 'Critical', variant: 'red' },
+                ] as const).map((priority) => (
+                  <DsBadge key={priority.name} variant={priority.variant}>{priority.name}</DsBadge>
+                ))}
+              </div>
+            </DsCard>
 
             {/* Ticket Type Dialog */}
             <Dialog open={showTicketTypeDialog} onOpenChange={setShowTicketTypeDialog}>
@@ -1044,72 +914,62 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
 
           {/* ==================== NOTIFICATIONS TAB ==================== */}
           {activeTab === 'notifications' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Configure how and when notifications are sent to users.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  {[
-                    { title: 'Email Notifications', desc: 'Send email alerts for ticket updates' },
-                    { title: 'New Ticket Alerts', desc: 'Notify admins when new tickets are created' },
-                    { title: 'Assignment Notifications', desc: 'Notify contractors when assigned to tickets' },
-                    { title: 'Completion Alerts', desc: 'Notify users when their tickets are completed' },
-                    { title: 'SLA Breach Warnings', desc: 'Alert when tickets are approaching SLA deadlines' },
-                  ].map(({ title, desc }) => (
-                    <div key={title} className="flex items-center justify-between p-4 rounded-lg" style={{ backgroundColor: 'var(--surface2)' }}>
-                      <div>
-                        <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{title}</div>
-                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>{desc}</div>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-                  ))}
+            <DsCard padding={0} style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '18px 22px' }}>
+                <div style={cardHeadTitle}>Notifications</div>
+                <div style={cardHeadSub}>Email and SMS alerts for your team</div>
+              </div>
+              {[
+                { key: 'newTicket', title: 'New ticket created', desc: 'Email admins when a ticket is raised in their department' },
+                { key: 'slaBreach', title: 'SLA breach warning', desc: 'Alert 2 hours before an SLA response deadline' },
+                { key: 'invoiceSubmitted', title: 'Invoice submitted', desc: 'Notify when a contractor submits an invoice' },
+                { key: 'sms', title: 'SMS notifications', desc: 'Send critical alerts via SMS (Africa’s Talking)' },
+              ].map(({ key, title, desc }) => (
+                <div key={key} className="ds-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px' }}>
+                  <span style={{ flex: 1 }}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 500 }}>{title}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{desc}</span>
+                  </span>
+                  <DsToggle on={!!notifPrefs[key]} onChange={(next) => setNotifPrefs((prev) => ({ ...prev, [key]: next }))} />
                 </div>
-                
-                <div className="pt-4 border-t">
-                  <Button disabled>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Preferences
-                  </Button>
-                  <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
-                    Note: Full notification configuration coming soon.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              ))}
+              <div style={{ padding: '16px 22px', borderTop: '1px solid var(--row-sep)' }}>
+                <button className="btn-accent" style={{ opacity: 0.5, cursor: 'not-allowed' }} disabled>
+                  <Save size={14} strokeWidth={1.8} />
+                  Save preferences
+                </button>
+                <p style={{ fontSize: 12, marginTop: 8, color: 'var(--text-muted)' }}>
+                  Note: Full notification configuration coming soon.
+                </p>
+              </div>
+            </DsCard>
           )}
 
           {/* ==================== REPORTS TAB ==================== */}
           {activeTab === 'reports' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileSpreadsheet className="h-5 w-5" />
-                  Reports & Data Export
-                </CardTitle>
-                <CardDescription>
-                  Download CSV reports of tickets and repair data for analysis.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            <DsCard padding="20px 22px">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <FileSpreadsheet size={18} strokeWidth={1.7} style={{ color: 'var(--accent-color)' }} />
+                <div>
+                  <div style={cardHeadTitle}>Reports &amp; data export</div>
+                  <div style={cardHeadSub}>Download detailed ticket and repair data for analysis</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginTop: 20 }}>
                 {/* Ticket Report */}
-                <div className="border rounded-lg p-6 space-y-4">
+                <div style={{ border: '1px solid var(--border-inner)', borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-medium text-lg">Ticket Report</h3>
+                      <h3 style={{ fontSize: 14.5, fontWeight: 500 }}>Ticket report</h3>
                       <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                         Export detailed ticket data including site, requester, dates, SLA, contractor, category, asset, cost, and status.
                       </p>
                     </div>
                     <FileSpreadsheet className="h-8 w-8" style={{ color: 'var(--green)' }} />
                   </div>
-                  
+
                   {/* Filters */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4" style={{ borderTop: '1px solid var(--border-inner)' }}>
                     <div>
                       <Label htmlFor="report-date-from" className="text-xs">From Date</Label>
                       <Input 
@@ -1146,20 +1006,14 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
                       </Select>
                     </div>
                     <div className="flex items-end">
-                      <Button 
-                        onClick={handleDownloadTicketReport} 
+                      <button
+                        className="btn-accent"
+                        onClick={handleDownloadTicketReport}
                         disabled={reportLoading}
-                        className="w-full"
+                        style={{ width: '100%', justifyContent: 'center', opacity: reportLoading ? 0.6 : 1 }}
                       >
-                        {reportLoading ? (
-                          <>Generating...</>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download CSV
-                          </>
-                        )}
-                      </Button>
+                        {reportLoading ? 'Generating…' : (<><Download size={14} strokeWidth={1.8} /> Download CSV</>)}
+                      </button>
                     </div>
                   </div>
                   
@@ -1231,8 +1085,9 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
 
                 {/* Quick Export Options */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button 
-                    variant="outline" 
+                  <button
+                    className="ds-btn-ghost"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     onClick={() => {
                       const today = new Date()
                       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -1241,11 +1096,12 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
                       setReportStatus('all')
                     }}
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    This Month
-                  </Button>
-                  <Button 
-                    variant="outline"
+                    <Calendar size={14} strokeWidth={1.7} />
+                    This month
+                  </button>
+                  <button
+                    className="ds-btn-ghost"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     onClick={() => {
                       const today = new Date()
                       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
@@ -1255,112 +1111,75 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
                       setReportStatus('all')
                     }}
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Last Month
-                  </Button>
-                  <Button 
-                    variant="outline"
+                    <Calendar size={14} strokeWidth={1.7} />
+                    Last month
+                  </button>
+                  <button
+                    className="ds-btn-ghost"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                     onClick={() => {
                       setReportStatus('CLOSED')
                       setReportDateFrom('')
                       setReportDateTo('')
                     }}
                   >
-                    <Filter className="h-4 w-4 mr-2" />
-                    Closed Tickets Only
-                  </Button>
+                    <Filter size={14} strokeWidth={1.7} />
+                    Closed tickets only
+                  </button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </DsCard>
           )}
 
           {/* ==================== BILLING TAB ==================== */}
           {activeTab === 'billing' && (
-            <div className="rounded-lg border p-6" style={{ backgroundColor: 'var(--surface)' }}>
-              {user.role === 'SUPER_ADMIN' ? (
-                <div className="text-center py-12">
+            user.role === 'SUPER_ADMIN' ? (
+              <DsCard padding="40px 22px">
+                <div style={{ textAlign: 'center' }}>
                   <CreditCard className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
-                  <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Super Admin Billing</h3>
-                  <p className="mb-4" style={{ color: 'var(--text-muted)' }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 6 }}>Super admin billing</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>
                     Tenant billing is managed from the Super Admin Dashboard.
                   </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => window.location.href = '/super-admin'}
-                  >
+                  <button className="ds-btn-ghost" onClick={() => (window.location.href = '/super-admin')}>
                     Go to Super Admin Dashboard
-                  </Button>
+                  </button>
                 </div>
-              ) : (
-                <>
-                  <div className="mb-6">
-                    <h2 className="text-xl font-medium" style={{ color: 'var(--text-primary)' }}>Billing & Subscription</h2>
-                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Manage your subscription, view usage, and access invoices</p>
-                  </div>
-                  <BillingManagement />
-                </>
-              )}
-            </div>
+              </DsCard>
+            ) : (
+              <BillingManagement />
+            )
           )}
 
           {/* ==================== ORGANIZATION TAB ==================== */}
           {activeTab === 'organization' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Organization Settings</CardTitle>
-                <CardDescription>
-                  General settings for your organization.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="org-name">Organization Name</Label>
-                    <Input id="org-name" placeholder="Your Company Name" disabled />
-                  </div>
-                  <div>
-                    <Label htmlFor="org-domain">Domain</Label>
-                    <Input id="org-domain" placeholder="yourcompany.com" disabled />
-                  </div>
-                  <div>
-                    <Label htmlFor="org-timezone">Timezone</Label>
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select timezone" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="utc">UTC</SelectItem>
-                        <SelectItem value="africa/harare">Africa/Harare (CAT)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="org-currency">Currency</Label>
-                    <Select disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select currency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="usd">USD ($)</SelectItem>
-                        <SelectItem value="zwl">ZWL ($)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <DsCard padding="22px" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={cardHeadTitle}>Organisation</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label htmlFor="org-name" style={fieldLabel}>Company name</label>
+                <input id="org-name" placeholder="Your Company Name" disabled style={{ ...fieldInput, opacity: 0.75 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label htmlFor="org-email" style={fieldLabel}>Contact email</label>
+                <input id="org-email" type="email" placeholder="info@yourcompany.com" disabled style={{ ...fieldInput, opacity: 0.75 }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={fieldLabel}>Workspace URL</label>
+                <div style={{ display: 'flex', alignItems: 'center', height: 38, border: '1px solid var(--border)', borderRadius: 9, padding: '0 12px', fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-secondary)', background: 'var(--hover)' }}>
+                  your-workspace<span style={{ color: 'var(--text-faint)' }}>.ticktrack.com</span>
                 </div>
-                
-                <div className="pt-4 border-t">
-                  <Button disabled>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Organization Settings
-                  </Button>
-                  <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
-                    Note: Organization settings are managed by Super Admin.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button className="btn-accent" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                  <Save size={14} strokeWidth={1.8} />
+                  Save changes
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                Note: Organisation settings are managed by Super Admin.
+              </p>
+            </DsCard>
           )}
-          </div>
       </div>
     </div>
   )

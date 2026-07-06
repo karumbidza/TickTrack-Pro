@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Loader2, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Star, Shield, ArrowRight, X, Check, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
+import { Card as DsCard, MonoLabel, Badge as DsBadge } from '@/components/admin/kit'
 
 // ============================================
 // TYPES
@@ -587,77 +588,47 @@ export function BillingManagement() {
   // ============================================
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* Current Subscription Status */}
+    <div className="space-y-6 font-sans" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Current Subscription — dark plan card */}
       {subscription && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="rounded-xl border-border">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Current Plan</p>
-                  <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{subscriptionPlan?.name || 'Basic'}</h3>
-                </div>
-                <Badge variant={getStatusBadgeVariant(subscription.status)}>
-                  {subscription.status}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-border">
-            <CardContent className="pt-6">
-              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Next Billing Date</p>
-              <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatDate(subscription.currentPeriodEnd)}</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{daysRemaining} days remaining</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-border">
-            <CardContent className="pt-6">
-              <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>Amount Due</p>
-              <h3 className="text-2xl font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(subscription.amount, subscription.currency)}</h3>
-              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>per {subscription.billingCycle}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <DsCard className="card-dark" padding="22px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            <MonoLabel size={10} spacing="0.1em" color="rgba(247,246,243,0.55)">Current plan</MonoLabel>
+            <div style={{ fontSize: 22, fontWeight: 300, marginTop: 6 }}>
+              {subscriptionPlan?.name || 'Basic'} — {formatCurrency(subscription.amount, subscription.currency)}/{subscription.billingCycle === 'yearly' ? 'year' : 'month'}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(247,246,243,0.55)', marginTop: 3 }}>
+              Renews {formatDate(subscription.currentPeriodEnd)} · {daysRemaining} days remaining · {subscription.status}
+            </div>
+          </div>
+          <button
+            onClick={() => openBillingModal('upgrade')}
+            style={{ height: 36, padding: '0 16px', background: '#F7F6F3', color: '#1A1916', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: 'pointer', flex: 'none' }}
+          >
+            Manage plan
+          </button>
+        </DsCard>
       )}
 
       {/* Quick Actions */}
       {subscription && subscription.status !== 'TRIAL' && (
-        <Card className="rounded-xl border-border">
-          <CardHeader>
-            <CardTitle style={{ color: 'var(--text-primary)' }}>Manage Subscription</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="outline"
-                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
-                onClick={() => openBillingModal('upgrade')}
-              >
-                <Star className="h-4 w-4 mr-2" />
-                Change Plan
-              </Button>
-              <Button 
-                variant="outline"
-                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
-                onClick={() => openBillingModal('advance')}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Pay in Advance
-              </Button>
-              <Button 
-                variant="outline"
-                className="hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700"
-                onClick={() => openBillingModal('renew')}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Renew Early
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <DsCard padding="18px 22px">
+          <div style={{ fontSize: 14.5, fontWeight: 500, marginBottom: 12 }}>Manage subscription</div>
+          <div className="flex flex-wrap gap-3">
+            <button className="ds-btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={() => openBillingModal('upgrade')}>
+              <Star size={14} strokeWidth={1.7} />
+              Change plan
+            </button>
+            <button className="ds-btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={() => openBillingModal('advance')}>
+              <Calendar size={14} strokeWidth={1.7} />
+              Pay in advance
+            </button>
+            <button className="ds-btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={() => openBillingModal('renew')}>
+              <Clock size={14} strokeWidth={1.7} />
+              Renew early
+            </button>
+          </div>
+        </DsCard>
       )}
 
       {/* Trial Warning */}
@@ -683,47 +654,51 @@ export function BillingManagement() {
         </Card>
       )}
 
+      {/* Payment methods */}
+      <DsCard padding="20px 22px">
+        <div style={{ fontSize: 14.5, fontWeight: 500 }}>Payment methods</div>
+        <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>Pay for your subscription with any supported method</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+          {paymentMethods.map((m) => (
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--border-inner)', borderRadius: 10, padding: '10px 14px' }}>
+              <img src={m.icon} alt={m.label} style={{ height: 18 }} />
+              <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)' }}>{m.label}</span>
+            </div>
+          ))}
+        </div>
+      </DsCard>
+
       {/* Payment History */}
-      <Card className="rounded-xl border-border">
-        <CardHeader>
-          <CardTitle style={{ color: 'var(--text-primary)' }}>Payment History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentPayments.length === 0 ? (
-            <div className="text-center py-8">
-              <CreditCard className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
-              <p style={{ color: 'var(--text-secondary)' }}>No payments yet</p>
+      <DsCard padding={0} style={{ overflow: 'hidden' }}>
+        <div style={{ fontSize: 14.5, fontWeight: 500, padding: '18px 22px' }}>Payment history</div>
+        {recentPayments.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '28px 22px', borderTop: '1px solid var(--row-sep)' }}>
+            <CreditCard className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No payments yet</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 100px', padding: '10px 22px', borderTop: '1px solid var(--row-sep)' }}>
+              <span>Invoice</span>
+              <span>Date</span>
+              <span>Amount</span>
+              <span>Status</span>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Invoice</th>
-                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Date</th>
-                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Amount</th>
-                    <th className="text-left py-3 font-medium" style={{ color: 'var(--text-secondary)' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentPayments.map((payment) => (
-                    <tr key={payment.id} className="border-b border-border last:border-0">
-                      <td className="py-3" style={{ color: 'var(--text-primary)' }}>{payment.invoiceNumber || payment.id.slice(0, 8)}</td>
-                      <td className="py-3" style={{ color: 'var(--text-secondary)' }}>{formatDate(payment.createdAt)}</td>
-                      <td className="py-3 font-medium" style={{ color: 'var(--text-primary)' }}>{formatCurrency(payment.amount, payment.currency)}</td>
-                      <td className="py-3">
-                        <Badge variant={payment.status === 'success' ? 'default' : payment.status === 'pending' ? 'secondary' : 'destructive'}>
-                          {payment.status === 'success' ? 'Paid' : payment.status === 'pending' ? 'Pending' : 'Failed'}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {recentPayments.map((payment) => (
+              <div key={payment.id} className="ds-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 100px', alignItems: 'center', padding: '13px 22px' }}>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-tertiary)' }}>{payment.invoiceNumber || payment.id.slice(0, 8)}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{formatDate(payment.createdAt)}</span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text-primary)' }}>{formatCurrency(payment.amount, payment.currency)}</span>
+                <span>
+                  <DsBadge variant={payment.status === 'success' ? 'green' : payment.status === 'pending' ? 'amber' : 'red'}>
+                    {payment.status === 'success' ? 'Paid' : payment.status === 'pending' ? 'Pending' : 'Failed'}
+                  </DsBadge>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </DsCard>
 
       {/* ============================================ */}
       {/* STRIPE-STYLE BILLING MODAL */}

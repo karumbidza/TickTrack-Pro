@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Card as DSCard, MonoLabel, Badge as DSBadge, type BadgeVariant } from '@/components/admin/kit'
 
 // ── Interfaces ─────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,17 @@ const monoLabel = {
   textTransform: 'uppercase' as const,
   letterSpacing: 'var(--tracking-wide)',
   color: 'var(--text-muted)',
+}
+
+// Redesign status badge mapping (variant + display label)
+const STATUS_BADGE: Record<string, { variant: BadgeVariant; label: string }> = {
+  PENDING:   { variant: 'amber',   label: 'PENDING REVIEW' },
+  APPROVED:  { variant: 'blue',    label: 'APPROVED' },
+  PAID:      { variant: 'green',   label: 'PAID' },
+  REJECTED:  { variant: 'red',     label: 'REJECTED' },
+  OVERDUE:   { variant: 'red',     label: 'OVERDUE' },
+  CANCELLED: { variant: 'neutral', label: 'CANCELLED' },
+  DRAFT:     { variant: 'neutral', label: 'DRAFT' },
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -516,6 +528,11 @@ export function AdminInvoiceManagement() {
     </div>
   )
 
+  const showCheck = invoiceFilters.status === 'approved'
+  const gridCols = showCheck
+    ? '36px 100px 160px 1fr 110px 100px 140px 90px'
+    : '100px 160px 1fr 110px 100px 140px 90px'
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -660,29 +677,34 @@ export function AdminInvoiceManagement() {
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ padding: '26px 32px 48px' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-        {/* Section label */}
-        <p style={{ ...monoLabel, margin: 0, fontSize: 'var(--text-xs)', letterSpacing: 'var(--tracking-wider)' }}>Click a card to filter</p>
-
-        {/* Stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {/* 3-card stat strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
           {([
-            { key: 'pending',  label: 'Pending Review', value: `$${totalPending.toFixed(2)}`,  sub: `${invoices.filter(i => i.status === 'PENDING').length} invoices`,  color: '#92400e' },
-            { key: 'approved', label: 'Approved',        value: `$${totalApproved.toFixed(2)}`, sub: `${invoices.filter(i => i.status === 'APPROVED').length} invoices`, color: '#2d6a4f' },
-            { key: 'paid',     label: 'Total Paid',      value: `$${totalPaid.toFixed(2)}`,     sub: `${invoices.filter(i => i.status === 'PAID').length} invoices`,     color: '#1e40af' },
-            { key: '',         label: 'Total Invoices',  value: String(invoices.length),        sub: 'all time',                                                          color: 'var(--text-primary)' },
-          ] as { key: string; label: string; value: string; sub: string; color: string }[]).map(({ key, label, value, sub, color }) => {
-            const isActive = key !== '' && invoiceFilters.status === key
+            { key: 'pending',  label: 'PENDING REVIEW',              count: invoices.filter(i => i.status === 'PENDING').length,  amount: totalPending,  color: 'var(--amber)' },
+            { key: 'approved', label: 'APPROVED — AWAITING PAYMENT', count: invoices.filter(i => i.status === 'APPROVED').length, amount: totalApproved, color: 'var(--blue)' },
+          ] as { key: string; label: string; count: number; amount: number; color: string }[]).map(({ key, label, count, amount, color }) => {
+            const isActive = invoiceFilters.status === key
             return (
-              <div key={label} onClick={() => key && setInvoiceFilters(f => ({ ...f, status: f.status === key ? '' : key }))}
-                style={{ backgroundColor: 'var(--surface)', border: isActive ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '13px 14px', cursor: key ? 'pointer' : 'default', transition: 'border 0.15s ease', userSelect: 'none' }}>
-                <p style={{ ...monoLabel, marginBottom: 6 }}>{label}</p>
-                <p style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', lineHeight: 1, color }}>{value}</p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 3 }}>{sub}</p>
-              </div>
+              <DSCard key={key} padding="18px 20px" onClick={() => setInvoiceFilters(f => ({ ...f, status: f.status === key ? '' : key }))}
+                style={{ border: isActive ? '1px solid var(--accent-color)' : undefined, background: isActive ? 'var(--accent-soft)' : undefined }}>
+                <MonoLabel>{label}</MonoLabel>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginTop: 8 }}>
+                  <span style={{ fontSize: 29, fontWeight: 300, letterSpacing: '-0.03em' }}>{count}</span>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color }}>${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </DSCard>
             )
           })}
+          <DSCard padding="18px 20px" onClick={() => setInvoiceFilters(f => ({ ...f, status: f.status === 'paid' ? '' : 'paid' }))}
+            style={{ border: invoiceFilters.status === 'paid' ? '1px solid var(--accent-color)' : undefined, background: invoiceFilters.status === 'paid' ? 'var(--accent-soft)' : undefined }}>
+            <MonoLabel>PAID — MTD</MonoLabel>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, marginTop: 8 }}>
+              <span style={{ fontSize: 29, fontWeight: 300, letterSpacing: '-0.03em', color: 'var(--green)' }}>${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </DSCard>
         </div>
 
         {/* Batch payment action bar */}
@@ -776,73 +798,65 @@ export function AdminInvoiceManagement() {
         )}
 
         {/* Invoice table */}
-        <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: hasActiveFilters ? '0 0 9px 9px' : '9px', borderTop: hasActiveFilters ? 'none' : undefined, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {invoiceFilters.status === 'approved' && (
-                  <th style={{ padding: '8px 14px', width: 36 }}>
-                    <Checkbox
-                      checked={selectedInvoiceIds.size === invoices.filter(i => i.status === 'APPROVED').length && selectedInvoiceIds.size > 0}
-                      onCheckedChange={checked => checked ? selectAllApproved() : deselectAll()}
-                    />
-                  </th>
+        <DSCard padding={0} style={{ overflow: 'hidden' }}>
+          <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+            {showCheck && (
+              <span>
+                <Checkbox
+                  checked={selectedInvoiceIds.size === invoices.filter(i => i.status === 'APPROVED').length && selectedInvoiceIds.size > 0}
+                  onCheckedChange={checked => checked ? selectAllApproved() : deselectAll()}
+                />
+              </span>
+            )}
+            <span>INVOICE</span>
+            <span>CONTRACTOR</span>
+            <span>TICKET</span>
+            <span>AMOUNT</span>
+            <span>SUBMITTED</span>
+            <span>STATUS</span>
+            <span />
+          </div>
+          {filteredInvoices.map(invoice => {
+            const sb = STATUS_BADGE[invoice.status] || { variant: 'neutral' as BadgeVariant, label: invoice.status }
+            const selected = selectedInvoiceIds.has(invoice.id)
+            return (
+              <div key={invoice.id} className="ds-row" style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 12, alignItems: 'center', padding: '14px 22px', background: selected ? 'var(--accent-soft)' : undefined }}>
+                {showCheck && (
+                  <span onClick={e => e.stopPropagation()}>
+                    <Checkbox checked={selected} onCheckedChange={() => toggleInvoiceSelection(invoice.id)} />
+                  </span>
                 )}
-                {['Invoice', 'Contractor', 'Ticket', 'Amount', 'Status', 'Created', 'Actions'].map(col => (
-                  <th key={col} style={{ ...monoLabel, marginBottom: 0, padding: '8px 14px', textAlign: 'left', fontWeight: 400, fontSize: 'var(--text-xs)', letterSpacing: '0.06em' }}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.map((invoice, idx) => (
-                <tr key={invoice.id}
-                  style={{ borderBottom: idx < filteredInvoices.length - 1 ? '1px solid var(--surface2)' : 'none', backgroundColor: selectedInvoiceIds.has(invoice.id) ? '#eff6ff' : undefined }}
-                  onMouseEnter={e => { if (!selectedInvoiceIds.has(invoice.id)) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--surface2)' }}
-                  onMouseLeave={e => { if (!selectedInvoiceIds.has(invoice.id)) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent' }}
-                >
-                  {invoiceFilters.status === 'approved' && (
-                    <td style={{ padding: '9px 14px' }}>
-                      <Checkbox checked={selectedInvoiceIds.has(invoice.id)} onCheckedChange={() => toggleInvoiceSelection(invoice.id)} />
-                    </td>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11.5, color: 'var(--text-secondary)' }}>{invoice.invoiceNumber}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invoice.contractor.name}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text-muted)' }}>{invoice.ticket.ticketNumber}</span> — {invoice.ticket.title}
+                </span>
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12.5 }}>${invoice.amount.toFixed(2)}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(invoice.createdAt).toLocaleDateString()}</span>
+                <span><DSBadge variant={sb.variant}>{sb.label}</DSBadge></span>
+                <span style={{ textAlign: 'right' }}>
+                  {invoice.status === 'PENDING' ? (
+                    <span className="link-accent" style={{ fontSize: 12.5 }} onClick={() => openDetailModal(invoice)}>Review</span>
+                  ) : invoice.status === 'APPROVED' ? (
+                    <span className="link-accent" style={{ fontSize: 12.5 }} onClick={() => { setSelectedInvoiceIds(new Set([invoice.id])); setShowBatchPaymentDialog(true) }}>Pay</span>
+                  ) : (
+                    <span className="link-accent" style={{ fontSize: 12.5 }} onClick={() => openDetailModal(invoice)}>View</span>
                   )}
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{invoice.invoiceNumber}</td>
-                  <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{invoice.contractor.name}</td>
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{invoice.ticket.ticketNumber}</td>
-                  <td style={{ padding: '9px 14px', fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>${invoice.amount.toFixed(2)}</td>
-                  <td style={{ padding: '9px 14px' }}>
-                    <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...(STATUS_PILL[invoice.status] || { backgroundColor: 'var(--surface2)', color: 'var(--text-muted)' }) }}>
-                      {invoice.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{new Date(invoice.createdAt).toLocaleDateString()}</td>
-                  <td style={{ padding: '9px 14px' }}>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {invoice.status === 'PENDING' && (
-                        <>
-                          <button onClick={() => handleStatusUpdate(invoice.id, 'APPROVED')} style={actionBtn({ border: '1px solid #c6e6d4', backgroundColor: '#e8f5ee', color: '#2d6a4f' })}>Approve</button>
-                          <button onClick={() => { setActionInvoice(invoice); setShowRejectDialog(true) }} style={actionBtn({ border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b' })}>Reject</button>
-                        </>
-                      )}
-                      {invoice.status === 'APPROVED' && (
-                        <button onClick={() => { setSelectedInvoiceIds(new Set([invoice.id])); setShowBatchPaymentDialog(true) }} style={actionBtn({ border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', color: '#1e40af' })}>Pay</button>
-                      )}
-                      <button onClick={() => openDetailModal(invoice)} style={actionBtn()}>View</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </span>
+              </div>
+            )
+          })}
 
           {filteredInvoices.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 36 }}>
-              <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+              <div style={{ width: 32, height: 32, backgroundColor: 'var(--hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                 <FileText size={16} style={{ color: 'var(--text-muted)' }} />
               </div>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 4px' }}>No invoices found</p>
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>Try adjusting your filters</p>
+              <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: '0 0 4px' }}>No invoices found</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>Try adjusting your filters</p>
             </div>
           )}
+        </DSCard>
         </div>
       </div>
 

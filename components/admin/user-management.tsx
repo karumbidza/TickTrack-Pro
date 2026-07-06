@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Card as DSCard, MonoLabel, Badge as DSBadge, Avatar, avatarTint, type BadgeVariant } from '@/components/admin/kit'
 
 interface UserData {
   id: string
@@ -77,6 +78,19 @@ function getRolePill(role: string): React.CSSProperties {
 function formatRoleLabel(role: string): string {
   return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
 }
+
+// Redesign role badge variant
+function roleVariant(role: string): BadgeVariant {
+  switch (role) {
+    case 'TENANT_ADMIN': return 'accent'
+    case 'IT_ADMIN': return 'blue'
+    case 'MAINTENANCE_ADMIN': return 'amber'
+    case 'END_USER': return 'neutral'
+    default: return role.includes('ADMIN') ? 'blue' : 'neutral'
+  }
+}
+
+const USER_GRID = '1.5fr 150px 160px 90px 110px 100px 44px'
 
 export function UserManagement({ user }: UserManagementProps) {
   const [users, setUsers] = useState<UserData[]>([])
@@ -495,132 +509,135 @@ export function UserManagement({ user }: UserManagementProps) {
         </div>
       </div>
 
-      {/* Topbar — 52px */}
-      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Users</div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{filteredUsers.length} users</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Filters ghost button with badge */}
-          <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', position: 'relative' }}>
-            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-            Filters
-            {activeFilterCount > 0 && (
-              <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeFilterCount}</span>
-            )}
-          </button>
-          {/* Invite User ghost button */}
-          <button onClick={() => setShowInviteDialog(true)} style={{ padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Invite User</button>
-          {/* Add User primary button */}
-          <button onClick={() => setShowCreateDialog(true)} style={{ padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 7, background: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--bg)' }}>+ Add User</button>
-        </div>
-      </div>
+      <div style={{ padding: '26px 32px 48px' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* 4 stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.03em', margin: 0 }}>Users</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>{users.length} users across {branches.length} branches</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Filters ghost button with badge */}
+            <button onClick={() => setFilterDrawerOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 36, padding: '0 13px', border: '1px solid var(--border)', borderRadius: 9, background: filterDrawerOpen ? 'var(--hover)' : 'var(--surface)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', position: 'relative' }}>
+              <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--accent-color)', color: '#fff', fontSize: 10, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeFilterCount}</span>
+              )}
+            </button>
+            {/* Add User ghost button */}
+            <button onClick={() => setShowCreateDialog(true)} style={{ height: 36, padding: '0 13px', border: '1px solid var(--border)', borderRadius: 9, background: 'var(--surface)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>Add user</button>
+            {/* Invite User primary button */}
+            <button className="btn-accent" onClick={() => setShowInviteDialog(true)}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+              Invite user
+            </button>
+          </div>
+        </div>
+
+        {/* 4 stat cards (click to filter) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
           {[
             { key: '', label: 'Total Users', value: users.length, color: 'var(--text-primary)' },
             { key: 'admins', label: 'Admins', value: users.filter(u => u.role.includes('ADMIN')).length, color: 'var(--text-primary)' },
-            { key: 'end_users', label: 'End Users', value: users.filter(u => u.role === 'END_USER').length, color: '#1e40af' },
-            { key: 'active', label: 'Active', value: users.filter(u => u.isActive).length, color: '#2d6a4f' },
-          ].map(card => (
-            <div key={card.key} onClick={() => setStatFilter(statFilter === card.key ? '' : card.key)} style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '11px 13px', cursor: 'pointer', transition: 'border 0.15s ease' }}>
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
-            </div>
-          ))}
+            { key: 'end_users', label: 'End Users', value: users.filter(u => u.role === 'END_USER').length, color: 'var(--blue)' },
+            { key: 'active', label: 'Active', value: users.filter(u => u.isActive).length, color: 'var(--green)' },
+          ].map(card => {
+            const active = statFilter === card.key
+            return (
+              <DSCard key={card.key} padding="16px 18px" onClick={() => setStatFilter(statFilter === card.key ? '' : card.key)}
+                style={{ border: active ? '1px solid var(--accent-color)' : undefined, background: active ? 'var(--accent-soft)' : undefined }}>
+                <MonoLabel>{card.label}</MonoLabel>
+                <div style={{ fontSize: 29, fontWeight: 300, letterSpacing: '-0.03em', color: card.color, marginTop: 8 }}>{card.value}</div>
+              </DSCard>
+            )
+          })}
         </div>
 
         {/* Table card with inline search in header */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
+        <DSCard padding={0} style={{ overflow: 'hidden' }}>
           {/* Card header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Users</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{filteredUsers.length} results</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+            <span style={{ fontSize: 14.5, fontWeight: 500, color: 'var(--text-primary)' }}>All users</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 11.5, color: 'var(--text-muted)' }}>{filteredUsers.length} results</span>
               {/* Inline search */}
               <div style={{ position: 'relative' }}>
-                <svg style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 11, height: 11, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 26, paddingRight: 8, paddingTop: 4, paddingBottom: 4, fontSize: 'var(--text-xs)', border: '1px solid var(--border)', borderRadius: 6, backgroundColor: 'var(--surface2)', color: 'var(--text-primary)', outline: 'none', width: 180 }} />
+                <svg style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', width: 12, height: 12, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search users..." style={{ paddingLeft: 28, paddingRight: 10, height: 32, fontSize: 12.5, border: '1px solid var(--border)', borderRadius: 8, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', width: 200 }} />
               </div>
             </div>
           </div>
 
-          {/* Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['User', 'Role', 'Branches', 'Status', 'Joined', 'Actions'].map(col => (
-                    <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left' }}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((userData, i) => (
-                  <tr key={userData.id} style={{ borderBottom: i === filteredUsers.length - 1 ? 'none' : '1px solid var(--surface2)' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    {/* User column: avatar + name + email */}
-                    <td style={{ padding: '9px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                          {getInitials(userData.name, userData.email)}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: 400 }}>{userData.name || 'No Name'}</div>
-                          <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{userData.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    {/* Role pill */}
-                    <td style={{ padding: '9px 14px' }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getRolePill(userData.role) }}>
-                        {formatRoleLabel(userData.role)}
-                      </span>
-                    </td>
-                    {/* Branches */}
-                    <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                      {userData.branches && userData.branches.length > 0
-                        ? userData.branches.map(ub => ub.branch.name).join(', ')
-                        : <span style={{ color: 'var(--text-muted)' }}>—</span>
-                      }
-                    </td>
-                    {/* Status pill */}
-                    <td style={{ padding: '9px 14px' }}>
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, backgroundColor: userData.isActive ? '#e8f5ee' : '#fef2f2', color: userData.isActive ? '#2d6a4f' : '#991b1b' }}>
-                        {userData.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    {/* Joined date */}
-                    <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
-                      {new Date(userData.createdAt).toLocaleDateString()}
-                    </td>
-                    {/* Actions — ··· button opens inline dropdown */}
-                    <td style={{ padding: '9px 14px' }}>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleMenuOpen(e, userData) }}
-                          style={{ fontSize: 'var(--text-sm)', padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)', letterSpacing: 2 }}
-                        >···</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredUsers.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px' }}>
-                <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                  <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                </div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No users found</div>
-              </div>
-            )}
+          {/* Table header */}
+          <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: USER_GRID, gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+            <span>USER</span>
+            <span>ROLE</span>
+            <span>BRANCH</span>
+            <span>TICKETS</span>
+            <span>STATUS</span>
+            <span>JOINED</span>
+            <span />
           </div>
+
+          {/* Rows */}
+          {filteredUsers.map(userData => {
+            const tint = avatarTint(userData.email || userData.id)
+            const active = userData.isActive
+            const invited = !active && (userData.status || '').toUpperCase() === 'INVITED'
+            const statusLabel = active ? 'Active' : invited ? 'Invited' : 'Inactive'
+            const dotColor = active ? 'var(--green)' : invited ? 'var(--amber)' : 'var(--red)'
+            return (
+              <div key={userData.id} className="ds-row" style={{ display: 'grid', gridTemplateColumns: USER_GRID, gap: 12, alignItems: 'center', padding: '13px 22px' }}>
+                {/* User */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                  <Avatar initials={getInitials(userData.name, userData.email)} size={32} tint={tint.tint} color={tint.color} />
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.name || 'No Name'}</span>
+                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userData.email}</span>
+                  </span>
+                </span>
+                {/* Role */}
+                <span><DSBadge variant={roleVariant(userData.role)}>{formatRoleLabel(userData.role)}</DSBadge></span>
+                {/* Branch */}
+                <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {userData.branches && userData.branches.length > 0
+                    ? userData.branches.map(ub => ub.branch.name).join(', ')
+                    : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                </span>
+                {/* Tickets */}
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-muted)' }}>—</span>
+                {/* Status */}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--text-tertiary)' }}>
+                  <span style={{ width: 7, height: 7, borderRadius: 99, background: dotColor, flex: 'none' }} />
+                  {statusLabel}
+                </span>
+                {/* Joined */}
+                <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {new Date(userData.createdAt).toLocaleDateString()}
+                </span>
+                {/* Actions — ··· button opens inline dropdown */}
+                <span style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={e => { e.stopPropagation(); handleMenuOpen(e, userData) }}
+                    style={{ fontSize: 15, padding: '2px 6px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', letterSpacing: 2, borderRadius: 6 }}
+                  >···</button>
+                </span>
+              </div>
+            )
+          })}
+
+          {filteredUsers.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 20px' }}>
+              <div style={{ width: 32, height: 32, backgroundColor: 'var(--hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              </div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>No users found</div>
+            </div>
+          )}
+        </DSCard>
         </div>
       </div>
 
