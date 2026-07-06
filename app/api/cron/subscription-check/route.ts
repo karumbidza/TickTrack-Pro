@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { BillingService } from '@/lib/billing-service'
 import { logger } from '@/lib/logger'
+import { timingSafeEqual } from 'crypto'
+
+/**
+ * Constant-time comparison of the presented cron secret against CRON_SECRET.
+ * Prefer the Authorization header (`Bearer <secret>`); the ?secret= query param
+ * is accepted as a deprecated fallback (it leaks into proxy/CDN access logs).
+ */
+function isValidCronSecret(request: NextRequest, expected: string): boolean {
+  const authHeader = request.headers.get('authorization') || ''
+  const headerSecret = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  const querySecret = new URL(request.url).searchParams.get('secret') || ''
+  const provided = headerSecret || querySecret
+  if (!provided) return false
+
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
 
 /**
  * SUBSCRIPTION CHECK CRON ENDPOINT
@@ -33,12 +52,8 @@ export async function GET(request: NextRequest) {
   logger.info(`[Cron:${requestId}] Subscription check started`)
   
   try {
-    // Validate cron secret
-    const { searchParams } = new URL(request.url)
-    const secret = searchParams.get('secret')
-    
     const cronSecret = process.env.CRON_SECRET
-    
+
     if (!cronSecret) {
       logger.error(`[Cron:${requestId}] CRON_SECRET not configured`)
       return NextResponse.json(
@@ -46,8 +61,8 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       )
     }
-    
-    if (secret !== cronSecret) {
+
+    if (!isValidCronSecret(request, cronSecret)) {
       logger.warn(`[Cron:${requestId}] Invalid cron secret provided`)
       return NextResponse.json(
         { message: 'Invalid secret' },
