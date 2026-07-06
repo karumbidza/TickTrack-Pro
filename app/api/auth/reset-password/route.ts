@@ -3,7 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
 import bcrypt from 'bcryptjs'
+import { createHash } from 'crypto'
 import { z } from 'zod'
+
+const MAX_OTP_ATTEMPTS = 5
 
 // Password validation - requires strong passwords
 const passwordSchema = z.string()
@@ -38,35 +41,50 @@ export async function POST(request: NextRequest) {
 
     const { email, otp, password } = validatedData
 
-    // Find user
+    // Generic error used for every failure path below, to avoid revealing
+    // whether the email exists or whether the OTP vs. the account was wrong.
+    const invalidResponse = NextResponse.json(
+      { message: 'Invalid or expired OTP' },
+      { status: 400 }
+    )
+
+    // Find user (do not disclose existence)
     const user = await prisma.user.findUnique({
       where: { email }
     })
 
     if (!user) {
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      )
+      return invalidResponse
     }
 
-    // Find and validate OTP token
+    // Find the active OTP token for this user
     const resetToken = await prisma.passwordResetToken.findFirst({
       where: {
         userId: user.id,
-        token: otp,
         type: 'OTP',
         expiresAt: {
           gt: new Date()
         }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     })
 
-    if (!resetToken) {
-      return NextResponse.json(
-        { message: 'Invalid or expired OTP' },
-        { status: 400 }
-      )
+    // Lockout: consume the token once too many wrong guesses have been made.
+    if (!resetToken || resetToken.attempts >= MAX_OTP_ATTEMPTS) {
+      if (resetToken) {
+        await prisma.passwordResetToken.delete({ where: { id: resetToken.id } })
+      }
+      return invalidResponse
+    }
+
+    // Constant-work hash comparison against the stored SHA-256 hash.
+    const otpHash = createHash('sha256').update(otp).digest('hex')
+    if (resetToken.token !== otpHash) {
+      await prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { attempts: { increment: 1 } }
+      })
+      return invalidResponse
     }
 
     // Hash new password

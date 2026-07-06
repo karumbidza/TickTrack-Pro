@@ -4,7 +4,7 @@ import { sendPasswordResetEmail } from '@/lib/email'
 import { sendSMS } from '@/lib/africastalking-service'
 import { logger } from '@/lib/logger'
 import { rateLimitCheck } from '@/lib/api-rate-limit'
-import { randomBytes } from 'crypto'
+import { randomBytes, createHash } from 'crypto'
 
 /**
  * POST /api/auth/send-otp
@@ -45,16 +45,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate 6-digit OTP
-    const otp = randomBytes(3).readUIntBE(0, 3) % 1000000
+    // Generate 6-digit OTP (uniform over 0..999999)
+    const otp = randomBytes(4).readUInt32BE(0) % 1000000
     const otpString = String(otp).padStart(6, '0')
+    const otpHash = createHash('sha256').update(otpString).digest('hex')
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
-    // Save OTP to database
+    // Invalidate any prior active OTPs for this user (single active token)
+    await prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id, type: 'OTP' }
+    })
+
+    // Save the OTP hash (never the clear code) to the database
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
-        token: otpString,
+        token: otpHash,
         type: 'OTP',
         method: method as 'email' | 'sms',
         phone: method === 'sms' ? phone : null,

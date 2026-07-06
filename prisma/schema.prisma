@@ -258,10 +258,11 @@ model User {
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
-  token     String    // 6-digit OTP code
+  token     String    // SHA-256 hash of the 6-digit OTP code (never stored in clear)
   type      String    @default("OTP") // Type of reset token
   method    String    // "email" or "sms"
   phone     String?   // Phone number for SMS delivery
+  attempts  Int       @default(0) // Failed verification attempts (lockout after N)
   expiresAt DateTime  // Token expiry time
   createdAt DateTime  @default(now())
 
