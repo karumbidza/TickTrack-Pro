@@ -46,6 +46,10 @@ export default function RootLayout() {
             name="new-ticket"
             options={{ presentation: 'modal', headerShown: true, title: 'New ticket', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false, headerTintColor: colors.textPrimary, headerTitleStyle: { fontFamily: font.sansMedium } }}
           />
+          <Stack.Screen
+            name="rate/[id]"
+            options={{ presentation: 'modal', headerShown: true, title: 'Rate service', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false, headerTintColor: colors.textPrimary, headerTitleStyle: { fontFamily: font.sansMedium } }}
+          />
         </Stack>
       </ClerkLoaded>
     </ClerkProvider>

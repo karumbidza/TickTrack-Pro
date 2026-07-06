@@ -25,11 +25,12 @@ cp .env.example .env    # then fill in the two values below
 npx expo start          # then press i (iOS sim) / a (Android) / scan QR in Expo Go
 ```
 
-## What's implemented (v1)
+## What's implemented
 - **Auth**: email/password sign-in via Clerk; session persists across launches; sign-out.
 - **Role-aware tabs**: contractors get Jobs + Invoices + Profile; end-users get Tickets + Profile.
-- **Contractor**: assigned jobs list (`/api/contractor/jobs`), job detail with real status actions — accept / decline / start / on-site / complete (`PATCH /api/contractor/jobs/:id`), and invoices list (`/api/contractor/invoices`).
-- **End-user**: my tickets list (`/api/tickets`), ticket detail, and create ticket (`POST /api/tickets`).
+- **Contractor**: assigned jobs list (`/api/contractor/jobs`), job detail with real status actions — accept / decline / start / on-site / complete (`PATCH /api/contractor/jobs/:id`), **submit work description** (`POST /api/tickets/:id/work-description`), and invoices list (`/api/contractor/invoices`).
+- **End-user**: my tickets list (`/api/tickets`), ticket detail, create ticket with **photo attachments** from camera/library (`POST /api/tickets` multipart, `files`), **approve / request-changes** on completion (`POST /api/tickets/:id/approve-work`), and a **service rating** form (`POST /api/tickets/:id/rating`).
+- **Photos**: reusable `PhotoPicker` (expo-image-picker, camera + multi-select library) → FormData file parts.
 
 ## Server prerequisite (one-time)
 Mobile clients authenticate with a **Bearer token**, not a cookie. Confirm the web
@@ -38,12 +39,11 @@ supports it by default). If a custom JWT template is required for long-lived
 tokens, create one in the Clerk dashboard and pass its name to `getToken({ template })`
 in `lib/api.ts`.
 
-## Not yet in v1 (next)
-- Push notifications (Expo push + a device-token registration endpoint).
-- Photo/attachment upload from the camera (wire `expo-image-picker` → the existing
-  `/api/upload/*` routes as multipart `FormData`).
-- End-user approve-completion + rating; contractor work-description + invoice submission.
-- Offline caching.
+## Not yet (next)
+- Push notifications (Expo push + a device-token registration endpoint on the server).
+- Contractor invoice **submission** from mobile (view is done; creation is web-only for now).
+- In-ticket chat/messages with attachments (`/api/tickets/:id/messages`).
+- Offline caching / optimistic updates.
 
 ## Status / verification
 This is a hand-authored scaffold. It has **not** been run through an Expo build or a

@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
+import type { ImagePickerAsset } from 'expo-image-picker'
 import { useApi } from '@/lib/api'
 import { colors, font, radius } from '@/lib/theme'
 import { Button, Mono } from '@/components/ui'
+import { PhotoPicker } from '@/components/photo-picker'
+import { assetToFilePart } from '@/lib/upload'
 
 const TYPES = ['REPAIR', 'MAINTENANCE', 'INSPECTION', 'INSTALLATION', 'REPLACEMENT', 'EMERGENCY', 'OTHER']
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
@@ -15,6 +18,7 @@ export default function NewTicket() {
   const [description, setDescription] = useState('')
   const [type, setType] = useState('REPAIR')
   const [priority, setPriority] = useState('MEDIUM')
+  const [photos, setPhotos] = useState<ImagePickerAsset[]>([])
   const [saving, setSaving] = useState(false)
 
   const submit = async () => {
@@ -24,7 +28,13 @@ export default function NewTicket() {
     }
     setSaving(true)
     try {
-      await api.post('/api/tickets', { title: title.trim(), description: description.trim(), type, priority })
+      const form = new FormData()
+      form.append('title', title.trim())
+      form.append('description', description.trim())
+      form.append('type', type)
+      form.append('priority', priority)
+      photos.forEach((p) => form.append('files', assetToFilePart(p)))
+      await api.post('/api/tickets', form)
       router.back()
     } catch (e: any) {
       Alert.alert('Could not create ticket', e?.message ?? 'Please try again.')
@@ -58,6 +68,10 @@ export default function NewTicket() {
 
       <Field label="PRIORITY">
         <ChipRow options={PRIORITIES} value={priority} onChange={setPriority} />
+      </Field>
+
+      <Field label="PHOTOS">
+        <PhotoPicker assets={photos} onChange={setPhotos} />
       </Field>
 
       <Button label="Create ticket" onPress={submit} loading={saving} />
