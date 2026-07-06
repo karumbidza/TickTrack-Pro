@@ -1,5 +1,20 @@
 import nodemailer from 'nodemailer'
 
+/**
+ * Escape user-controlled text before interpolating it into an HTML email body.
+ * Ticket titles/descriptions, comments, feedback and names are authored by one
+ * user and rendered in another user's inbox, so unescaped values allow HTML
+ * injection / phishing. Non-string input is coerced; null/undefined -> ''.
+ */
+export function escapeHtml(input: unknown): string {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // Create transporter using SMTP
 const createTransporter = () => {
   // Check if SMTP is configured
@@ -213,12 +228,12 @@ export async function sendRatingEmailToContractor(data: RatingEmailData): Promis
         </div>
         
         <div class="content">
-          <p>Dear ${data.contractorName},</p>
+          <p>Dear ${escapeHtml(data.contractorName)},</p>
           <p>You have received a rating for the following job:</p>
           
           <div class="rating-section">
             <div class="label">Job Title</div>
-            <div class="value">${data.ticketTitle}</div>
+            <div class="value">${escapeHtml(data.ticketTitle)}</div>
           </div>
           
           <div class="overall">
@@ -282,7 +297,7 @@ export async function sendRatingEmailToContractor(data: RatingEmailData): Promis
           ${data.comments ? `
           <div class="comments">
             <div class="label" style="margin-bottom: 5px;">Customer Comments</div>
-            <p style="margin: 0;">${data.comments}</p>
+            <p style="margin: 0;">${escapeHtml(data.comments)}</p>
           </div>
           ` : ''}
           
@@ -814,8 +829,8 @@ export async function sendTicketNotificationEmail(
             <div style="margin-bottom: 15px;">
               <span class="status-badge">${status.replace('_', ' ')}</span>
             </div>
-            <h3 style="margin: 0 0 10px 0; color: #1a365d;">${ticketTitle}</h3>
-            <p style="margin: 0; color: #64748b;">${message}</p>
+            <h3 style="margin: 0 0 10px 0; color: #1a365d;">${escapeHtml(ticketTitle)}</h3>
+            <p style="margin: 0; color: #64748b;">${escapeHtml(message)}</p>
           </div>
           
           ${actionUrl ? `
@@ -890,7 +905,7 @@ export async function sendNewTicketEmailToAdmin(
         </div>
         
         <div class="content">
-          <p>Hello ${data.adminName},</p>
+          <p>Hello ${escapeHtml(data.adminName)},</p>
           <p>A new ticket has been created and requires your attention.</p>
           
           <div class="ticket-info">
@@ -898,10 +913,10 @@ export async function sendNewTicketEmailToAdmin(
               <span class="priority-badge">${data.priority}</span>
             </div>
             
-            <h2 style="margin: 0 0 15px 0; color: #1a365d;">${data.ticketTitle}</h2>
+            <h2 style="margin: 0 0 15px 0; color: #1a365d;">${escapeHtml(data.ticketTitle)}</h2>
             <p style="color: #64748b;">${data.ticketDescription.substring(0, 200)}${data.ticketDescription.length > 200 ? '...' : ''}</p>
             <p><strong>Branch:</strong> ${data.branchName}</p>
-            <p><strong>Raised By:</strong> ${data.userName} (${data.userEmail})</p>
+            <p><strong>Raised By:</strong> ${escapeHtml(data.userName)} (${escapeHtml(data.userEmail)})</p>
           </div>
           
           <div style="text-align: center;">
@@ -976,7 +991,7 @@ export async function sendJobAssignedEmailToContractor(
         </div>
         
         <div class="content">
-          <p>Hello ${data.contractorName},</p>
+          <p>Hello ${escapeHtml(data.contractorName)},</p>
           <p>You have been assigned a new job from <strong>${data.companyName}</strong>.</p>
           
           <div class="job-info">
@@ -984,13 +999,13 @@ export async function sendJobAssignedEmailToContractor(
               <span class="priority-badge">${data.priority} PRIORITY</span>
             </div>
             
-            <h2 style="margin: 0 0 15px 0; color: #0891b2;">${data.ticketTitle}</h2>
+            <h2 style="margin: 0 0 15px 0; color: #0891b2;">${escapeHtml(data.ticketTitle)}</h2>
             <p style="color: #64748b;">${data.ticketDescription.substring(0, 300)}${data.ticketDescription.length > 300 ? '...' : ''}</p>
             <p><strong>Location:</strong> ${data.location}</p>
             
             <div class="contact-box">
               <p style="margin: 0;"><strong>📞 Contact Person:</strong></p>
-              <p style="margin: 5px 0 0 0;">${data.userName} - ${data.userPhone}</p>
+              <p style="margin: 5px 0 0 0;">${escapeHtml(data.userName)} - ${escapeHtml(data.userPhone)}</p>
             </div>
           </div>
           
@@ -1038,7 +1053,7 @@ export async function sendJobClosedEmail(
       <div style="font-size: 12px; color: #92400e; text-transform: uppercase; font-weight: bold;">Customer Rating</div>
       <div style="font-size: 28px; color: #f59e0b; margin: 10px 0;">${'★'.repeat(data.rating)}${'☆'.repeat(5 - data.rating)}</div>
       <div style="font-size: 18px; font-weight: bold;">${data.rating}/5 Stars</div>
-      ${data.feedback ? `<p style="margin-top: 10px; font-style: italic; color: #64748b;">"${data.feedback}"</p>` : ''}
+      ${data.feedback ? `<p style="margin-top: 10px; font-style: italic; color: #64748b;">"${escapeHtml(data.feedback)}"</p>` : ''}
     </div>
   ` : ''
 
@@ -1072,8 +1087,8 @@ export async function sendJobClosedEmail(
               <span class="completed-badge">✓ COMPLETED</span>
             </div>
             
-            <h2 style="margin: 0 0 15px 0; color: #1a365d; text-align: center;">${data.ticketTitle}</h2>
-            <p><strong>Contractor:</strong> ${data.contractorName}</p>
+            <h2 style="margin: 0 0 15px 0; color: #1a365d; text-align: center;">${escapeHtml(data.ticketTitle)}</h2>
+            <p><strong>Contractor:</strong> ${escapeHtml(data.contractorName)}</p>
             <p><strong>Completed At:</strong> ${data.completedAt.toLocaleString('en-GB', { dateStyle: 'full', timeStyle: 'short' })}</p>
             
             ${ratingHtml}
