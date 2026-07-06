@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendPushToUser } from '@/lib/push'
 
 // POST - User approves or rejects work description
 export async function POST(
@@ -116,6 +117,11 @@ export async function POST(
             })
           }
         })
+        await sendPushToUser(ticket.assignedToId, {
+          title: 'Work approved ✓',
+          body: `Your work on ${ticket.ticketNumber} was approved. You can now upload an invoice.`,
+          data: { ticketId: ticket.id },
+        })
       }
 
       return NextResponse.json({
@@ -185,6 +191,11 @@ export async function POST(
               rejectionReason: rejectionReason
             })
           }
+        })
+        await sendPushToUser(ticket.assignedToId, {
+          title: 'Changes requested',
+          body: `Your work on ${ticket.ticketNumber} needs changes: ${rejectionReason}`,
+          data: { ticketId: ticket.id },
         })
       }
 

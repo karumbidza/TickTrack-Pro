@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { sendJobAssignedSMS } from '@/lib/africastalking-service'
 import { sendJobAssignedEmailToContractor } from '@/lib/email'
 import { logger } from '@/lib/logger'
+import { sendPushToUser } from '@/lib/push'
 
 export async function POST(
   request: NextRequest,
@@ -146,6 +147,24 @@ export async function POST(
         ticketId,
         userId: user.id
       }
+    })
+
+    // Notify the contractor of the new assignment (in-app + push)
+    await prisma.notification.create({
+      data: {
+        userId: contractorId,
+        type: requestQuote ? 'QUOTE_REQUESTED' : 'JOB_ASSIGNED',
+        title: requestQuote ? 'Quote requested' : 'New job assigned',
+        message: requestQuote
+          ? `You've been asked to quote ticket ${updatedTicket.ticketNumber || ''}.`
+          : `You've been assigned ticket ${updatedTicket.ticketNumber || ''}.`,
+        data: JSON.stringify({ ticketId })
+      }
+    })
+    await sendPushToUser(contractorId, {
+      title: requestQuote ? 'Quote requested' : 'New job assigned',
+      body: `${requestQuote ? 'Quote request' : 'New job'}: ${updatedTicket.title || ''}`,
+      data: { ticketId }
     })
 
     // Send SMS notification to contractor (both primary and secondary phones)

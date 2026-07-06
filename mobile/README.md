@@ -31,6 +31,7 @@ npx expo start          # then press i (iOS sim) / a (Android) / scan QR in Expo
 - **Contractor**: assigned jobs list (`/api/contractor/jobs`), job detail with real status actions — accept / decline / start / on-site / complete (`PATCH /api/contractor/jobs/:id`), **submit work description** (`POST /api/tickets/:id/work-description`), and invoices list (`/api/contractor/invoices`).
 - **End-user**: my tickets list (`/api/tickets`), ticket detail, create ticket with **photo attachments** from camera/library (`POST /api/tickets` multipart, `files`), **approve / request-changes** on completion (`POST /api/tickets/:id/approve-work`), and a **service rating** form (`POST /api/tickets/:id/rating`).
 - **Photos**: reusable `PhotoPicker` (expo-image-picker, camera + multi-select library) → FormData file parts.
+- **Push notifications**: the device registers its Expo push token with the server on launch (`POST /api/notifications/device`); tapping a notification deep-links to the ticket. Server fires pushes on job assignment, work approval / change-request, and invoice payment (`lib/push.ts` → Expo push API). Requires the `push_tokens` migration (`prisma migrate deploy`).
 
 ## Server prerequisite (one-time)
 Mobile clients authenticate with a **Bearer token**, not a cookie. Confirm the web
@@ -40,7 +41,6 @@ tokens, create one in the Clerk dashboard and pass its name to `getToken({ templ
 in `lib/api.ts`.
 
 ## Not yet (next)
-- Push notifications (Expo push + a device-token registration endpoint on the server).
 - Contractor invoice **submission** from mobile (view is done; creation is web-only for now).
 - In-ticket chat/messages with attachments (`/api/tickets/:id/messages`).
 - Offline caching / optimistic updates.

@@ -226,6 +226,7 @@ model User {
   adminTickets        Ticket[]       @relation("AdminTickets")
   contractorProfile   Contractor?
   notifications       Notification[]
+  pushTokens          PushToken[]
   messages            Message[]
   uploadedAttachments Attachment[]
   ratings             Rating[]
@@ -937,6 +938,20 @@ model Notification {
   @@index([userId, read])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique // Expo push token
+  platform  String?  // ios | android
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 // ==================== CONTRACTOR KYC SYSTEM ====================

@@ -3,10 +3,14 @@ import { useAuth, useUser } from '@clerk/clerk-expo'
 import { Home, FileText, User } from 'lucide-react-native'
 import { colors, font } from '@/lib/theme'
 import { Loading } from '@/components/ui'
+import { usePushNotifications } from '@/lib/push'
 
 export default function TabsLayout() {
   const { isLoaded, isSignedIn } = useAuth()
   const { user } = useUser()
+
+  // Register for push + handle notification taps (authenticated area only).
+  usePushNotifications()
 
   if (!isLoaded) return <Loading />
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />

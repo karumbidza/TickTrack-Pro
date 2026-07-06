@@ -3,6 +3,7 @@ import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { uploadToR2, isR2Configured } from '@/lib/r2-storage'
 import { logger } from '@/lib/logger'
+import { sendPushToUser } from '@/lib/push'
 
 // Route segment config for large file uploads
 export const maxDuration = 300
@@ -177,6 +178,11 @@ export async function POST(
             proofOfPaymentUrl
           })
         }
+      })
+      await sendPushToUser(invoice.contractorId, {
+        title: '💰 Payment received',
+        body: `Invoice ${invoice.invoiceNumber} has been paid — $${amount.toLocaleString()}.`,
+        data: { invoiceId: invoice.id },
       })
     }
 
