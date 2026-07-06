@@ -588,7 +588,7 @@ export function BillingManagement() {
   // ============================================
 
   return (
-    <div className="space-y-6 font-sans" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="font-sans" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Current Subscription — dark plan card */}
       {subscription && (
         <DsCard className="card-dark" padding="22px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
