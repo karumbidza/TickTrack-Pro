@@ -1,3 +1,23 @@
+// Content-Security-Policy. Kept pragmatic so it does not break Next's inline
+// bootstrap, MUI/Emotion inline styles, Clerk, Paynow redirects, or R2 images —
+// while still enforcing frame-ancestors (clickjacking), base-uri, object-src and
+// form-action. Tighten script-src to nonces once the app is verified in staging.
+// NOTE: validate Clerk auth + Paynow redirect flows in staging before relying on this.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' https://*.clerk.com https://challenges.cloudflare.com",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://www.paynow.co.zw https://*.paynow.co.zw",
+  "object-src 'none'",
+].join('; ')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable compression (gzip/brotli) for responses
@@ -24,6 +44,10 @@ const nextConfig = {
         // Apply security headers to all routes
         source: '/:path*',
         headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: CONTENT_SECURITY_POLICY,
+          },
           {
             key: 'X-Frame-Options',
             value: 'DENY',
