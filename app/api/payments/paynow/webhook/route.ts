@@ -75,18 +75,17 @@ export async function POST(request: NextRequest) {
     const tenantId = tenant.id
     logger.info(`[Webhook:${requestId}] Found tenant: ${tenantId}`)
 
-    // IDEMPOTENCY CHECK: Find existing payment by provider reference
-    let payment = await prisma.payment.findFirst({
+    // IDENTITY + IDEMPOTENCY: match strictly on the Paynow reference or on the
+    // reference we generated at initiate time (stored in providerResponse.reference),
+    // scoped to the tenant. We deliberately do NOT fall back to "the most recent
+    // pending payment for this tenant" — that could settle an unrelated, larger
+    // invoice from a cheaper transaction.
+    const payment = await prisma.payment.findFirst({
       where: {
+        tenantId,
         OR: [
           { providerPaymentId: processedData.paynowReference },
-          {
-            tenantId,
-            providerResponse: {
-              path: ['hash'],
-              equals: data.hash
-            }
-          }
+          { providerResponse: { path: ['reference'], equals: processedData.reference } }
         ]
       },
       include: {
@@ -94,42 +93,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // If no payment found, look for pending payment for this tenant
     if (!payment) {
-      payment = await prisma.payment.findFirst({
-        where: {
-          tenantId,
-          status: 'pending',
-          provider: 'PAYNOW'
-        },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          subscription: true
-        }
-      })
-    }
-
-    // If still no payment, create one (shouldn't happen normally)
-    if (!payment) {
-      // We already have the tenant from earlier lookup
-      payment = await prisma.payment.create({
-        data: {
-          tenantId,
-          subscriptionId: tenant.subscription?.id,
-          amount: processedData.amount,
-          currency: 'USD',
-          status: 'pending',
-          provider: 'PAYNOW',
-          providerPaymentId: processedData.paynowReference,
-          providerResponse: data,
-          description: 'Payment received via webhook'
-        },
-        include: {
-          subscription: true
-        }
-      })
-      
-      logger.info(`[Webhook:${requestId}] Created payment record: ${payment.id}`)
+      logger.error(`[Webhook:${requestId}] No matching payment for reference ${processedData.reference} / ${processedData.paynowReference}`)
+      return NextResponse.json({ message: 'Payment not found' }, { status: 404 })
     }
 
     // IDEMPOTENCY: Check if already processed successfully
@@ -153,6 +119,22 @@ export async function POST(request: NextRequest) {
 
     // Process based on Paynow status
     const paynowStatus = processedData.status.toLowerCase()
+
+    // AMOUNT VERIFICATION: never activate a subscription on an underpayment.
+    // Compare what Paynow reports against the amount recorded at initiate time.
+    if (paynowStatus === 'paid' || paynowStatus === 'delivered') {
+      const expected = payment.amount
+      const received = processedData.amount
+      if (!Number.isFinite(received) || received + 0.01 < expected) {
+        logger.error(`[Webhook:${requestId}] Amount mismatch on ${payment.id}: expected ${expected}, received ${received}`)
+        await BillingService.processFailedPayment(payment.id, `Underpayment: expected ${expected}, received ${received}`)
+        return NextResponse.json(
+          { status: 'rejected', message: 'Amount mismatch', paymentId: payment.id },
+          { status: 409 }
+        )
+      }
+    }
+
     let result: { status: string; message: string }
 
     switch (paynowStatus) {
