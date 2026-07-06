@@ -236,7 +236,7 @@ export async function PATCH(
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
         
         // Upload to R2
-        const result = await uploadToR2(buffer, safeName, `tickets/${ticketId}`, file.type)
+        const result = await uploadToR2(buffer, safeName, `tickets/${ticketId}`, file.type, authCtx.tenantId)
         
         if (!result.success || !result.url) {
           logger.error(`Failed to upload file ${file.name} to R2: ${result.error}`)

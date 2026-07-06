@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
           const safeFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
           
           // Upload to R2
-          const result = await uploadToR2(buffer, safeFilename, `tickets/${ticket.id}`, file.type || 'application/octet-stream')
+          const result = await uploadToR2(buffer, safeFilename, `tickets/${ticket.id}`, file.type || 'application/octet-stream', authCtx.tenantId)
           
           if (!result.success || !result.url) {
             logger.error(`Failed to upload file ${file.name} to R2: ${result.error}`)

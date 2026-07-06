@@ -1,4 +1,6 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { randomBytes } from 'crypto'
 
 // R2 Configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID!
@@ -25,26 +27,37 @@ export interface UploadResult {
 }
 
 /**
- * Upload a file to Cloudflare R2
+ * Upload a file to Cloudflare R2 (PRIVATE bucket).
+ *
+ * Objects are stored under a tenant-scoped key (`t/<tenantId>/<folder>/...`) so
+ * the authenticated file route can authorize access by key prefix. When no
+ * tenantId is given the object is stored under `public/<folder>/...`.
+ *
+ * The returned `url` is an in-app access path (`/api/files/<key>`) served by the
+ * authenticated file route — it is NOT a public bucket URL. Store this value.
+ *
  * @param file - The file buffer to upload
  * @param fileName - The desired file name
- * @param folder - The folder path (e.g., 'assets', 'invoices', 'tickets')
+ * @param folder - The folder path (e.g., 'assets', 'invoices', 'pop')
  * @param contentType - The MIME type of the file
+ * @param tenantId - Owning tenant; omit only for genuinely public/system objects
  */
 export async function uploadToR2(
   file: Buffer,
   fileName: string,
   folder: string,
-  contentType: string
+  contentType: string,
+  tenantId?: string | null
 ): Promise<UploadResult> {
   try {
-    // Generate unique key with folder structure
+    // Generate a tenant-scoped, hard-to-guess key.
     const timestamp = Date.now()
-    const randomSuffix = Math.random().toString(36).substring(2, 8)
+    const randomSuffix = randomBytes(6).toString('hex')
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const key = `${folder}/${timestamp}-${randomSuffix}-${sanitizedName}`
+    const scope = tenantId ? `t/${tenantId}` : 'public'
+    const key = `${scope}/${folder}/${timestamp}-${randomSuffix}-${sanitizedName}`
 
-    // Upload to R2
+    // Upload to R2 (bucket is private; no public-read ACL)
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
@@ -54,13 +67,10 @@ export async function uploadToR2(
 
     await s3Client.send(command)
 
-    // Return the public URL
-    const publicUrl = `${R2_PUBLIC_URL}/${key}`
-
     return {
       success: true,
-      url: publicUrl,
-      key: key,
+      url: fileAccessUrl(key),
+      key,
     }
   } catch (error) {
     console.error('[R2] Upload error:', error)
@@ -91,14 +101,62 @@ export async function deleteFromR2(key: string): Promise<boolean> {
 }
 
 /**
- * Extract the R2 key from a public URL
- * @param url - The public URL of the file
+ * The in-app access path for an object key. Files are served through the
+ * authenticated /api/files route (presigned redirect), never a public URL.
+ */
+export function fileAccessUrl(key: string): string {
+  return `/api/files/${key}`
+}
+
+/**
+ * Extract the R2 object key from any stored form:
+ * - new app path:      /api/files/<key>
+ * - legacy public URL: <R2_PUBLIC_URL>/<key>
+ * - a raw key
+ * Returns null if it cannot be resolved.
  */
 export function getKeyFromUrl(url: string): string | null {
-  if (!url.startsWith(R2_PUBLIC_URL)) {
-    return null
+  if (!url) return null
+  if (url.startsWith('/api/files/')) {
+    return url.slice('/api/files/'.length)
   }
-  return url.replace(`${R2_PUBLIC_URL}/`, '')
+  if (R2_PUBLIC_URL && url.startsWith(R2_PUBLIC_URL)) {
+    return url.replace(`${R2_PUBLIC_URL}/`, '')
+  }
+  // Already a bare key (no scheme, no leading slash)
+  if (!url.includes('://') && !url.startsWith('/')) {
+    return url
+  }
+  return null
+}
+
+// A safe object key: at least folder/file, only safe chars. Traversal ("..") and
+// empty segments ("//") are rejected separately. This also accepts legacy keys
+// minted before tenant scoping (e.g. "assets/..."), which are treated as
+// untenanted by keyTenantId().
+const KEY_PATTERN = /^[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)+$/
+
+export function isValidObjectKey(key: string): boolean {
+  if (!key || key.includes('..') || key.includes('//')) return false
+  return KEY_PATTERN.test(key)
+}
+
+/**
+ * The tenant id encoded in a tenant-scoped key (`t/<tenantId>/...`), or null for
+ * `public/...` keys and legacy keys minted before tenant scoping existed.
+ */
+export function keyTenantId(key: string): string | null {
+  const m = key.match(/^t\/([a-zA-Z0-9_-]+)\//)
+  return m ? m[1] : null
+}
+
+/**
+ * Generate a short-lived presigned GET URL for a private object.
+ * @param expiresInSeconds - default 300s (5 min)
+ */
+export async function getSignedDownloadUrl(key: string, expiresInSeconds = 300): Promise<string> {
+  const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key })
+  return getSignedUrl(s3Client, command, { expiresIn: expiresInSeconds })
 }
 
 /**

@@ -52,7 +52,7 @@ export async function POST(
         const ext = popFile.name.split('.').pop() || 'pdf'
         const safeFilename = `POP-${invoiceId}-${Date.now()}.${ext}`
         
-        const uploadResult = await uploadToR2(buffer, safeFilename, 'pop', popFile.type || 'application/octet-stream')
+        const uploadResult = await uploadToR2(buffer, safeFilename, 'pop', popFile.type || 'application/octet-stream', authCtx.tenantId)
         
         if (uploadResult.success && uploadResult.url) {
           proofOfPaymentUrl = uploadResult.url

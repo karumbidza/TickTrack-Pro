@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const fileName = `POP-${sanitizedFileName}`
 
     // Upload to R2
-    const result = await uploadToR2(buffer, fileName, 'payments', file.type)
+    const result = await uploadToR2(buffer, fileName, 'payments', file.type, authCtx.tenantId)
 
     if (!result.success) {
       return NextResponse.json({ 

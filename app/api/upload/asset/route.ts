@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         const fileName = `${assetId || 'temp'}-${sanitizedName}.${extension}`
 
         // Upload to R2
-        const result = await uploadToR2(buffer, fileName, 'assets', file.type)
+        const result = await uploadToR2(buffer, fileName, 'assets', file.type, authCtx.tenantId)
 
         if (result.success && result.url) {
           uploadedUrls.push(result.url)

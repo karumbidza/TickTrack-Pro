@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const fileName = `${ticketId}-${sanitizedFileName}`
 
     // Upload to R2
-    const result = await uploadToR2(buffer, fileName, 'invoices', file.type)
+    const result = await uploadToR2(buffer, fileName, 'invoices', file.type, authCtx.tenantId)
 
     if (!result.success) {
       return NextResponse.json({ 

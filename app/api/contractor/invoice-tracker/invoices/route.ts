@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
       const ext = invoiceFile.name.split('.').pop() || 'pdf'
       const safeFilename = `${invoiceNumber.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.${ext}`
       
-      const uploadResult = await uploadToR2(buffer, safeFilename, 'invoices', invoiceFile.type || 'application/octet-stream')
+      const uploadResult = await uploadToR2(buffer, safeFilename, 'invoices', invoiceFile.type || 'application/octet-stream', authCtx.tenantId)
       
       if (uploadResult.success && uploadResult.url) {
         invoiceFileUrl = uploadResult.url
