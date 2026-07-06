@@ -21,8 +21,23 @@ import {
   History,
   TrendingUp,
   AlertCircle,
+  Eye,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Card as DsCard, MonoLabel, Badge as DsBadge, type BadgeVariant } from '@/components/admin/kit'
+
+const CONDITION_VARIANT: Record<string, BadgeVariant> = {
+  ACTIVE: 'green',
+  MAINTENANCE: 'amber',
+  IN_MAINTENANCE: 'amber',
+  REPAIR_NEEDED: 'red',
+  OUT_OF_SERVICE: 'red',
+  RETIRED: 'neutral',
+  DECOMMISSIONED: 'neutral',
+  TRANSFERRED: 'blue',
+  PENDING_DECOMMISSION: 'amber',
+  PENDING_APPROVAL: 'amber',
+}
 
 interface AssetCategory {
   id: string
@@ -132,21 +147,6 @@ interface AssetStats {
   pendingDecommission: number
   decommissioned: number
   repairNeeded: number
-}
-
-function getStatusPill(status: string): React.CSSProperties {
-  const map: Record<string, React.CSSProperties> = {
-    ACTIVE:               { backgroundColor: '#e8f5ee', color: '#2d6a4f' },
-    PENDING_APPROVAL:     { backgroundColor: '#fef3c7', color: '#92400e' },
-    IN_MAINTENANCE:       { backgroundColor: '#eff6ff', color: '#1e40af' },
-    REPAIR_NEEDED:        { backgroundColor: '#fef2f2', color: '#991b1b' },
-    OUT_OF_SERVICE:       { backgroundColor: '#fef2f2', color: '#991b1b' },
-    DECOMMISSIONED:       { backgroundColor: '#f0efe9', color: '#6b6860' },
-    PENDING_DECOMMISSION: { backgroundColor: '#fef3c7', color: '#92400e' },
-    MAINTENANCE:          { backgroundColor: '#eff6ff', color: '#1e40af' },
-    RETIRED:              { backgroundColor: '#f0efe9', color: '#6b6860' },
-  }
-  return map[status] || { backgroundColor: '#f0efe9', color: '#6b6860' }
 }
 
 export function AdminAssetManagement() {
@@ -343,7 +343,7 @@ export function AdminAssetManagement() {
   }
 
   return (
-    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ backgroundColor: 'var(--bg)', minHeight: '100vh', padding: '26px 32px 48px' }}>
       {/* Filter drawer overlay */}
       {filterDrawerOpen && (
         <div
@@ -404,142 +404,149 @@ export function AdminAssetManagement() {
         </div>
       </div>
 
-      {/* Topbar — 52px */}
-      <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--surface)' }}>
-        <div>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>Assets</div>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'DM Mono, monospace' }}>{assets.length} assets</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(() => {
-            const count = [drawerFilters.status, drawerFilters.category, drawerFilters.branch].filter(Boolean).length
-            return (
-              <button
-                onClick={() => setFilterDrawerOpen(o => !o)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 7, background: filterDrawerOpen ? 'var(--surface2)' : 'var(--surface)', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}
-              >
-                <svg viewBox="0 0 24 24" style={{ width: 12, height: 12, stroke: 'currentColor', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }}>
-                  <line x1="4" y1="6" x2="20" y2="6"/>
-                  <line x1="8" y1="12" x2="16" y2="12"/>
-                  <line x1="11" y1="18" x2="13" y2="18"/>
-                </svg>
-                Filters
-                {count > 0 && (
-                  <span style={{ width: 15, height: 15, borderRadius: '50%', background: 'var(--accent)', color: 'var(--bg)', fontSize: 'var(--text-xs)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
-                )}
-              </button>
-            )
-          })()}
-        </div>
-      </div>
+      <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* 6 stat cards in a grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
-          {[
-            { key: '',                  label: 'Total',       value: stats?.total ?? assets.length,             color: 'var(--text-primary)' },
-            { key: 'ACTIVE',            label: 'Active',      value: stats?.active ?? 0,                        color: '#2d6a4f' },
-            { key: 'PENDING_APPROVAL',  label: 'Pending',     value: stats?.pendingDecommission ?? 0,           color: '#92400e' },
-            { key: 'IN_MAINTENANCE',    label: 'Maintenance', value: stats?.maintenance ?? 0,                   color: '#1e40af' },
-            { key: 'REPAIR_NEEDED',     label: 'Repair',      value: stats?.repairNeeded ?? 0,                  color: '#991b1b' },
-            { key: 'DECOMMISSIONED',    label: 'Decomm.',     value: stats?.decommissioned ?? 0,                color: '#9e9c94' },
-          ].map(card => (
-            <div
-              key={card.key}
-              onClick={() => { setStatFilter(statFilter === card.key ? '' : card.key); setStatusFilter(card.key || 'all') }}
-              style={{ background: 'var(--surface)', border: statFilter === card.key ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: 9, padding: '10px 12px', cursor: 'pointer', transition: 'border 0.15s ease' }}
-            >
-              <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wide)', color: 'var(--text-muted)', marginBottom: 5 }}>{card.label}</div>
-              <div style={{ fontSize: 'var(--text-lg)', fontWeight: 300, letterSpacing: '-0.03em', color: card.color }}>{card.value}</div>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+              {assets.length} registered asset{assets.length === 1 ? '' : 's'}
+              {typeof stats?.pendingDecommission === 'number' && stats.pendingDecommission > 0
+                ? ` · ${stats.pendingDecommission} pending decommission`
+                : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ position: 'relative' }}>
+              <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search assets..."
+                style={{ height: 34, fontSize: 13, paddingLeft: 30, paddingRight: 12, width: 200, backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
+              />
             </div>
+            {(() => {
+              const count = [drawerFilters.status, drawerFilters.category, drawerFilters.branch].filter(Boolean).length
+              return (
+                <button
+                  onClick={() => setFilterDrawerOpen(o => !o)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 12px', border: '1px solid var(--border)', borderRadius: 9, background: filterDrawerOpen ? 'var(--hover)' : 'var(--surface)', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)' }}
+                >
+                  <svg viewBox="0 0 24 24" style={{ width: 13, height: 13, stroke: 'currentColor', fill: 'none', strokeWidth: 1.6, strokeLinecap: 'round' }}>
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="11" y1="18" x2="13" y2="18"/>
+                  </svg>
+                  Filters
+                  {count > 0 && (
+                    <span style={{ minWidth: 16, height: 16, padding: '0 4px', borderRadius: 99, background: 'var(--accent-color)', color: '#fff', fontSize: 10, fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+                  )}
+                </button>
+              )
+            })()}
+          </div>
+        </div>
+
+        {/* Stats Strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 14 }}>
+          {[
+            { key: '',                  label: 'Total',       value: stats?.total ?? assets.length,   color: 'var(--text-primary)' },
+            { key: 'ACTIVE',            label: 'Active',      value: stats?.active ?? 0,              color: 'var(--green)' },
+            { key: 'PENDING_APPROVAL',  label: 'Pending',     value: stats?.pendingDecommission ?? 0, color: 'var(--amber)' },
+            { key: 'IN_MAINTENANCE',    label: 'Maintenance', value: stats?.maintenance ?? 0,         color: 'var(--blue)' },
+            { key: 'REPAIR_NEEDED',     label: 'Repair',      value: stats?.repairNeeded ?? 0,        color: 'var(--red)' },
+            { key: 'DECOMMISSIONED',    label: 'Decomm.',     value: stats?.decommissioned ?? 0,      color: 'var(--text-muted)' },
+          ].map(card => (
+            <DsCard
+              key={card.key}
+              padding="16px 18px"
+              onClick={() => { setStatFilter(statFilter === card.key ? '' : card.key); setStatusFilter(card.key || 'all') }}
+              style={{ borderColor: statFilter === card.key ? 'var(--accent-color)' : undefined }}
+            >
+              <MonoLabel>{card.label}</MonoLabel>
+              <div className="stat-number" style={{ marginTop: 6, color: card.color }}>{card.value}</div>
+            </DsCard>
           ))}
         </div>
 
-        {/* Search bar full width */}
-        <div style={{ position: 'relative' }}>
-          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5, strokeLinecap: 'round' }} viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search assets..."
-            style={{ width: '100%', paddingLeft: 32, paddingRight: 12, paddingTop: 9, paddingBottom: 9, fontSize: 'var(--text-sm)', border: '1px solid var(--border)', borderRadius: 7, backgroundColor: 'var(--surface)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }}
-          />
-        </div>
+        {/* Category filter chips */}
+        {categories.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => setCategoryFilter('all')} className={`filter-chip${categoryFilter === 'all' ? ' active' : ''}`}>
+              All categories
+            </button>
+            {categories.map(cat => (
+              <button key={cat.id} onClick={() => setCategoryFilter(categoryFilter === cat.id ? 'all' : cat.id)} className={`filter-chip${categoryFilter === cat.id ? ' active' : ''}`}>
+                {cat.color && <span style={{ width: 7, height: 7, borderRadius: 99, background: cat.color, flex: 'none' }} />}
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Table card */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)' }}>All Assets</span>
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{assets.length} results</span>
+        {/* Assets Table */}
+        <DsCard padding={0} style={{ overflow: 'hidden' }}>
+          {/* Column header */}
+          <div className="ds-thead" style={{ display: 'grid', gridTemplateColumns: '1.4fr 150px 150px 130px 120px 80px 90px', gap: 12, padding: '11px 22px', borderBottom: '1px solid var(--border-inner)' }}>
+            <span>Asset</span><span>Category</span><span>Branch</span><span>Condition</span><span>Last service</span><span>Tickets</span><span />
           </div>
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 20px' }}>
-              <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <div style={{ width: 20, height: 20, border: '2px solid var(--border)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            </div>
+          ) : assets.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0' }}>
+              <div style={{ width: 32, height: 32, backgroundColor: 'var(--hover)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24">
+                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>No assets found</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Try adjusting your filters</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Asset ID', 'Name', 'Category', 'Branch', 'Status', 'Last Updated', 'Actions'].map(col => (
-                      <th key={col} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', fontWeight: 400, padding: '8px 14px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {assets.map((asset, i) => (
-                    <tr
-                      key={asset.id}
-                      style={{ borderBottom: i === assets.length - 1 ? 'none' : '1px solid var(--surface2)', cursor: 'pointer' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      onClick={() => fetchAssetDetail(asset.id)}
-                    >
-                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>{asset.assetNumber}</td>
-                      <td style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '9px 14px' }}>
-                        <div style={{ fontWeight: 400 }}>{asset.name}</div>
-                        {asset.brand && <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{asset.brand}</div>}
-                      </td>
-                      <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.category?.name || '—'}</td>
-                      <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', padding: '9px 14px' }}>{asset.branch?.name || '—'}</td>
-                      <td style={{ padding: '9px 14px' }}>
-                        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.03em', padding: '2px 7px', borderRadius: 99, ...getStatusPill(asset.status) }}>
-                          {asset.status.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '9px 14px', whiteSpace: 'nowrap' }}>
-                        {new Date(asset.purchaseDate || '').toLocaleDateString() !== 'Invalid Date' && asset.purchaseDate
-                          ? new Date(asset.purchaseDate).toLocaleDateString()
-                          : '—'
-                        }
-                      </td>
-                      <td style={{ padding: '9px 14px' }}>
-                        <button
-                          onClick={e => { e.stopPropagation(); fetchAssetDetail(asset.id) }}
-                          style={{ fontSize: 'var(--text-xs)', padding: '3px 9px', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}
-                        >View</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {assets.length === 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 20px' }}>
-                  <div style={{ width: 32, height: 32, backgroundColor: 'var(--surface2)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                    <svg style={{ width: 16, height: 16, stroke: 'var(--text-muted)', fill: 'none', strokeWidth: 1.5 }} viewBox="0 0 24 24">
-                      <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                  </div>
-                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No assets found</div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}>Try adjusting your filters</div>
+            assets.map(asset => {
+              const ticketCount = asset._count?.tickets ?? asset.tickets?.length ?? 0
+              return (
+                <div
+                  key={asset.id}
+                  className="ds-row"
+                  onClick={() => fetchAssetDetail(asset.id)}
+                  style={{ display: 'grid', gridTemplateColumns: '1.4fr 150px 150px 130px 120px 80px 90px', gap: 12, alignItems: 'center', padding: '13px 22px', cursor: 'pointer' }}
+                >
+                  {/* Asset */}
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.name}</span>
+                    <span style={{ display: 'block', fontFamily: 'DM Mono, monospace', fontSize: 10.5, color: 'var(--text-muted)' }}>{asset.assetNumber}</span>
+                  </span>
+                  {/* Category */}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-tertiary)', minWidth: 0 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 99, background: asset.category?.color || '#9E9C94', flex: 'none' }} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.category?.name || 'Uncategorized'}</span>
+                  </span>
+                  {/* Branch */}
+                  <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.branch?.name || asset.location || '—'}</span>
+                  {/* Condition */}
+                  <span><DsBadge variant={CONDITION_VARIANT[asset.status] || 'neutral'}>{asset.status.replace(/_/g, ' ')}</DsBadge></span>
+                  {/* Last service */}
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
+                  {/* Tickets */}
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: 'var(--text-tertiary)' }}>{ticketCount}</span>
+                  {/* Actions */}
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                    <button title="View details" onClick={e => { e.stopPropagation(); fetchAssetDetail(asset.id) }} style={{ display: 'flex', padding: 5, border: '1px solid var(--border)', borderRadius: 7, background: 'var(--surface)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <Eye style={{ width: 14, height: 14 }} />
+                    </button>
+                  </span>
                 </div>
-              )}
-            </div>
+              )
+            })
           )}
-        </div>
+        </DsCard>
       </div>
 
       {/* Asset Detail Modal */}
