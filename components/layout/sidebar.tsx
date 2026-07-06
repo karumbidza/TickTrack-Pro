@@ -48,49 +48,25 @@ const SETTINGS_SUB_ITEMS = [
   { href: '/admin/settings/billing',      label: 'Billing',       icon: <CreditCard size={12} strokeWidth={1.5} /> },
 ]
 
-function NavLink({ href, label, icon, exact, isActive }: {
+function NavLink({ href, label, icon, isActive, trailing }: {
   href: string
   label: string
   icon: React.ReactNode
   exact?: boolean
   isActive: boolean
+  trailing?: React.ReactNode
 }) {
   return (
     <Link
       href={href}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '7px 10px',
-        borderRadius: 8,
-        fontSize: 'var(--text-sm)',
-        fontWeight: isActive ? 500 : 400,
-        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-        backgroundColor: isActive ? 'var(--surface2)' : 'transparent',
-        textDecoration: 'none',
-        transition: 'background-color 0.12s ease, color 0.12s ease',
-      }}
-      onMouseEnter={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.backgroundColor = 'var(--surface2)'
-          e.currentTarget.style.color = 'var(--text-primary)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.backgroundColor = 'transparent'
-          e.currentTarget.style.color = 'var(--text-secondary)'
-        }
-      }}
+      className={`nav-item${isActive ? ' active' : ''}`}
+      style={{ textDecoration: 'none' }}
     >
-      <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>{icon}</span>
+      <span style={{ flexShrink: 0, display: 'flex' }}>{icon}</span>
       <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {label}
       </span>
-      {isActive && (
-        <ChevronRight size={11} strokeWidth={2} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-      )}
+      {trailing}
     </Link>
   )
 }
@@ -165,15 +141,22 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
         {isAdmin && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <SectionLabel label="Main" />
-            <NavLink href="/admin" label="Dashboard" icon={<LayoutDashboard size={14} strokeWidth={1.5} />} exact isActive={pathname === '/admin'} />
-            <NavLink href="/admin/tickets" label="Tickets" icon={<Ticket size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/tickets')} />
-            <NavLink href="/admin/invoices" label="Invoices" icon={<FileText size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/invoices')} />
+            <NavLink href="/admin" label="Dashboard" icon={<LayoutDashboard size={15} strokeWidth={1.6} />} exact isActive={pathname === '/admin'} />
+            <NavLink href="/admin/tickets" label="Tickets" icon={<Ticket size={15} strokeWidth={1.6} />} isActive={pathname?.startsWith('/admin/tickets')} />
+            <NavLink
+              href="/admin/invoices"
+              label="Invoices"
+              icon={<FileText size={15} strokeWidth={1.6} />}
+              isActive={pathname?.startsWith('/admin/invoices')}
+              trailing={<span style={{ width: 6, height: 6, borderRadius: 99, background: 'var(--accent-color)', flexShrink: 0 }} />}
+            />
 
             {isTenantAdmin && (
               <>
-                <NavLink href="/admin/users" label="Users" icon={<Users size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/users')} />
-                <NavLink href="/admin/contractors" label="Contractors" icon={<Briefcase size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/contractors')} />
-                <NavLink href="/admin/assets" label="Assets" icon={<Package size={14} strokeWidth={1.5} />} isActive={pathname?.startsWith('/admin/assets')} />
+                <SectionLabel label="Manage" />
+                <NavLink href="/admin/users" label="Users" icon={<Users size={15} strokeWidth={1.6} />} isActive={pathname?.startsWith('/admin/users')} />
+                <NavLink href="/admin/contractors" label="Contractors" icon={<Briefcase size={15} strokeWidth={1.6} />} isActive={pathname?.startsWith('/admin/contractors')} />
+                <NavLink href="/admin/assets" label="Assets" icon={<Package size={15} strokeWidth={1.6} />} isActive={pathname?.startsWith('/admin/assets')} />
               </>
             )}
 
@@ -183,41 +166,18 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
                 {/* Settings parent */}
                 <Link
                   href="/admin/settings/categories"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '7px 10px',
-                    borderRadius: 8,
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: isSettingsActive ? 500 : 400,
-                    color: isSettingsActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    backgroundColor: isSettingsActive ? 'var(--surface2)' : 'transparent',
-                    textDecoration: 'none',
-                    transition: 'background-color 0.12s ease, color 0.12s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isSettingsActive) {
-                      e.currentTarget.style.backgroundColor = 'var(--surface2)'
-                      e.currentTarget.style.color = 'var(--text-primary)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSettingsActive) {
-                      e.currentTarget.style.backgroundColor = 'transparent'
-                      e.currentTarget.style.color = 'var(--text-secondary)'
-                    }
-                  }}
+                  className={`nav-item${isSettingsActive ? ' active' : ''}`}
+                  style={{ textDecoration: 'none' }}
                 >
-                  <span style={{ flexShrink: 0, opacity: isSettingsActive ? 1 : 0.7 }}>
-                    <Settings size={14} strokeWidth={1.5} />
+                  <span style={{ flexShrink: 0, display: 'flex' }}>
+                    <Settings size={15} strokeWidth={1.6} />
                   </span>
                   <span style={{ flex: 1 }}>Settings</span>
                   <ChevronRight
                     size={11}
                     strokeWidth={2}
                     style={{
-                      color: 'var(--text-muted)',
+                      opacity: 0.55,
                       flexShrink: 0,
                       transform: isSettingsActive ? 'rotate(90deg)' : 'none',
                       transition: 'transform 0.15s ease',
@@ -234,36 +194,9 @@ export function Sidebar({ mobileOpen }: { mobileOpen?: boolean }) {
                         <Link
                           key={sub.href}
                           href={sub.href}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 7,
-                            paddingLeft: 26,
-                            paddingRight: 10,
-                            paddingTop: 5,
-                            paddingBottom: 5,
-                            borderRadius: 6,
-                            fontSize: 'var(--text-xs)',
-                            fontWeight: subActive ? 500 : 400,
-                            color: subActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                            textDecoration: 'none',
-                            backgroundColor: subActive ? 'var(--surface2)' : 'transparent',
-                            transition: 'background-color 0.1s ease, color 0.1s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!subActive) {
-                              e.currentTarget.style.backgroundColor = 'var(--surface2)'
-                              e.currentTarget.style.color = 'var(--text-secondary)'
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!subActive) {
-                              e.currentTarget.style.backgroundColor = 'transparent'
-                              e.currentTarget.style.color = 'var(--text-muted)'
-                            }
-                          }}
+                          className={`nav-subitem${subActive ? ' active' : ''}`}
+                          style={{ textDecoration: 'none' }}
                         >
-                          <span style={{ opacity: subActive ? 1 : 0.6 }}>{sub.icon}</span>
                           {sub.label}
                         </Link>
                       )

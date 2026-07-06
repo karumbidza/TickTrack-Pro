@@ -6,35 +6,48 @@
 
 @layer base {
   :root {
-    /* ── COLOUR TOKENS ── */
-    --bg: #f2f1ee;
+    /* ── COLOUR TOKENS (Tenant Admin redesign) ── */
+    --bg: #f6f5f1;                 /* warm paper */
     --surface: #ffffff;
-    --surface2: #eceae5;
-    --border: #e0ddd6;
+    --sidebar-surface: #fcfbf9;
+    --surface2: #eceae3;
+    --border: #e8e5de;            /* cards / inputs */
+    --border-inner: #eeebe4;      /* inner dividers */
+    --row-sep: #f1efe9;           /* table row separators */
     --border-strong: #c8c6bc;
+    --hover: #faf9f6;             /* row / item hover */
+    --hover-strong: #f1efe9;      /* ghost button / nav hover */
     --text-primary: #1a1916;
     --text-secondary: #6b6860;
+    --text-tertiary: #4a4843;
     --text-muted: #9e9c94;
-    --accent: #2a2825;
+    --text-faint: #b3b0a7;
+    --accent: #1a1916;            /* dark ink (text emphasis, inverted cards) */
+
+    /* Violet accent — the single "touch of colour". Swappable. */
+    --accent-color: #5a51d6;
+    --accent-soft: color-mix(in srgb, var(--accent-color) 9%, white);
+    --accent-soft-2: color-mix(in srgb, var(--accent-color) 28%, white);
+
     --tag-bg: #eceae3;
     --tag-text: #4a4843;
-    --green: #2d6a4f;
-    --green-bg: #e8f5ee;
-    --amber: #92400e;
-    --amber-bg: #fef3c7;
-    --blue: #1e40af;
-    --blue-bg: #dbeafe;
-    --red: #991b1b;
-    --red-bg: #fee2e2;
+    --green: #2d6a4f;   --green-bg: #e8f5ee;
+    --amber: #92400e;   --amber-bg: #fef3c7;
+    --blue: #1e40af;    --blue-bg: #dbeafe;
+    --red: #991b1b;     --red-bg: #fee2e2;
+    --orange: #9a3412;  --orange-bg: #ffedd5;   /* HIGH priority */
+    --violet: #5b21b6;  --violet-bg: #ede9fe;   /* ON SITE */
+    --neutral: #4a4843; --neutral-bg: #eceae3;
 
-    /* ── TYPE SCALE — Major Third (1.250) ── */
-    --text-xs:   11px;   /* DM Mono labels, badges, timestamps, IDs */
-    --text-sm:   13px;   /* Secondary body, table cells, nav items, form labels */
-    --text-base: 15px;   /* Primary body, card content, descriptions */
-    --text-md:   17px;   /* Card titles, section headings, topbar title */
-    --text-lg:   20px;   /* Sub-page headings, modal titles */
-    --text-xl:   24px;   /* Stat card numbers */
-    --text-2xl:  30px;   /* Page-level headings */
+    /* ── TYPE SCALE (redesign) ── */
+    --text-xs:   12px;   /* meta */
+    --text-sm:   13px;   /* secondary body, table cells */
+    --text-base: 13.5px; /* body */
+    --text-md:   14.5px; /* card titles */
+    --text-lg:   15px;   /* topbar / nav */
+    --text-xl:   24px;   /* detail title */
+    --text-2xl:  26px;   /* page greeting / h1 */
+    --text-stat: 31px;   /* stat numbers */
 
     /* ── LINE HEIGHTS ── */
     --leading-tight:   1.2;
@@ -163,36 +176,34 @@
 
   .stat-number {
     font-weight: 300;
-    font-size: var(--text-xl);
+    font-size: var(--text-stat);
     line-height: var(--leading-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: -0.03em;
   }
 
-  /* ── CARD UTILITIES ── */
-  .ds-card {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 8px rgba(0, 0, 0, 0.04);
+  /* ── CARD UTILITIES (flat, airy, bordered) ── */
+  .ds-card,
+  .card,
+  .glass {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(26, 25, 22, 0.03);
   }
 
   .ds-card-lg {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px) saturate(160%);
-    -webkit-backdrop-filter: blur(16px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(26, 25, 22, 0.03);
   }
 
-  .glass {
-    background: rgba(255, 255, 255, 0.82);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+  /* Inverted dark card (SLA compliance, billing plan) */
+  .card-dark {
+    background: var(--text-primary);
+    color: #f7f6f3;
+    border: 1px solid var(--text-primary);
+    border-radius: 14px;
   }
 
   /* Stats strip */
@@ -274,11 +285,138 @@
     border-radius: 99px;
   }
 
-  .badge-green  { background-color: var(--green-bg); color: var(--green); }
-  .badge-amber  { background-color: var(--amber-bg); color: var(--amber); }
-  .badge-blue   { background-color: var(--blue-bg);  color: var(--blue); }
-  .badge-red    { background-color: var(--red-bg);   color: var(--red); }
-  .badge-neutral { background-color: var(--tag-bg);  color: var(--tag-text); }
+  .badge-green   { background-color: var(--green-bg);  color: var(--green); }
+  .badge-amber   { background-color: var(--amber-bg);  color: var(--amber); }
+  .badge-blue    { background-color: var(--blue-bg);   color: var(--blue); }
+  .badge-red     { background-color: var(--red-bg);    color: var(--red); }
+  .badge-orange  { background-color: var(--orange-bg); color: var(--orange); }
+  .badge-violet  { background-color: var(--violet-bg); color: var(--violet); }
+  .badge-neutral { background-color: var(--neutral-bg); color: var(--neutral); }
+  .badge-accent  { background-color: var(--accent-soft); color: var(--accent-color); }
+
+  /* ── REDESIGN: accent button + link ── */
+  .btn-accent {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 36px;
+    padding: 0 15px;
+    background: var(--accent-color);
+    color: #ffffff;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.12s ease;
+  }
+  .btn-accent:hover { opacity: 0.9; }
+
+  .link-accent {
+    color: var(--accent-color);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .link-accent:hover { text-decoration: underline; }
+
+  /* ── REDESIGN: sidebar nav item ── */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: var(--text-tertiary);
+    transition: background-color 0.12s ease;
+  }
+  .nav-item:hover { background: var(--hover-strong); }
+  .nav-item.active {
+    background: var(--accent-soft);
+    color: var(--accent-color);
+    font-weight: 500;
+  }
+  .nav-subitem {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px 5px 35px;
+    border-radius: 7px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background-color 0.12s ease;
+  }
+  .nav-subitem:hover { background: var(--hover-strong); }
+  .nav-subitem.active { color: var(--accent-color); font-weight: 500; }
+
+  /* ── REDESIGN: filter chips ── */
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 99px;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.12s ease;
+  }
+  .filter-chip:hover { background: var(--hover-strong); }
+  .filter-chip.active {
+    border-color: var(--accent-color);
+    background: var(--accent-soft);
+    color: var(--accent-color);
+    font-weight: 500;
+  }
+  .filter-chip .chip-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+  }
+  .filter-chip.active .chip-count { color: var(--accent-color); }
+
+  /* ── REDESIGN: iOS-style toggle ── */
+  .ds-toggle {
+    position: relative;
+    width: 36px;
+    height: 21px;
+    border-radius: 99px;
+    background: #ddDAD2;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    flex: none;
+  }
+  .ds-toggle.on { background: var(--accent-color); }
+  .ds-toggle .knob {
+    position: absolute;
+    top: 2.5px;
+    left: 2.5px;
+    width: 16px;
+    height: 16px;
+    border-radius: 99px;
+    background: #ffffff;
+    transition: left 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .ds-toggle.on .knob { left: 17.5px; }
+
+  /* ── REDESIGN: data table ── */
+  .ds-thead {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .ds-row {
+    border-top: 1px solid var(--row-sep);
+    transition: background-color 0.12s ease;
+  }
+  .ds-row:hover { background: var(--hover); }
 
   /* ── FILTER PANEL (legacy, kept for reference) ── */
   .page-with-filter-panel {
@@ -357,21 +495,21 @@
     position: fixed;
     top: 0;
     left: 0;
-    width: 210px;
+    width: 228px;
     height: 100vh;
     z-index: 40;
     display: flex;
     flex-direction: column;
-    background-color: var(--surface);
+    background-color: var(--sidebar-surface);
     border-right: 1px solid var(--border);
     overflow-y: auto;
     overflow-x: hidden;
   }
 
   .sidebar-content {
-    margin-left: 210px;
+    margin-left: 228px;
     min-height: 100vh;
-    width: calc(100% - 210px);
+    width: calc(100% - 228px);
   }
 
   /* ── MOBILE ── */
