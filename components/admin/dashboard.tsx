@@ -47,19 +47,25 @@ export function AdminDashboard({ user }: { user: User }) {
     openTickets: 0, inProgressTickets: 0, completedMTD: 0, needsAttention: 0,
     highPriorityTickets: 0, contractorCount: 0, userCount: 0, totalCostMTD: 0,
   })
+  const [weeks, setWeeks] = useState<{ label: string; created: number; resolved: number }[]>([])
+  const [sla, setSla] = useState<{ rate: number | null; delta: number | null }>({ rate: null, delta: null })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     ;(async () => {
       try {
-        const [ticketsRes, statsRes] = await Promise.all([
+        const [ticketsRes, statsRes, extrasRes] = await Promise.all([
           fetch('/api/admin/tickets'),
           fetch('/api/admin/stats'),
+          fetch('/api/admin/stats/dashboard-extras'),
         ])
         const ticketsData = await ticketsRes.json()
         const statsData = await statsRes.json()
+        const extrasData = await extrasRes.json()
         setTickets(ticketsData.tickets || [])
         if (statsData.stats) setStats((s) => ({ ...s, ...statsData.stats }))
+        if (Array.isArray(extrasData.weeks)) setWeeks(extrasData.weeks)
+        if (extrasData.sla) setSla(extrasData.sla)
       } catch (e) {
         console.error('Failed to fetch admin data:', e)
       } finally {
@@ -90,12 +96,7 @@ export function AdminDashboard({ user }: { user: User }) {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
   })()
 
-  // NOTE: weekly volume + SLA compliance require new endpoints (see redesign
-  // handoff "New data needs"). Representative shape until those land.
-  const weeks = [
-    { l: 'W1', a: 62, b: 48 }, { l: 'W2', a: 78, b: 60 }, { l: 'W3', a: 54, b: 66 }, { l: 'W4', a: 88, b: 70 },
-    { l: 'W5', a: 72, b: 80 }, { l: 'W6', a: 96, b: 74 }, { l: 'W7', a: 68, b: 84 }, { l: 'W8', a: 100, b: 78 },
-  ]
+  const volumeMax = Math.max(1, ...weeks.flatMap((w) => [w.created, w.resolved]))
 
   if (loading) {
     return (
@@ -150,13 +151,16 @@ export function AdminDashboard({ user }: { user: User }) {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, marginTop: 18 }}>
-                {weeks.map((w) => (
-                  <div key={w.l} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
+                {weeks.length === 0 && (
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>No ticket activity yet.</div>
+                )}
+                {weeks.map((w, i) => (
+                  <div key={i} title={`${w.label}: ${w.created} created, ${w.resolved} resolved`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 170 }}>
-                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-color)', height: `${w.a}%` }} />
-                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-soft-2)', height: `${w.b}%` }} />
+                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-color)', height: `${Math.round((w.created / volumeMax) * 100)}%` }} />
+                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-soft-2)', height: `${Math.round((w.resolved / volumeMax) * 100)}%` }} />
                     </div>
-                    <MonoLabel size={10} spacing="0" color="var(--text-faint)">{w.l}</MonoLabel>
+                    <MonoLabel size={10} spacing="0" color="var(--text-faint)">{w.label}</MonoLabel>
                   </div>
                 ))}
               </div>
@@ -232,17 +236,30 @@ export function AdminDashboard({ user }: { user: User }) {
               </Link>
             </Card>
 
-            {/* SLA compliance (sample — needs endpoint) */}
+            {/* SLA compliance — MTD (resolution deadline met) */}
             <div className="card-dark" style={{ padding: '18px 20px' }}>
               <MonoLabel size={10} color="rgba(247,246,243,0.55)">SLA compliance — MTD</MonoLabel>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
-                <span style={{ fontSize: 31, fontWeight: 300, letterSpacing: '-0.03em' }}>94.2%</span>
-                <span style={{ fontSize: 12, color: '#6EE7B7', fontWeight: 500 }}>▲ 1.4%</span>
-              </div>
-              <div style={{ height: 6, borderRadius: 99, background: '#3D3C38', marginTop: 12, overflow: 'hidden' }}>
-                <div style={{ width: '94.2%', height: '100%', background: '#4ADE80', borderRadius: 99 }} />
-              </div>
-              <div style={{ fontSize: 11.5, color: 'rgba(247,246,243,0.5)', marginTop: 10 }}>Response + resolution within target.</div>
+              {sla.rate === null ? (
+                <>
+                  <div style={{ fontSize: 31, fontWeight: 300, letterSpacing: '-0.03em', marginTop: 8, color: 'rgba(247,246,243,0.6)' }}>—</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(247,246,243,0.5)', marginTop: 10 }}>No resolved tickets with an SLA target yet this month.</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
+                    <span style={{ fontSize: 31, fontWeight: 300, letterSpacing: '-0.03em' }}>{sla.rate}%</span>
+                    {sla.delta !== null && sla.delta !== 0 && (
+                      <span style={{ fontSize: 12, color: sla.delta > 0 ? '#6EE7B7' : '#FCA5A5', fontWeight: 500 }}>
+                        {sla.delta > 0 ? '▲' : '▼'} {Math.abs(sla.delta)}%
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ height: 6, borderRadius: 99, background: '#3D3C38', marginTop: 12, overflow: 'hidden' }}>
+                    <div style={{ width: `${sla.rate}%`, height: '100%', background: '#4ADE80', borderRadius: 99 }} />
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(247,246,243,0.5)', marginTop: 10 }}>Resolved within the resolution SLA target.</div>
+                </>
+              )}
             </div>
           </div>
         </div>
