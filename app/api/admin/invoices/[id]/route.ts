@@ -131,18 +131,34 @@ export async function PATCH(
       return NextResponse.json({ message: 'Invoice not found' }, { status: 404 })
     }
 
-    // For tenant admins, ensure they can only modify their tenant's invoices
-    if (role === 'TENANT_ADMIN' && invoice.tenantId !== tenantId) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    // Tenant isolation: every admin role except SUPER_ADMIN is pinned to its tenant.
+    if (role !== 'SUPER_ADMIN' && invoice.tenantId !== tenantId) {
+      return NextResponse.json({ message: 'Invoice not found' }, { status: 404 })
     }
 
     // Build update data
     const updateData: Record<string, unknown> = {}
-    
+
     if (status) {
       const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'PROCESSING', 'PAID']
       if (!validStatuses.includes(status)) {
         return NextResponse.json({ message: 'Invalid status' }, { status: 400 })
+      }
+      // Enforce a state machine: no illegal jumps (e.g. PENDING->PAID) and no
+      // reopening terminal states (PAID/CANCELLED).
+      const allowedTransitions: Record<string, string[]> = {
+        PENDING: ['APPROVED', 'REJECTED', 'CANCELLED', 'PROCESSING'],
+        PROCESSING: ['APPROVED', 'REJECTED', 'CANCELLED', 'PENDING'],
+        APPROVED: ['PAID', 'CANCELLED', 'REJECTED', 'PROCESSING'],
+        REJECTED: ['PENDING', 'CANCELLED'],
+        CANCELLED: [],
+        PAID: [],
+      }
+      if (status !== invoice.status && !(allowedTransitions[invoice.status] ?? []).includes(status)) {
+        return NextResponse.json(
+          { message: `Cannot change invoice status from ${invoice.status} to ${status}` },
+          { status: 409 }
+        )
       }
       updateData.status = status
       
