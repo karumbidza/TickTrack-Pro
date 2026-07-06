@@ -3,8 +3,13 @@ import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
 import { sendVerificationEmail, sendTrialStartedEmail } from '@/lib/email'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Public self-registration: rate limit to prevent mass tenant/admin creation.
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const {
