@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
@@ -67,6 +68,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const { userId, tenantId, role } = authCtx
+
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     // Only admins can create categories
     const adminRoles = ['TENANT_ADMIN', 'IT_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN', 'SUPER_ADMIN']

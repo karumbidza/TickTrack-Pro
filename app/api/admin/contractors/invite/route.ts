@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth'
+import { enforceSubscription } from '@/lib/subscription-guard'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { logger } from '@/lib/logger'
@@ -18,6 +19,9 @@ export async function POST(request: NextRequest) {
     if (!allowedRoles.includes(role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
     }
+
+    const subGate = await enforceSubscription(authCtx, 'write')
+    if (subGate) return subGate
 
     if (!tenantId) {
       return NextResponse.json({ message: 'Invalid tenant. Super admins must switch to a tenant context to invite contractors.' }, { status: 400 })
