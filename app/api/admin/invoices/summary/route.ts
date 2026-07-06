@@ -8,15 +8,24 @@ export async function GET(request: NextRequest) {
     if (!authCtx) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
-    const { userId, tenantId, role } = authCtx
+    const { userId, tenantId, role, isSuperAdmin } = authCtx
+
+    const ADMIN_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
+    if (!isSuperAdmin && !ADMIN_ROLES.includes(role)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
 
     const { searchParams } = new URL(request.url)
     const invoiceId = searchParams.get('invoiceId')
     const format = searchParams.get('format') || 'json' // json, html, or text
 
+    // Tenant isolation: pin non-super-admins to their tenant; a null tenantId
+    // must not collapse the filter (fail closed with a non-matching sentinel).
+    const tenantScope = isSuperAdmin ? {} : { tenantId: tenantId ?? '__none__' }
+
     // Fetch invoice with related ticket data
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId || '' },
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId || '', ...tenantScope },
       include: {
         contractor: true,
         ticket: {

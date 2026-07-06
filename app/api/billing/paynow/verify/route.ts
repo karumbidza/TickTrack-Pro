@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
+import { getAuthContext } from '@/lib/auth'
 
 /**
  * GET /api/billing/paynow/verify
@@ -8,6 +9,11 @@ import { logger } from '@/lib/logger'
  */
 export async function GET(request: NextRequest) {
   try {
+    const ctx = await getAuthContext()
+    if (!ctx) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const reference = searchParams.get('reference')
 
@@ -15,9 +21,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Reference is required' }, { status: 400 })
     }
 
+    // Tenant isolation: only expose payment state for the caller's own tenant.
+    const tenantScope = ctx.isSuperAdmin ? {} : { tenantId: ctx.tenantId ?? '__none__' }
+
     // Find payment by reference (extracted from Paynow reference)
     const payment = await prisma.payment.findFirst({
       where: {
+        ...tenantScope,
         OR: [
           { providerPaymentId: reference },
           {

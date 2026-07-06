@@ -8,7 +8,13 @@ export async function GET(request: NextRequest) {
     if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const { userId, tenantId, role } = authCtx
+    const { userId, tenantId, role, isSuperAdmin } = authCtx
+
+    // Fail closed: a null tenantId must never collapse to "no filter" (which would
+    // return every tenant's assets). Only a SUPER_ADMIN may query across tenants.
+    if (!tenantId && !isSuperAdmin) {
+      return NextResponse.json({ error: 'No organisation context' }, { status: 403 })
+    }
 
     // Parse pagination params
     const { searchParams } = new URL(request.url)
@@ -16,9 +22,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
     const skip = (page - 1) * limit
 
-    const whereClause = {
-      tenantId: tenantId ?? undefined
-    }
+    const whereClause = isSuperAdmin && !tenantId ? {} : { tenantId: tenantId as string }
 
     // Run count and data query in parallel
     const [assets, total] = await Promise.all([

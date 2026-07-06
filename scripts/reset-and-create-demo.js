@@ -3,6 +3,15 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
+  // Safety guard: this script deletes every row in every table. It must never run
+  // against production and requires an explicit opt-in even in non-prod.
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DB_RESET !== 'yes') {
+    console.error('Refusing to run reset-and-create-demo.');
+    console.error('Requires NODE_ENV !== production AND ALLOW_DB_RESET=yes.');
+    console.error('Target DB:', (process.env.DATABASE_URL || '(unset)').replace(/:\/\/[^@]*@/, '://***@'));
+    process.exit(1);
+  }
+
   console.log('🗑️  Deleting all tenants and their data...');
   
   // Delete in correct order due to foreign keys

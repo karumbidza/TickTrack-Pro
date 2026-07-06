@@ -11,12 +11,17 @@ export async function GET(
     if (!authCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const { userId, tenantId, role } = authCtx
+    const { userId, tenantId, role, isSuperAdmin } = authCtx
+
+    // Fail closed: never let a null tenantId collapse the tenant filter.
+    if (!tenantId && !isSuperAdmin) {
+      return NextResponse.json({ error: 'No organisation context' }, { status: 403 })
+    }
 
     const asset = await prisma.asset.findFirst({
       where: {
         id: params.id,
-        tenantId: tenantId ?? undefined
+        ...(isSuperAdmin && !tenantId ? {} : { tenantId: tenantId as string })
       },
       include: {
         category: true

@@ -8,6 +8,14 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function cleanTicketData() {
+  // Safety guard: destroys all ticket-related data. Never run against production.
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DB_RESET !== 'yes') {
+    console.error('Refusing to run clean-ticket-data.');
+    console.error('Requires NODE_ENV !== production AND ALLOW_DB_RESET=yes.');
+    console.error('Target DB:', (process.env.DATABASE_URL || '(unset)').replace(/:\/\/[^@]*@/, '://***@'));
+    process.exit(1);
+  }
+
   console.log('🧹 Starting ticket data cleanup...\n');
 
   try {

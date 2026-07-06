@@ -47,3 +47,9 @@ public/uploads/
 *.log
 *.pid
 *.seed
+
+# Never commit local test/one-off secrets or credential notes
+test-email.js
+k.env
+*.env
+USER_CREDENTIALS.md

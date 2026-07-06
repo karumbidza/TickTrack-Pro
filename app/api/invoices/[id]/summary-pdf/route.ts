@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getAuthContext } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateInvoiceSummaryPDF } from '@/lib/pdf-generator'
+
+const ADMIN_ROLES = ['TENANT_ADMIN', 'IT_ADMIN', 'SALES_ADMIN', 'RETAIL_ADMIN', 'MAINTENANCE_ADMIN', 'PROJECTS_ADMIN']
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { userId: clerkUserId } = await auth()
-    if (!clerkUserId) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    const ctx = await getAuthContext()
+    if (!ctx) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+
+    const isAdmin = ADMIN_ROLES.includes(ctx.role)
+    const isContractor = ctx.role === 'CONTRACTOR'
+    if (!isAdmin && !isContractor && !ctx.isSuperAdmin) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
 
     const invoiceId = params.id
 
+    // Tenant isolation: SUPER_ADMIN may cross tenants; admins are pinned to their
+    // tenant; contractors may only fetch their own invoices. A null tenantId must
+    // never collapse the filter, so we fall back to a sentinel that matches nothing.
+    const tenantScope = ctx.isSuperAdmin ? {} : { tenantId: ctx.tenantId ?? '__none__' }
+    const ownershipScope = isContractor && !ctx.isSuperAdmin ? { contractorId: ctx.userId } : {}
+
     // Fetch invoice with all related data
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: invoiceId },
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, ...tenantScope, ...ownershipScope },
       include: {
         ticket: {
           include: {
