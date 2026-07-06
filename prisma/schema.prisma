@@ -673,6 +673,8 @@ model MaintenanceHistory {
   contractor      Contractor? @relation(fields: [contractorId], references: [id])
   ticket          Ticket?   @relation(fields: [ticketId], references: [id])
 
+  @@index([assetId])
+  @@index([ticketId])
   @@map("maintenance_history")
 }
 
@@ -692,6 +694,7 @@ model AssetHistory {
   asset           Asset     @relation(fields: [assetId], references: [id])
   performedBy     User?     @relation(fields: [performedById], references: [id])
 
+  @@index([assetId])
   @@map("asset_history")
 }
 
@@ -745,6 +748,8 @@ model Message {
   user        User         @relation(fields: [userId], references: [id])
   attachments Attachment[]
 
+  @@index([ticketId])
+  @@index([userId])
   @@map("messages")
 }
 
@@ -766,6 +771,9 @@ model Attachment {
   message    Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
   uploadedBy User     @relation(fields: [uploadedById], references: [id])
 
+  @@index([ticketId])
+  @@index([messageId])
+  @@index([uploadedById])
   @@map("attachments")
 }
 
@@ -780,6 +788,7 @@ model StatusHistory {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
+  @@index([ticketId])
   @@map("status_history")
 }
 
