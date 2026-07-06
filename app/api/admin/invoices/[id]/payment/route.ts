@@ -113,37 +113,55 @@ export async function POST(
       }, { status: 400 })
     }
 
-    // Calculate new amounts
-    const newPaidAmount = invoice.paidAmount + amount
-    const newBalance = invoice.amount - newPaidAmount
-    const isPaidInFull = newBalance <= 0
-
-    // Update the invoice with payment information
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        paidAmount: newPaidAmount,
-        balance: newBalance,
-        status: isPaidInFull ? 'PAID' : 'APPROVED',
-        paidDate: isPaidInFull ? new Date() : invoice.paidDate,
-        proofOfPaymentUrl,
-        notes: notes ? `${invoice.notes ? invoice.notes + '\n' : ''}Payment: ${notes}` : invoice.notes
-      },
-      include: {
-        contractor: {
-          select: {
-            name: true,
-            email: true,
-          }
+    // Apply the payment atomically to prevent lost updates and overpayment under
+    // concurrent requests. The guarded updateMany only succeeds while the balance
+    // still covers this amount (re-checked at write time under a row lock); we then
+    // finalize PAID status inside the same transaction.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const applied = await tx.invoice.updateMany({
+        where: { id: invoiceId, status: 'APPROVED', balance: { gte: amount } },
+        data: {
+          paidAmount: { increment: amount },
+          balance: { decrement: amount },
         },
-        ticket: {
-          select: {
-            title: true,
-            id: true,
-          }
-        }
+      })
+
+      if (applied.count === 0) {
+        return { conflict: true as const }
       }
+
+      const fresh = await tx.invoice.findUnique({
+        where: { id: invoiceId },
+        select: { balance: true, notes: true },
+      })
+      const paidInFull = (fresh?.balance ?? 0) <= 0
+
+      const finalized = await tx.invoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: paidInFull ? 'PAID' : 'APPROVED',
+          paidDate: paidInFull ? new Date() : undefined,
+          proofOfPaymentUrl: proofOfPaymentUrl ?? undefined,
+          notes: notes ? `${fresh?.notes ? fresh.notes + '\n' : ''}Payment: ${notes}` : undefined,
+        },
+        include: {
+          contractor: { select: { name: true, email: true } },
+          ticket: { select: { title: true, id: true } },
+        },
+      })
+
+      return { conflict: false as const, invoice: finalized, isPaidInFull: paidInFull }
     })
+
+    if (outcome.conflict) {
+      return NextResponse.json(
+        { message: 'Payment could not be applied — the invoice balance changed. Please refresh and retry.' },
+        { status: 409 }
+      )
+    }
+
+    const updatedInvoice = outcome.invoice
+    const isPaidInFull = outcome.isPaidInFull
 
     // Notify contractor of payment
     if (invoice.contractorId && isPaidInFull) {
