@@ -2,22 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { 
-  Ticket,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  ArrowRight,
-  FileText,
-  DollarSign,
-  Wrench,
-  AlertTriangle,
-  Package
-} from 'lucide-react'
+import { Ticket, Clock, CheckCircle, DollarSign, ChevronDown } from 'lucide-react'
+import { Card, CardTitle, MonoLabel, Badge, Avatar, StatCard, getInitials, avatarTint, type BadgeVariant } from '@/components/admin/kit'
 
 interface User {
   id: string
@@ -34,279 +20,231 @@ interface TicketSummary {
   status: string
   type: string
   priority: string
-  user: {
-    name: string
-    email: string
-  }
-  assignedTo?: {
-    name: string
-    email: string
-  }
+  user: { name: string; email: string }
+  assignedTo?: { name: string; email: string } | null
   createdAt: string
   updatedAt: string
 }
 
-interface AdminDashboardProps {
-  user: User
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  OPEN: 'amber', ASSIGNED: 'blue', ACCEPTED: 'blue', IN_PROGRESS: 'blue', PROCESSING: 'blue',
+  ON_SITE: 'violet', AWAITING_QUOTE: 'amber', QUOTE_SUBMITTED: 'amber',
+  AWAITING_DESCRIPTION: 'amber', AWAITING_WORK_APPROVAL: 'amber',
+  COMPLETED: 'green', CLOSED: 'neutral', CANCELLED: 'red',
 }
+const PRIORITY_VARIANT: Record<string, BadgeVariant> = { LOW: 'green', MEDIUM: 'amber', HIGH: 'orange', CRITICAL: 'red', URGENT: 'red' }
+// Category dot colour derived from ticket type (seed-style palette).
+const TYPE_COLOR: Record<string, string> = {
+  REPAIR: '#5A51D6', MAINTENANCE: '#2D6A4F', INSPECTION: '#1E40AF',
+  INSTALLATION: '#9A3412', REPLACEMENT: '#5B21B6', EMERGENCY: '#991B1B', OTHER: '#9E9C94',
+}
+const money = (n: number) => `$${(n || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+const statusLabel = (s: string) => s.replace(/_/g, ' ')
 
-export function AdminDashboard({ user }: AdminDashboardProps) {
+export function AdminDashboard({ user }: { user: User }) {
   const [tickets, setTickets] = useState<TicketSummary[]>([])
   const [stats, setStats] = useState({
-    totalTickets: 0,
-    openTickets: 0,
-    processingTickets: 0,
-    inProgressTickets: 0,
-    completedTickets: 0,
-    completedMTD: 0,
-    cancelledTickets: 0,
-    highPriorityTickets: 0,
-    needsAttention: 0,
-    contractorCount: 0,
-    userCount: 0,
-    avgResolutionTime: 0,
-    totalCost: 0,
-    totalCostMTD: 0,
-    pendingCost: 0
+    openTickets: 0, inProgressTickets: 0, completedMTD: 0, needsAttention: 0,
+    highPriorityTickets: 0, contractorCount: 0, userCount: 0, totalCostMTD: 0,
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchAdminData()
+    ;(async () => {
+      try {
+        const [ticketsRes, statsRes] = await Promise.all([
+          fetch('/api/admin/tickets'),
+          fetch('/api/admin/stats'),
+        ])
+        const ticketsData = await ticketsRes.json()
+        const statsData = await statsRes.json()
+        setTickets(ticketsData.tickets || [])
+        if (statsData.stats) setStats((s) => ({ ...s, ...statsData.stats }))
+      } catch (e) {
+        console.error('Failed to fetch admin data:', e)
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
-  const fetchAdminData = async () => {
-    try {
-      const [ticketsRes, statsRes] = await Promise.all([
-        fetch('/api/admin/tickets'),
-        fetch('/api/admin/stats')
-      ])
-      
-      const ticketsData = await ticketsRes.json()
-      const statsData = await statsRes.json()
-      
-      setTickets(ticketsData.tickets || [])
-      if (statsData.stats) {
-        setStats(statsData.stats)
+  const greeting = (() => {
+    const h = new Date().getHours()
+    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  })()
+  const firstName = (user.name || 'there').split(' ')[0]
+
+  const recent = tickets.slice(0, 5)
+  const urgent = tickets
+    .filter((t) => ['HIGH', 'CRITICAL', 'URGENT'].includes(t.priority) && ['OPEN', 'PROCESSING', 'IN_PROGRESS', 'ON_SITE'].includes(t.status))
+    .slice(0, 3)
+
+  // Contractors on the job — derived from assigned tickets.
+  const onJob = (() => {
+    const counts = new Map<string, number>()
+    tickets.forEach((t) => {
+      if (t.assignedTo?.name && ['ACCEPTED', 'IN_PROGRESS', 'ON_SITE', 'ASSIGNED'].includes(t.status)) {
+        counts.set(t.assignedTo.name, (counts.get(t.assignedTo.name) || 0) + 1)
       }
-    } catch (error) {
-      console.error('Failed to fetch admin data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
+    })
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
+  })()
 
-  const getStatusVariant = (status: string): 'info' | 'warning' | 'success' | 'neutral' | 'destructive' => {
-    const variants: Record<string, 'info' | 'warning' | 'success' | 'neutral' | 'destructive'> = {
-      OPEN: 'info',
-      PROCESSING: 'warning',
-      IN_PROGRESS: 'warning',
-      ON_SITE: 'info',
-      PENDING_REVIEW: 'info',
-      COMPLETED: 'success',
-      CLOSED: 'neutral',
-      CANCELLED: 'destructive'
-    }
-    return variants[status] || 'neutral'
-  }
-
-  const getPriorityVariant = (priority: string): 'success' | 'warning' | 'destructive' | 'neutral' => {
-    const variants: Record<string, 'success' | 'warning' | 'destructive' | 'neutral'> = {
-      LOW: 'success',
-      MEDIUM: 'warning',
-      HIGH: 'warning',
-      CRITICAL: 'destructive',
-      URGENT: 'destructive'
-    }
-    return variants[priority] || 'neutral'
-  }
-
-  const formatRole = (role: string) => {
-    return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
-  }
-
-  // Get recent tickets (last 5)
-  const recentTickets = tickets.slice(0, 5)
-  
-  // Get urgent/high priority open tickets
-  const urgentTickets = tickets.filter(t => 
-    ['HIGH', 'CRITICAL', 'URGENT'].includes(t.priority) && 
-    ['OPEN', 'PROCESSING', 'IN_PROGRESS'].includes(t.status)
-  )
+  // NOTE: weekly volume + SLA compliance require new endpoints (see redesign
+  // handoff "New data needs"). Representative shape until those land.
+  const weeks = [
+    { l: 'W1', a: 62, b: 48 }, { l: 'W2', a: 78, b: 60 }, { l: 'W3', a: 54, b: 66 }, { l: 'W4', a: 88, b: 70 },
+    { l: 'W5', a: 72, b: 80 }, { l: 'W6', a: 96, b: 74 }, { l: 'W7', a: 68, b: 84 }, { l: 'W8', a: 100, b: 78 },
+  ]
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent)' }}></div>
-          <p style={{ color: 'var(--text-secondary)' }}>Loading dashboard...</p>
-        </div>
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+        Loading…
       </div>
     )
   }
 
   return (
-    <div className="p-5" style={{ backgroundColor: 'var(--bg)' }}>
-      <div className="space-y-5">
-        {/* Welcome Header */}
-        <div className="flex items-center justify-between">
+    <div style={{ padding: '26px 32px 48px' }}>
+      <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* Greeting */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           <div>
-            <h1 className="text-3xl" style={{ fontWeight: 300, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Welcome back, {user.name || 'Admin'}</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Here's what's happening with your tickets today</p>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 300, letterSpacing: '-0.03em' }}>{greeting}, {firstName}</h1>
+            <p style={{ margin: '5px 0 0', fontSize: 13.5, color: 'var(--text-secondary)' }}>
+              {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+              {stats.needsAttention > 0 && (
+                <> — <span style={{ color: 'var(--red)', fontWeight: 500 }}>{stats.needsAttention} ticket{stats.needsAttention === 1 ? '' : 's'}</span> need your attention today.</>
+              )}
+            </p>
           </div>
-          <Badge variant="neutral" style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)' }}>
-            {formatRole(user.role)}
-          </Badge>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 9, fontSize: 13, color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+            All branches
+            <ChevronDown size={12} strokeWidth={2} style={{ color: 'var(--text-muted)' }} />
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card style={{ backgroundColor: 'var(--amber-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', color: 'var(--text-muted)', fontWeight: 500 }}>Open</CardTitle>
-              <AlertCircle className="h-5 w-5" style={{ color: 'var(--amber)' }} />
-            </CardHeader>
-            <CardContent>
-              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)' }}>{stats.openTickets}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Awaiting assignment</p>
-            </CardContent>
-          </Card>
-
-          <Card style={{ backgroundColor: 'var(--blue-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', color: 'var(--text-muted)', fontWeight: 500 }}>In Progress</CardTitle>
-              <Clock className="h-5 w-5" style={{ color: 'var(--blue)' }} />
-            </CardHeader>
-            <CardContent>
-              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)' }}>{stats.inProgressTickets}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Being worked on</p>
-            </CardContent>
-          </Card>
-
-          <Card style={{ backgroundColor: 'var(--green-bg)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', color: 'var(--text-muted)', fontWeight: 500 }}>Completed</CardTitle>
-              <CheckCircle className="h-5 w-5" style={{ color: 'var(--green)' }} />
-            </CardHeader>
-            <CardContent>
-              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)' }}>{stats.completedMTD}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Month to date</p>
-            </CardContent>
-          </Card>
-
-          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', color: 'var(--text-muted)', fontWeight: 500 }}>Approved Cost</CardTitle>
-              <DollarSign className="h-5 w-5" style={{ color: 'var(--green)' }} />
-            </CardHeader>
-            <CardContent>
-              <div style={{ fontSize: '2rem', fontWeight: 300, letterSpacing: 'var(--tracking-tight)', color: 'var(--text-primary)' }}>${stats.totalCostMTD.toLocaleString()}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Month to date</p>
-            </CardContent>
-          </Card>
+        {/* Stat cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+          <StatCard label="Open" value={stats.openTickets} icon={<Ticket size={13} strokeWidth={1.8} />} tint="var(--amber-bg)" iconColor="var(--amber)"
+            delta={stats.needsAttention > 0 ? `${stats.needsAttention} urgent` : undefined} deltaColor="var(--red)" note={stats.needsAttention > 0 ? 'need attention' : 'all clear'} />
+          <StatCard label="In progress" value={stats.inProgressTickets} icon={<Clock size={13} strokeWidth={1.8} />} tint="var(--blue-bg)" iconColor="var(--blue)" note="active now" />
+          <StatCard label="Completed — MTD" value={stats.completedMTD} icon={<CheckCircle size={13} strokeWidth={1.8} />} tint="var(--green-bg)" iconColor="var(--green)" note="this month" />
+          <StatCard label="Approved cost — MTD" value={money(stats.totalCostMTD)} icon={<DollarSign size={13} strokeWidth={1.8} />} tint="var(--accent-soft)" iconColor="var(--accent-color)" note="this month" />
         </div>
 
-        {/* Quick Links */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-widest)', color: 'var(--text-muted)' }}>Quick links:</span>
-          <Link href="/admin/tickets" className="hover:underline flex items-center gap-1" style={{ color: 'var(--accent)' }}>
-            <Ticket className="h-4 w-4" />
-            Manage Tickets
-          </Link>
-          <Link href="/admin/assets" className="hover:underline flex items-center gap-1" style={{ color: 'var(--blue)' }}>
-            <Package className="h-4 w-4" />
-            Assets
-          </Link>
-          <Link href="/admin/contractors" className="hover:underline flex items-center gap-1" style={{ color: 'var(--green)' }}>
-            <Wrench className="h-4 w-4" />
-            Contractors
-          </Link>
-          <Link href="/admin/invoices" className="hover:underline flex items-center gap-1" style={{ color: 'var(--amber)' }}>
-            <FileText className="h-4 w-4" />
-            Invoices
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Urgent Tickets */}
-          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center font-medium" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                <AlertTriangle className="h-5 w-5 mr-2" style={{ color: 'var(--red)' }} />
-                Urgent Tickets
-              </CardTitle>
-              <Badge variant="destructive" style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)' }}>{urgentTickets.length}</Badge>
-            </CardHeader>
-            <CardContent>
-              {urgentTickets.length === 0 ? (
-                <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
-                  <CheckCircle className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--green)' }} />
-                  <p>No urgent tickets! Great job!</p>
+        {/* Two-column */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, alignItems: 'stretch' }}>
+          {/* Left */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Volume chart */}
+            <Card padding="20px 22px">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <CardTitle>Ticket volume</CardTitle>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 3, background: 'var(--accent-color)' }} />Created</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 3, background: 'var(--accent-soft-2)' }} />Resolved</span>
+                  <MonoLabel size={10} spacing="0.08em" color="var(--text-faint)">Last 8 weeks</MonoLabel>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {urgentTickets.slice(0, 5).map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--red-bg)', border: '1px solid var(--border)' }}>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{ticket.title}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{ticket.ticketNumber || ticket.id.slice(0, 8)}</p>
-                      </div>
-                      <div className="flex items-center space-x-2 ml-4">
-                        <Badge variant={getPriorityVariant(ticket.priority)} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)' }}>{ticket.priority}</Badge>
-                        <Link href={`/admin/tickets`}>
-                          <Button size="sm" variant="outline">View</Button>
-                        </Link>
-                      </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', height: 200, marginTop: 18 }}>
+                {weeks.map((w) => (
+                  <div key={w.l} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 170 }}>
+                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-color)', height: `${w.a}%` }} />
+                      <div style={{ width: 14, borderRadius: '5px 5px 2px 2px', background: 'var(--accent-soft-2)', height: `${w.b}%` }} />
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <MonoLabel size={10} spacing="0" color="var(--text-faint)">{w.l}</MonoLabel>
+                  </div>
+                ))}
+              </div>
+            </Card>
 
-          {/* Recent Tickets */}
-          <Card style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10 }}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center font-medium" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
-                <Clock className="h-5 w-5 mr-2" style={{ color: 'var(--blue)' }} />
-                Recent Tickets
-              </CardTitle>
-              <Link href="/admin/tickets">
-                <Button variant="ghost" size="sm">
-                  View All <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
+            {/* Recent tickets */}
+            <Card padding="8px 0" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px 8px' }}>
+                <CardTitle>Recent tickets</CardTitle>
+                <Link href="/admin/tickets" className="link-accent" style={{ fontSize: 12.5, textDecoration: 'none' }}>View all →</Link>
+              </div>
+              {recent.length === 0 && <div style={{ padding: '16px 22px', fontSize: 13, color: 'var(--text-muted)' }}>No tickets yet.</div>}
+              {recent.map((t) => (
+                <Link key={t.id} href={`/admin/tickets/${t.id}`} className="ds-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 22px', textDecoration: 'none', color: 'inherit' }}>
+                  <MonoLabel size={11.5} spacing="0" color="var(--text-muted)" style={{ width: 70, flex: 'none', textTransform: 'none' }}>{t.ticketNumber || t.id.slice(0, 6)}</MonoLabel>
+                  <span style={{ width: 7, height: 7, borderRadius: 99, background: TYPE_COLOR[t.type] || '#9E9C94', flex: 'none' }} />
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 'none' }}>{t.assignedTo?.name || 'Unassigned'}</span>
+                  <Badge variant={STATUS_VARIANT[t.status] || 'neutral'}>{statusLabel(t.status)}</Badge>
+                </Link>
+              ))}
+            </Card>
+          </div>
+
+          {/* Right */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Needs attention */}
+            <Card padding="18px 20px">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <CardTitle>Needs attention</CardTitle>
+                {urgent.length > 0 && <Badge variant="red">{urgent.length} urgent</Badge>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                {urgent.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nothing urgent. 🎉</div>}
+                {urgent.map((u) => (
+                  <Link key={u.id} href={`/admin/tickets/${u.id}`} style={{ border: '1px solid var(--border-inner)', borderRadius: 10, padding: '11px 13px', textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 99, background: 'var(--red)', flex: 'none' }} />
+                      <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.title}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, paddingLeft: 15 }}>
+                      <MonoLabel size={10.5} spacing="0" color="var(--text-muted)" style={{ textTransform: 'none' }}>{u.ticketNumber || u.id.slice(0, 6)}</MonoLabel>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>· {statusLabel(u.type)}</span>
+                      <span style={{ flex: 1 }} />
+                      <Badge variant={PRIORITY_VARIANT[u.priority] || 'neutral'}>{u.priority}</Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+
+            {/* On the job */}
+            <Card padding="18px 20px">
+              <CardTitle>On the job</CardTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14 }}>
+                {onJob.length === 0 && <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>No contractors on active jobs.</div>}
+                {onJob.map(([name, count]) => {
+                  const t = avatarTint(name)
+                  return (
+                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                      <Avatar initials={getInitials(name)} size={34} tint={t.tint} color={t.color} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{name}</div>
+                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Contractor</div>
+                      </div>
+                      <Badge variant="blue">{count} job{count === 1 ? '' : 's'}</Badge>
+                    </div>
+                  )
+                })}
+              </div>
+              <Link href="/admin/contractors" style={{ display: 'block', marginTop: 14 }}>
+                <button className="filter-chip" style={{ width: '100%', justifyContent: 'center' }}>All contractors</button>
               </Link>
-            </CardHeader>
-            <CardContent>
-              {recentTickets.length === 0 ? (
-                <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
-                  <Ticket className="h-12 w-12 mx-auto mb-2" style={{ color: 'var(--border-strong)' }} />
-                  <p>No tickets yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentTickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-3 rounded-lg transition-colors" style={{ ['--hover-bg' as string]: 'var(--surface2)' }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--surface2)')} onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--blue-bg)' }}>
-                          <Ticket className="h-5 w-5" style={{ color: 'var(--blue)' }} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{ticket.title}</p>
-                          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                            {ticket.user?.name || 'Unknown'} • {new Date(ticket.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant={getStatusVariant(ticket.status)} style={{ fontFamily: 'DM Mono, monospace', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-wider)' }}>
-                        {ticket.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </Card>
+
+            {/* SLA compliance (sample — needs endpoint) */}
+            <div className="card-dark" style={{ padding: '18px 20px' }}>
+              <MonoLabel size={10} color="rgba(247,246,243,0.55)">SLA compliance — MTD</MonoLabel>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 8 }}>
+                <span style={{ fontSize: 31, fontWeight: 300, letterSpacing: '-0.03em' }}>94.2%</span>
+                <span style={{ fontSize: 12, color: '#6EE7B7', fontWeight: 500 }}>▲ 1.4%</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 99, background: '#3D3C38', marginTop: 12, overflow: 'hidden' }}>
+                <div style={{ width: '94.2%', height: '100%', background: '#4ADE80', borderRadius: 99 }} />
+              </div>
+              <div style={{ fontSize: 11.5, color: 'rgba(247,246,243,0.5)', marginTop: 10 }}>Response + resolution within target.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
