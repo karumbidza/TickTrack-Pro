@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
+import { getAuthContext } from '@/lib/auth'
+import { rateLimitCheck } from '@/lib/api-rate-limit'
 
 export async function POST(request: NextRequest) {
+  // Public lead-capture form: rate limit to prevent spam / DB pollution.
+  const rateLimitResponse = await rateLimitCheck(request, 'auth')
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const {
@@ -33,38 +39,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if tenant already exists with this company name
-    let tenant = await prisma.tenant.findFirst({
-      where: { 
+    // Associate with an existing tenant only if one already matches. Never create
+    // a Tenant from anonymous input — real tenants are provisioned at signup.
+    const tenant = await prisma.tenant.findFirst({
+      where: {
         OR: [
           { name: companyName },
           { email: contactEmail }
         ]
-      }
+      },
+      select: { id: true }
     })
-
-    // If no tenant exists, create a placeholder one for the quote
-    if (!tenant) {
-      const slug = companyName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
-
-      tenant = await prisma.tenant.create({
-        data: {
-          name: companyName,
-          slug: `${slug}-${Date.now()}`, // Add timestamp to ensure uniqueness
-          email: contactEmail,
-          phone: contactPhone || null,
-          status: 'TRIAL', // Will be activated when they sign up
-          settings: {
-            industry: industry || null,
-            companySize: companySize || null,
-            isQuoteOnly: true // Flag to indicate this is a quote-only tenant
-          }
-        }
-      })
-    }
 
     // Prepare requested features data
     const requestedFeatures = {
@@ -84,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Create the quote request
     const quote = await prisma.quote.create({
       data: {
-        tenantId: tenant.id,
+        tenantId: tenant?.id ?? null,
         title: projectTitle,
         description: projectDescription,
         requestedFeatures,
@@ -130,7 +115,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // This endpoint could be used by admins to fetch all quote requests
+    // Sales-lead pipeline is platform-internal: SUPER_ADMIN only.
+    const ctx = await getAuthContext()
+    if (!ctx?.isSuperAdmin) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
     

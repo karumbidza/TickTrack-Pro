@@ -380,7 +380,7 @@ model Payment {
 
 model Quote {
   id              String    @id @default(cuid())
-  tenantId        String
+  tenantId        String?   // Optional: public sales leads are not tied to a tenant
   title           String
   description     String
   requestedFeatures Json    // Array of requested custom features
@@ -399,7 +399,7 @@ model Quote {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  tenant          Tenant?   @relation(fields: [tenantId], references: [id])
 
   @@map("quotes")
 }
