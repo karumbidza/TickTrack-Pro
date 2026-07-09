@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store'
-import type { TokenCache } from '@clerk/clerk-expo/dist/cache'
+import type { TokenCache } from '@clerk/clerk-expo'
 
 /**
  * Persist the Clerk session in the device secure enclave/keychain so the user

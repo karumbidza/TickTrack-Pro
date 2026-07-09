@@ -9,7 +9,9 @@ import { useApi } from '@/lib/api'
 // Show notifications while the app is foregrounded.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // SDK 52+ split shouldShowAlert into banner + list
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
