@@ -53,3 +53,4 @@ test-email.js
 k.env
 *.env
 USER_CREDENTIALS.md
+.superpowers/
