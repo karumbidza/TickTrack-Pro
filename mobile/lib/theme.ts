@@ -62,3 +62,24 @@ export const PRIORITY_VARIANT: Record<string, BadgeVariant> = {
 }
 
 export const statusLabel = (s: string) => (s || '').replace(/_/g, ' ')
+
+// Ticket status → dashboard stat group (mirrors the web's client-side stats).
+export type StatGroup = 'open' | 'inProgress' | 'completed'
+export const ticketStatGroup = (s: string): StatGroup | null => {
+  if (s === 'OPEN' || s === 'ASSIGNED') return 'open'
+  if (s === 'IN_PROGRESS' || s === 'ON_SITE') return 'inProgress'
+  if (s === 'COMPLETED' || s === 'CLOSED') return 'completed'
+  return null
+}
+
+// Asset lifecycle status → badge variant.
+export const ASSET_STATUS_VARIANT: Record<string, BadgeVariant> = {
+  ACTIVE: 'green',
+  MAINTENANCE: 'amber',
+  REPAIR_NEEDED: 'orange',
+  OUT_OF_SERVICE: 'red',
+  RETIRED: 'neutral',
+  DECOMMISSIONED: 'neutral',
+  TRANSFERRED: 'blue',
+  PENDING_DECOMMISSION: 'amber',
+}
