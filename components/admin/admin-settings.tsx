@@ -36,6 +36,7 @@ import { UserManagement } from './user-management'
 import { ContractorManagement } from './contractor-management'
 import { AdminAssetManagement } from './asset-management'
 import { BillingManagement } from './billing-management'
+import { ReportsHub } from './reports-hub'
 
 interface User {
   id: string
@@ -583,6 +584,11 @@ export function AdminSettings({ user, section = 'categories' }: AdminSettingsPro
   const monoCount: React.CSSProperties = { fontFamily: 'DM Mono, monospace', fontSize: 11, color: 'var(--text-muted)' }
   const fieldLabel: React.CSSProperties = { fontFamily: 'DM Mono, monospace', fontSize: 10, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase' }
   const fieldInput: React.CSSProperties = { height: 38, border: '1px solid var(--border)', borderRadius: 9, padding: '0 12px', fontSize: 13.5, background: 'var(--surface)', color: 'var(--text-primary)', width: '100%' }
+
+  // Reports section gets its own full-page component
+  if (activeTab === 'reports') {
+    return <ReportsHub />
+  }
 
   return (
     <div style={{ padding: '26px 32px 48px' }}>

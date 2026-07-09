@@ -52,11 +52,12 @@ model Branch {
   name          String   // e.g., "Head Office", "Branch A", "Site B"
   address       String?  // Physical address
   type          String   @default("BRANCH") // HEAD_OFFICE, BRANCH, SITE, WAREHOUSE, DEPOT, OTHER
-  isHeadOffice  Boolean  @default(false) // If true, users assigned here have access to all branches
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isHeadOffice       Boolean  @default(false) // If true, users assigned here have access to all branches
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+  maintenanceBudget  Float?   // Monthly maintenance budget in USD
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   tenant        Tenant       @relation(fields: [tenantId], references: [id])
   userBranches  UserBranch[]
@@ -436,8 +437,12 @@ model Ticket {
   assignedAt            DateTime?   // When admin assigned the ticket (first response)
   contractorAcceptedAt  DateTime?   // When contractor accepted the job
   onSiteAt              DateTime?   // When contractor arrived on site
+  firstResponseAt       DateTime?   // When first response was sent to requester
+  resolvedAt            DateTime?   // When ticket was resolved (for MTTR calculation)
   responseDeadline      DateTime?   // Auto-calculated: createdAt + response SLA
   resolutionDeadline    DateTime?   // Auto-calculated: createdAt + resolution SLA
+  slaFirstResponseBreached Boolean  @default(false) // Whether first response SLA was breached
+  slaResolutionBreached   Boolean   @default(false) // Whether resolution SLA was breached
   
   // Cancellation fields
   cancellationReason    String?  // Reason for cancellation
