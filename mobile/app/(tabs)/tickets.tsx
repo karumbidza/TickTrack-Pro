@@ -19,7 +19,9 @@ export default function Tickets() {
   const api = useApi()
   const router = useRouter()
   const { filter } = useLocalSearchParams<{ filter?: string }>()
-  const group = (filter as StatGroup | undefined) ?? null
+  const raw = Array.isArray(filter) ? filter[0] : filter
+  const STAT_GROUPS: StatGroup[] = ['open', 'inProgress', 'completed']
+  const group: StatGroup | null = STAT_GROUPS.includes(raw as StatGroup) ? (raw as StatGroup) : null
 
   const [items, setItems] = useState<TicketItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +68,9 @@ export default function Tickets() {
       </Pressable>
 
       {error ? <Text style={{ color: colors.red, fontFamily: font.sans, fontSize: 13 }}>{error}</Text> : null}
-      {visible.length === 0 && !error && <EmptyState message={'No tickets yet. Tap “New ticket” to create one.'} />}
+      {visible.length === 0 && !error && (
+        <EmptyState message={group ? `No ${groupLabel[group].toLowerCase()} tickets.` : 'No tickets yet. Tap “New ticket” to create one.'} />
+      )}
 
       {visible.map((t) => (
         <Card key={t.id} onPress={() => router.push(`/ticket/${t.id}`)}>
