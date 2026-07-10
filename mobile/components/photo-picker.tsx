@@ -53,7 +53,7 @@ export function PhotoPicker({
           </View>
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         <PickButton icon={<Camera color={colors.textTertiary} size={16} strokeWidth={1.8} />} label="Camera" onPress={() => pick(true)} />
         <PickButton icon={<ImagePlus color={colors.textTertiary} size={16} strokeWidth={1.8} />} label="Library" onPress={() => pick(false)} />
       </View>
@@ -65,7 +65,7 @@ function PickButton({ icon, label, onPress }: { icon: React.ReactNode; label: st
   return (
     <Pressable
       onPress={onPress}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 7, height: 38, paddingHorizontal: 14, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
+      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 40, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
     >
       {icon}
       <Text style={{ fontFamily: font.sans, fontSize: 13, color: colors.textTertiary }}>{label}</Text>
