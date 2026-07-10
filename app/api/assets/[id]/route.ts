@@ -24,7 +24,12 @@ export async function GET(
         ...(isSuperAdmin && !tenantId ? {} : { tenantId: tenantId as string })
       },
       include: {
-        category: true
+        category: true,
+        // Repair history: the tickets logged against this asset (most recent first).
+        tickets: {
+          select: { id: true, ticketNumber: true, title: true, status: true },
+          orderBy: { createdAt: 'desc' }
+        }
       }
     })
 
@@ -32,7 +37,8 @@ export async function GET(
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ asset })
+    // Expose the tickets as `repairHistory` (additive alias; `tickets` is kept intact).
+    return NextResponse.json({ asset: { ...asset, repairHistory: asset.tickets } })
   } catch (error) {
     console.error('Error fetching asset:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

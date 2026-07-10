@@ -43,6 +43,10 @@ export default function RootLayout() {
             options={{ headerShown: true, title: 'Ticket', headerBackTitle: 'Back', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false, headerTintColor: colors.textPrimary, headerTitleStyle: { fontFamily: font.sansMedium } }}
           />
           <Stack.Screen
+            name="asset/[id]"
+            options={{ headerShown: true, title: 'Asset', headerBackTitle: 'Back', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false, headerTintColor: colors.textPrimary, headerTitleStyle: { fontFamily: font.sansMedium } }}
+          />
+          <Stack.Screen
             name="new-ticket"
             options={{ presentation: 'modal', headerShown: true, title: 'New ticket', headerStyle: { backgroundColor: colors.bg }, headerShadowVisible: false, headerTintColor: colors.textPrimary, headerTitleStyle: { fontFamily: font.sansMedium } }}
           />
