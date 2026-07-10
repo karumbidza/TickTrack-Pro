@@ -61,7 +61,13 @@ export default function NewTicket() {
   )
 
   const onPickAsset = (id: string) => {
-    if (!id) { setAssetId(null); return } // "None" clears the asset
+    if (!id) {
+      // "None" clears the asset; also clear the category only if it was auto-filled from that asset.
+      const prev = assets.find((x) => x.id === assetId)
+      if (prev?.categoryId && categoryId === prev.categoryId) setCategoryId(null)
+      setAssetId(null)
+      return
+    }
     setAssetId(id)
     // Auto-fill category from the asset, but never clobber a category the user already chose.
     const a = assets.find((x) => x.id === id)
