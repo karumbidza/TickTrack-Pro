@@ -29,8 +29,8 @@ export function PhotoPicker({
       return
     }
     const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7, mediaTypes: ImagePicker.MediaTypeOptions.Images })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, selectionLimit: max - assets.length })
+      ? await ImagePicker.launchCameraAsync({ quality: 0.7, mediaTypes: ['images'] })
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: max - assets.length })
     if (!result.canceled) {
       onChange([...assets, ...result.assets].slice(0, max))
     }

@@ -47,21 +47,34 @@ export default function NewTicket() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // A leading "None" option (value '') lets the user clear these optional fields.
   const assetOptions: Option[] = useMemo(
-    () => assets.map((a) => ({ label: `${a.assetNumber ? a.assetNumber + ' — ' : ''}${a.name}`, value: a.id, hint: a.location || undefined })),
+    () => [
+      { label: 'None', value: '' },
+      ...assets.map((a) => ({ label: `${a.assetNumber ? a.assetNumber + ' — ' : ''}${a.name}`, value: a.id, hint: a.location || undefined })),
+    ],
     [assets],
   )
-  const categoryOptions: Option[] = useMemo(() => categories.map((c) => ({ label: c.name, value: c.id })), [categories])
+  const categoryOptions: Option[] = useMemo(
+    () => [{ label: 'None', value: '' }, ...categories.map((c) => ({ label: c.name, value: c.id }))],
+    [categories],
+  )
 
   const onPickAsset = (id: string) => {
+    if (!id) { setAssetId(null); return } // "None" clears the asset
     setAssetId(id)
+    // Auto-fill category from the asset, but never clobber a category the user already chose.
     const a = assets.find((x) => x.id === id)
-    if (a?.categoryId) setCategoryId(a.categoryId) // auto-fill category from asset
+    if (a?.categoryId && !categoryId) setCategoryId(a.categoryId)
   }
 
   const submit = async () => {
     if (!title.trim() || !description.trim()) {
       Alert.alert('Missing details', 'Please add a title and description.')
+      return
+    }
+    if (onBehalf && !reporterName.trim()) {
+      Alert.alert('Reporter required', "Please enter the reporter's name, or turn off “Someone else reported this”.")
       return
     }
     setSaving(true)
@@ -125,7 +138,7 @@ export default function NewTicket() {
       </Field>
 
       <Field label="CATEGORY · OPTIONAL">
-        <Dropdown label="Category" value={categoryId} options={categoryOptions} onChange={setCategoryId} placeholder="Select a category" searchable />
+        <Dropdown label="Category" value={categoryId} options={categoryOptions} onChange={(v) => setCategoryId(v || null)} placeholder="Select a category" searchable />
       </Field>
 
       <Field label="PHOTOS">
