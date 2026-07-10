@@ -1,6 +1,6 @@
 import { Tabs, Redirect } from 'expo-router'
 import { useAuth, useUser } from '@clerk/clerk-expo'
-import { Home, FileText, User } from 'lucide-react-native'
+import { LayoutDashboard, FileText, Boxes, User, Briefcase } from 'lucide-react-native'
 import { colors, font } from '@/lib/theme'
 import { Loading } from '@/components/ui'
 import { usePushNotifications } from '@/lib/push'
@@ -9,7 +9,6 @@ export default function TabsLayout() {
   const { isLoaded, isSignedIn } = useAuth()
   const { user } = useUser()
 
-  // Register for push + handle notification taps (authenticated area only).
   usePushNotifications()
 
   if (!isLoaded) return <Loading />
@@ -33,9 +32,30 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: isContractor ? 'My jobs' : 'My tickets',
-          tabBarLabel: isContractor ? 'Jobs' : 'Tickets',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} strokeWidth={1.8} />,
+          title: isContractor ? 'My jobs' : 'Home',
+          tabBarLabel: isContractor ? 'Jobs' : 'Home',
+          tabBarIcon: ({ color, size }) =>
+            isContractor ? <Briefcase color={color} size={size} strokeWidth={1.8} /> : <LayoutDashboard color={color} size={size} strokeWidth={1.8} />,
+        }}
+      />
+      <Tabs.Screen
+        name="tickets"
+        options={{
+          title: 'My tickets',
+          tabBarLabel: 'Tickets',
+          // End-user only.
+          href: isContractor ? null : '/(tabs)/tickets',
+          tabBarIcon: ({ color, size }) => <FileText color={color} size={size} strokeWidth={1.8} />,
+        }}
+      />
+      <Tabs.Screen
+        name="assets"
+        options={{
+          title: 'Assets',
+          tabBarLabel: 'Assets',
+          // End-user only.
+          href: isContractor ? null : '/(tabs)/assets',
+          tabBarIcon: ({ color, size }) => <Boxes color={color} size={size} strokeWidth={1.8} />,
         }}
       />
       <Tabs.Screen
@@ -43,7 +63,7 @@ export default function TabsLayout() {
         options={{
           title: 'Invoices',
           tabBarLabel: 'Invoices',
-          // Contractor-only tab; hidden for end-users.
+          // Contractor only.
           href: isContractor ? '/(tabs)/invoices' : null,
           tabBarIcon: ({ color, size }) => <FileText color={color} size={size} strokeWidth={1.8} />,
         }}
